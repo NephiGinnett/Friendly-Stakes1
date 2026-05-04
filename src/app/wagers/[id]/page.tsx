@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import PointsBadge from "@/components/PointsBadge";
 import { formatPoints, formatDate, timeUntil, getStatusBg } from "@/lib/utils";
+import { playWinSound } from "@/lib/sounds";
 
 type User = { id: number; username: string; points: number; isAdmin: boolean };
 type Vote = { id: number; userId: number; choice: string; user: { id: number; username: string } };
@@ -29,6 +30,7 @@ export default function WagerDetailPage() {
   const [joinSide, setJoinSide] = useState<"for" | "against">("against");
   const [joinStake, setJoinStake] = useState("");
   const [loading, setLoading] = useState("");
+  const [soundPlayed, setSoundPlayed] = useState(false);
 
   const fetchData = () => {
     fetch("/api/auth/me").then((r) => r.ok ? r.json() : null).then(setUser);
@@ -43,6 +45,21 @@ export default function WagerDetailPage() {
       .then((r) => { if (!r.ok) { router.push("/feed"); return null; } return r.json(); })
       .then(setWager);
   }, [params.id, router]);
+
+  // Play win sound when wager settles and this user is on the winning side
+  useEffect(() => {
+    if (!user || !wager || soundPlayed) return;
+    if (wager.status !== "settled" || !wager.winnerSide) return;
+
+    const isCreator = user.id === wager.creator.id;
+    const myEntry = wager.entries.find((e) => e.userId === user.id);
+    const mySide = isCreator ? "for" : myEntry?.side;
+
+    if (mySide === wager.winnerSide) {
+      playWinSound();
+      setSoundPlayed(true);
+    }
+  }, [wager?.status, wager?.winnerSide, user, soundPlayed, wager]);
 
   if (!user || !wager) return null;
 
