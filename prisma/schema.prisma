@@ -1,0 +1,81 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int       @id @default(autoincrement())
+  username  String    @unique
+  pinHash   String
+  pinSalt   String
+  points    Int       @default(1000)
+  isAdmin   Boolean   @default(false)
+  createdAt DateTime  @default(now())
+
+  sessions       Session[]
+  createdWagers  Wager[]        @relation("creator")
+  acceptedWagers Wager[]        @relation("acceptor")
+  counterOffers  CounterOffer[]
+  votes          Vote[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  token     String   @unique
+  createdAt DateTime @default(now())
+}
+
+model Wager {
+  id              Int       @id @default(autoincrement())
+  title           String
+  description     String?
+  creatorId       Int
+  creator         User      @relation("creator", fields: [creatorId], references: [id])
+  creatorPosition String
+  creatorStake    Int
+
+  acceptorId    Int?
+  acceptor      User?   @relation("acceptor", fields: [acceptorId], references: [id])
+  acceptorStake Int?
+
+  deadline  DateTime
+  status    String   @default("open") // open, accepted, voting, settled, cancelled
+  winnerId  Int?
+  settledAt DateTime?
+  settledBy String? // "vote" or "admin"
+
+  createdAt     DateTime       @default(now())
+  counterOffers CounterOffer[]
+  votes         Vote[]
+}
+
+model CounterOffer {
+  id               Int      @id @default(autoincrement())
+  wagerId          Int
+  wager            Wager    @relation(fields: [wagerId], references: [id])
+  userId           Int
+  user             User     @relation(fields: [userId], references: [id])
+  proposedStake    Int      // What the counter-offerer would stake
+  wantCreatorStake Int      // What they want the creator to stake
+  message          String?
+  status           String   @default("pending") // pending, accepted, rejected
+  createdAt        DateTime @default(now())
+}
+
+model Vote {
+  id        Int      @id @default(autoincrement())
+  wagerId   Int
+  wager     Wager    @relation(fields: [wagerId], references: [id])
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  choice    String   // "creator" or "acceptor"
+  createdAt DateTime @default(now())
+
+  @@unique([wagerId, userId])
+}
