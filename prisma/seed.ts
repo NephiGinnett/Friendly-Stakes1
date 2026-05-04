@@ -12,13 +12,12 @@ function hashPin(pin: string): { hash: string; salt: string } {
 }
 
 async function main() {
-  // Create admin user (Zoe)
   const adminPin = hashPin("0000");
   await prisma.user.upsert({
-    where: { username: "zoe" },
+    where: { username: "nephi" },
     update: {},
     create: {
-      username: "zoe",
+      username: "nephi",
       pinHash: adminPin.hash,
       pinSalt: adminPin.salt,
       points: 1000,
@@ -27,7 +26,7 @@ async function main() {
   });
 
   console.log("Seed complete! Admin user created:");
-  console.log("  Username: zoe");
+  console.log("  Username: nephi");
   console.log("  PIN: 0000");
   console.log("  (Change your PIN after first login!)");
 }

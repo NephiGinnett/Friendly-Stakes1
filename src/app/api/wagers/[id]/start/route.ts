@@ -11,27 +11,31 @@ export async function POST(
 
   try {
     const wagerId = parseInt(params.id);
+
     const wager = await prisma.wager.findUnique({
       where: { id: wagerId },
       include: { entries: true },
     });
 
     if (!wager) return NextResponse.json({ error: "Wager not found" }, { status: 404 });
-    if (wager.status !== "started") {
-      return NextResponse.json({ error: "Only started wagers can be closed early for voting" }, { status: 400 });
+    if (wager.status !== "open") return NextResponse.json({ error: "Wager is not in the open lobby" }, { status: 400 });
+
+    const isCreator = user.id === wager.creatorId;
+    if (!isCreator && !user.isAdmin) {
+      return NextResponse.json({ error: "Only the creator or an admin can start the wager" }, { status: 403 });
     }
 
-    const isParticipant =
-      user.id === wager.creatorId ||
-      wager.entries.some((e) => e.userId === user.id);
-
-    if (!isParticipant && !user.isAdmin) {
-      return NextResponse.json({ error: "Only participants or admins can close early" }, { status: 403 });
+    const againstCount = wager.entries.filter((e) => e.side === "against").length;
+    if (againstCount === 0) {
+      return NextResponse.json(
+        { error: "Need at least one person on the 'against' side before starting" },
+        { status: 400 }
+      );
     }
 
     await prisma.wager.update({
       where: { id: wagerId },
-      data: { status: "voting" },
+      data: { status: "started" },
     });
 
     return NextResponse.json({ ok: true });

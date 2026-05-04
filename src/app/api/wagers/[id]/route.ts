@@ -13,7 +13,10 @@ export async function GET(
     where: { id: parseInt(params.id) },
     include: {
       creator: { select: { id: true, username: true } },
-      acceptor: { select: { id: true, username: true } },
+      entries: {
+        include: { user: { select: { id: true, username: true } } },
+        orderBy: { createdAt: "asc" },
+      },
       counterOffers: {
         include: { user: { select: { id: true, username: true } } },
         orderBy: { createdAt: "desc" },

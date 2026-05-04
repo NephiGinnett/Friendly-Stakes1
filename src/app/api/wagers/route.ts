@@ -15,7 +15,9 @@ export async function GET(req: Request) {
     where,
     include: {
       creator: { select: { id: true, username: true } },
-      acceptor: { select: { id: true, username: true } },
+      entries: {
+        include: { user: { select: { id: true, username: true } } },
+      },
       votes: { select: { userId: true, choice: true } },
       _count: { select: { counterOffers: { where: { status: "pending" } } } },
     },
@@ -35,11 +37,9 @@ export async function POST(req: Request) {
     if (!title || !creatorPosition || !creatorStake || !deadline) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
-
     if (creatorStake < 1) {
       return NextResponse.json({ error: "Stake must be at least 1 point" }, { status: 400 });
     }
-
     if (creatorStake > user.points) {
       return NextResponse.json({ error: "Not enough points" }, { status: 400 });
     }
@@ -49,7 +49,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Deadline must be in the future" }, { status: 400 });
     }
 
-    // Deduct points from creator (escrow)
     const [wager] = await prisma.$transaction([
       prisma.wager.create({
         data: {

@@ -18,7 +18,7 @@ model User {
 
   sessions       Session[]
   createdWagers  Wager[]        @relation("creator")
-  acceptedWagers Wager[]        @relation("acceptor")
+  wagerEntries   WagerEntry[]
   counterOffers  CounterOffer[]
   votes          Vote[]
 }
@@ -32,27 +32,38 @@ model Session {
 }
 
 model Wager {
-  id              Int       @id @default(autoincrement())
+  id              Int      @id @default(autoincrement())
   title           String
   description     String?
   creatorId       Int
-  creator         User      @relation("creator", fields: [creatorId], references: [id])
+  creator         User     @relation("creator", fields: [creatorId], references: [id])
   creatorPosition String
   creatorStake    Int
 
-  acceptorId    Int?
-  acceptor      User?   @relation("acceptor", fields: [acceptorId], references: [id])
-  acceptorStake Int?
-
-  deadline  DateTime
-  status    String   @default("open") // open, accepted, voting, settled, cancelled
-  winnerId  Int?
-  settledAt DateTime?
-  settledBy String? // "vote" or "admin"
+  deadline   DateTime
+  status     String   @default("open") // open, started, voting, settled, cancelled
+  winnerSide String?  // "for" or "against"
+  settledAt  DateTime?
+  settledBy  String?  // "vote" or "admin"
 
   createdAt     DateTime       @default(now())
+  entries       WagerEntry[]
   counterOffers CounterOffer[]
   votes         Vote[]
+}
+
+// Each person who joins a wager (besides the creator, who is implicit "for")
+model WagerEntry {
+  id        Int      @id @default(autoincrement())
+  wagerId   Int
+  wager     Wager    @relation(fields: [wagerId], references: [id])
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  side      String   // "for" (agrees with creator) or "against"
+  stake     Int
+  createdAt DateTime @default(now())
+
+  @@unique([wagerId, userId])
 }
 
 model CounterOffer {
@@ -61,8 +72,8 @@ model CounterOffer {
   wager            Wager    @relation(fields: [wagerId], references: [id])
   userId           Int
   user             User     @relation(fields: [userId], references: [id])
-  proposedStake    Int      // What the counter-offerer would stake
-  wantCreatorStake Int      // What they want the creator to stake
+  proposedStake    Int
+  wantCreatorStake Int
   message          String?
   status           String   @default("pending") // pending, accepted, rejected
   createdAt        DateTime @default(now())
@@ -74,7 +85,7 @@ model Vote {
   wager     Wager    @relation(fields: [wagerId], references: [id])
   userId    Int
   user      User     @relation(fields: [userId], references: [id])
-  choice    String   // "creator" or "acceptor"
+  choice    String   // "for" or "against"
   createdAt DateTime @default(now())
 
   @@unique([wagerId, userId])

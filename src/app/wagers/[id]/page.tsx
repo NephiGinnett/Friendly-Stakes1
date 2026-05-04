@@ -4,21 +4,21 @@ import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import PointsBadge from "@/components/PointsBadge";
-import { formatPoints, formatDate, timeUntil, getStatusBg, impliedOdds } from "@/lib/utils";
+import { formatPoints, formatDate, timeUntil, getStatusBg } from "@/lib/utils";
 
 type User = { id: number; username: string; points: number; isAdmin: boolean };
 type Vote = { id: number; userId: number; choice: string; user: { id: number; username: string } };
-type CounterOffer = {
-  id: number; userId: number; proposedStake: number; wantCreatorStake: number;
-  message: string | null; status: string; createdAt: string;
+type WagerEntry = {
+  id: number; userId: number; side: string; stake: number; createdAt: string;
   user: { id: number; username: string };
 };
 type Wager = {
   id: number; title: string; description: string | null; creatorPosition: string;
-  creatorStake: number; acceptorStake: number | null; deadline: string;
-  status: string; winnerId: number | null; settledBy: string | null; settledAt: string | null;
-  creator: { id: number; username: string }; acceptor: { id: number; username: string } | null;
-  counterOffers: CounterOffer[]; votes: Vote[];
+  creatorStake: number; deadline: string; status: string;
+  winnerSide: string | null; settledBy: string | null; settledAt: string | null;
+  creator: { id: number; username: string };
+  entries: WagerEntry[];
+  votes: Vote[];
 };
 
 export default function WagerDetailPage() {
@@ -26,11 +26,8 @@ export default function WagerDetailPage() {
   const params = useParams();
   const [user, setUser] = useState<User | null>(null);
   const [wager, setWager] = useState<Wager | null>(null);
-  const [acceptStake, setAcceptStake] = useState("");
-  const [counterStake, setCounterStake] = useState("");
-  const [counterCreatorStake, setCounterCreatorStake] = useState("");
-  const [counterMsg, setCounterMsg] = useState("");
-  const [showCounter, setShowCounter] = useState(false);
+  const [joinSide, setJoinSide] = useState<"for" | "against">("against");
+  const [joinStake, setJoinStake] = useState("");
   const [loading, setLoading] = useState("");
 
   const fetchData = () => {
@@ -50,50 +47,39 @@ export default function WagerDetailPage() {
   if (!user || !wager) return null;
 
   const isCreator = user.id === wager.creator.id;
-  const isAcceptor = user.id === wager.acceptor?.id;
-  const isParticipant = isCreator || isAcceptor;
+  const myEntry = wager.entries.find((e) => e.userId === user.id);
+  const isParticipant = isCreator || !!myEntry;
   const userVote = wager.votes.find((v) => v.userId === user.id);
-  const creatorVotes = wager.votes.filter((v) => v.choice === "creator").length;
-  const acceptorVotes = wager.votes.filter((v) => v.choice === "acceptor").length;
 
-  const handleAccept = async () => {
-    const stakeNum = parseInt(acceptStake);
+  const forEntries = wager.entries.filter((e) => e.side === "for");
+  const againstEntries = wager.entries.filter((e) => e.side === "against");
+  const forTotal = wager.creatorStake + forEntries.reduce((sum, e) => sum + e.stake, 0);
+  const againstTotal = againstEntries.reduce((sum, e) => sum + e.stake, 0);
+  const totalPool = forTotal + againstTotal;
+
+  const forVotes = wager.votes.filter((v) => v.choice === "for").length;
+  const againstVotes = wager.votes.filter((v) => v.choice === "against").length;
+
+  const handleJoin = async () => {
+    const stakeNum = parseInt(joinStake);
     if (!stakeNum) return;
-    setLoading("accept");
-    await fetch(`/api/wagers/${wager.id}/accept`, {
+    setLoading("join");
+    const res = await fetch(`/api/wagers/${wager.id}/join`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ stake: stakeNum }),
+      body: JSON.stringify({ side: joinSide, stake: stakeNum }),
     });
     setLoading("");
-    fetchData();
+    if (res.ok) { setJoinStake(""); fetchData(); }
+    else { const d = await res.json(); alert(d.error); }
   };
 
-  const handleCounter = async () => {
-    setLoading("counter");
-    await fetch(`/api/wagers/${wager.id}/counter`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        proposedStake: parseInt(counterStake),
-        wantCreatorStake: parseInt(counterCreatorStake),
-        message: counterMsg || undefined,
-      }),
-    });
+  const handleStart = async () => {
+    setLoading("start");
+    const res = await fetch(`/api/wagers/${wager.id}/start`, { method: "POST" });
     setLoading("");
-    setShowCounter(false);
-    fetchData();
-  };
-
-  const handleCounterResponse = async (counterOfferId: number, action: string) => {
-    setLoading(`counter-${counterOfferId}`);
-    await fetch(`/api/wagers/${wager.id}/counter`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ counterOfferId, action }),
-    });
-    setLoading("");
-    fetchData();
+    if (res.ok) fetchData();
+    else { const d = await res.json(); alert(d.error); }
   };
 
   const handleVote = async (choice: string) => {
@@ -114,12 +100,12 @@ export default function WagerDetailPage() {
     fetchData();
   };
 
-  const handleAdminSettle = async (winnerId: number) => {
+  const handleAdminSettle = async (winnerSide: string) => {
     setLoading("settle");
     await fetch(`/api/wagers/${wager.id}/settle`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ winnerId }),
+      body: JSON.stringify({ winnerSide }),
     });
     setLoading("");
     fetchData();
@@ -137,60 +123,102 @@ export default function WagerDetailPage() {
       </header>
 
       <div className="max-w-lg mx-auto px-4 pt-5 space-y-5">
-        {/* Wager header */}
+        {/* Header */}
         <div className="card">
-          <div className="flex items-start justify-between gap-3 mb-3">
+          <div className="flex items-start justify-between gap-3 mb-2">
             <h2 className="text-xl font-bold text-white">{wager.title}</h2>
             <span className={`shrink-0 text-xs px-2.5 py-1 rounded-full font-medium ${getStatusBg(wager.status)}`}>
               {wager.status}
             </span>
           </div>
-          {wager.description && <p className="text-sm text-slate-400 mb-4">{wager.description}</p>}
-
-          {/* Stakes breakdown */}
-          <div className="space-y-2 mb-4">
-            <div className="flex items-center justify-between p-3 rounded-xl bg-violet-500/10">
-              <div>
-                <p className="text-xs text-slate-400">Creator</p>
-                <p className="text-sm font-medium text-violet-300">{wager.creator.username}</p>
-              </div>
-              <div className="text-right">
-                <p className="text-xs text-slate-400">Position &amp; Stake</p>
-                <p className="text-sm text-white">{wager.creatorPosition}</p>
-                <p className="text-sm font-bold text-violet-400">{formatPoints(wager.creatorStake)} pts</p>
-              </div>
-            </div>
-
-            {wager.acceptor && (
-              <div className="flex items-center justify-between p-3 rounded-xl bg-sky-500/10">
-                <div>
-                  <p className="text-xs text-slate-400">Opponent</p>
-                  <p className="text-sm font-medium text-sky-300">{wager.acceptor.username}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs text-slate-400">Stake</p>
-                  <p className="text-sm font-bold text-sky-400">{formatPoints(wager.acceptorStake!)} pts</p>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {wager.acceptor && wager.acceptorStake && (
-            <p className="text-xs text-slate-500 mb-3">
-              Implied odds: {impliedOdds(wager.creatorStake, wager.acceptorStake)}
-              {" | "}Total pool: {formatPoints(wager.creatorStake + wager.acceptorStake)} pts
-            </p>
+          {wager.description && (
+            <p className="text-sm text-slate-400 mb-3">{wager.description}</p>
           )}
-
+          <p className="text-sm text-slate-300 mb-3">
+            <span className="text-violet-400 font-medium">{wager.creator.username}</span> says:{" "}
+            <span className="italic">&quot;{wager.creatorPosition}&quot;</span>
+          </p>
           <p className="text-xs text-slate-500">
             Deadline: {formatDate(wager.deadline)} ({timeUntil(wager.deadline)})
           </p>
         </div>
 
-        {/* ACTIONS — open wager, not creator */}
-        {wager.status === "open" && !isCreator && (
+        {/* Sides breakdown */}
+        <div className="grid grid-cols-2 gap-3">
+          {/* For side */}
+          <div className="card space-y-2">
+            <p className="text-xs font-semibold text-violet-400 uppercase tracking-wide">For</p>
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-violet-300 font-medium">{wager.creator.username}</span>
+                <span className="text-slate-300">{formatPoints(wager.creatorStake)}</span>
+              </div>
+              {forEntries.map((e) => (
+                <div key={e.id} className="flex items-center justify-between text-sm">
+                  <span className="text-slate-300">{e.user.username}</span>
+                  <span className="text-slate-400">{formatPoints(e.stake)}</span>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-violet-400 font-medium pt-1 border-t border-white/5">
+              Total: {formatPoints(forTotal)} pts
+            </p>
+          </div>
+
+          {/* Against side */}
+          <div className="card space-y-2">
+            <p className="text-xs font-semibold text-rose-400 uppercase tracking-wide">Against</p>
+            {againstEntries.length === 0 ? (
+              <p className="text-xs text-slate-500 py-2">Nobody yet</p>
+            ) : (
+              <div className="space-y-1.5">
+                {againstEntries.map((e) => (
+                  <div key={e.id} className="flex items-center justify-between text-sm">
+                    <span className="text-slate-300">{e.user.username}</span>
+                    <span className="text-slate-400">{formatPoints(e.stake)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            <p className="text-xs text-rose-400 font-medium pt-1 border-t border-white/5">
+              Total: {formatPoints(againstTotal)} pts
+            </p>
+          </div>
+        </div>
+
+        <p className="text-center text-xs text-slate-500 -mt-2">
+          Total pool: {formatPoints(totalPool)} pts
+        </p>
+
+        {/* JOIN — open wager, not creator, not already joined */}
+        {wager.status === "open" && !isCreator && !myEntry && (
           <div className="card space-y-4">
-            <h3 className="font-semibold text-white">Take this wager?</h3>
+            <h3 className="font-semibold text-white">Join this wager</h3>
+
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => setJoinSide("for")}
+                className={`p-3 rounded-xl text-sm font-medium transition-all ${
+                  joinSide === "for"
+                    ? "bg-violet-600 text-white ring-2 ring-violet-400"
+                    : "bg-white/5 text-slate-400 hover:text-white"
+                }`}
+              >
+                For
+                <p className="text-xs font-normal opacity-70 mt-0.5">I agree with {wager.creator.username}</p>
+              </button>
+              <button
+                onClick={() => setJoinSide("against")}
+                className={`p-3 rounded-xl text-sm font-medium transition-all ${
+                  joinSide === "against"
+                    ? "bg-rose-600 text-white ring-2 ring-rose-400"
+                    : "bg-white/5 text-slate-400 hover:text-white"
+                }`}
+              >
+                Against
+                <p className="text-xs font-normal opacity-70 mt-0.5">I think they&apos;re wrong</p>
+              </button>
+            </div>
 
             <div>
               <label className="label">Your stake (you have {formatPoints(user.points)} pts)</label>
@@ -198,169 +226,111 @@ export default function WagerDetailPage() {
                 <input
                   type="number"
                   className="input flex-1"
-                  placeholder="Match or set your stake"
+                  placeholder="How many points?"
                   min={1}
                   max={user.points}
-                  value={acceptStake}
-                  onChange={(e) => setAcceptStake(e.target.value)}
+                  value={joinStake}
+                  onChange={(e) => setJoinStake(e.target.value)}
                 />
                 <button
-                  onClick={handleAccept}
-                  disabled={!acceptStake || loading === "accept"}
-                  className="btn-success"
+                  onClick={handleJoin}
+                  disabled={!joinStake || loading === "join"}
+                  className={joinSide === "for" ? "btn-primary" : "btn-danger"}
                 >
-                  {loading === "accept" ? "..." : "Accept"}
+                  {loading === "join" ? "..." : "Join"}
                 </button>
               </div>
             </div>
+          </div>
+        )}
 
-            <div className="text-center text-xs text-slate-500">or</div>
+        {/* Already joined message */}
+        {wager.status === "open" && myEntry && (
+          <div className={`card text-center ${myEntry.side === "for" ? "border-violet-500/30" : "border-rose-500/30"}`}>
+            <p className={`font-medium ${myEntry.side === "for" ? "text-violet-300" : "text-rose-300"}`}>
+              You&apos;re in! ({myEntry.side === "for" ? "For" : "Against"} · {formatPoints(myEntry.stake)} pts)
+            </p>
+            <p className="text-xs text-slate-500 mt-1">Waiting for the creator to start the wager.</p>
+          </div>
+        )}
 
-            {!showCounter ? (
-              <button onClick={() => setShowCounter(true)} className="btn-ghost w-full">
-                Suggest different odds
-              </button>
+        {/* START button — creator/admin only, open status, need at least one against */}
+        {wager.status === "open" && (isCreator || user.isAdmin) && (
+          <div className="card space-y-3">
+            <h3 className="font-semibold text-white">Ready to lock it in?</h3>
+            {againstEntries.length === 0 ? (
+              <p className="text-sm text-slate-500">Need at least one person on the &quot;against&quot; side before you can start.</p>
             ) : (
-              <div className="space-y-3 p-4 rounded-xl bg-white/5">
-                <h4 className="text-sm font-medium text-slate-300">Counter-Offer</h4>
-                <div>
-                  <label className="label">You would stake</label>
-                  <input
-                    type="number"
-                    className="input"
-                    placeholder="Your stake"
-                    min={1}
-                    value={counterStake}
-                    onChange={(e) => setCounterStake(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="label">You want creator to stake</label>
-                  <input
-                    type="number"
-                    className="input"
-                    placeholder="Creator's stake"
-                    min={1}
-                    value={counterCreatorStake}
-                    onChange={(e) => setCounterCreatorStake(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="label">Message (optional)</label>
-                  <input
-                    type="text"
-                    className="input"
-                    placeholder="Why these odds?"
-                    value={counterMsg}
-                    onChange={(e) => setCounterMsg(e.target.value)}
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <button onClick={() => setShowCounter(false)} className="btn-ghost flex-1">Cancel</button>
-                  <button
-                    onClick={handleCounter}
-                    disabled={!counterStake || !counterCreatorStake || loading === "counter"}
-                    className="btn-primary flex-1"
-                  >
-                    {loading === "counter" ? "..." : "Send Offer"}
-                  </button>
-                </div>
-              </div>
+              <>
+                <p className="text-sm text-slate-400">
+                  {1 + forEntries.length} for · {againstEntries.length} against · {formatPoints(totalPool)} pts in the pool
+                </p>
+                <button
+                  onClick={handleStart}
+                  disabled={loading === "start"}
+                  className="btn-success w-full"
+                >
+                  {loading === "start" ? "Starting..." : "Start Wager — Lock It In"}
+                </button>
+              </>
             )}
           </div>
         )}
 
-        {/* Counter-offers (visible to creator) */}
-        {wager.status === "open" && isCreator && wager.counterOffers.filter((c) => c.status === "pending").length > 0 && (
-          <div className="card space-y-3">
-            <h3 className="font-semibold text-white">Counter-Offers</h3>
-            {wager.counterOffers
-              .filter((c) => c.status === "pending")
-              .map((c) => (
-                <div key={c.id} className="p-3 rounded-xl bg-white/5 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-sky-300">{c.user.username}</span>
-                    <span className="text-xs text-slate-500">{formatDate(c.createdAt)}</span>
-                  </div>
-                  <p className="text-sm text-slate-300">
-                    Offers <span className="text-white font-medium">{formatPoints(c.proposedStake)} pts</span>,
-                    wants you to stake <span className="text-white font-medium">{formatPoints(c.wantCreatorStake)} pts</span>
-                  </p>
-                  {c.message && <p className="text-xs text-slate-400 italic">&quot;{c.message}&quot;</p>}
-                  <div className="flex gap-2 pt-1">
-                    <button
-                      onClick={() => handleCounterResponse(c.id, "accept")}
-                      disabled={loading === `counter-${c.id}`}
-                      className="btn-success text-xs flex-1"
-                    >
-                      Accept
-                    </button>
-                    <button
-                      onClick={() => handleCounterResponse(c.id, "reject")}
-                      disabled={loading === `counter-${c.id}`}
-                      className="btn-danger text-xs flex-1"
-                    >
-                      Reject
-                    </button>
-                  </div>
-                </div>
-              ))}
+        {/* Close early — started status, participants/admin */}
+        {wager.status === "started" && (isParticipant || user.isAdmin) && (
+          <div className="card text-center space-y-2">
+            <p className="text-sm text-slate-400">The event is over early?</p>
+            <button
+              onClick={handleCloseEarly}
+              disabled={loading === "close"}
+              className="btn-ghost w-full"
+            >
+              {loading === "close" ? "Closing..." : "Close Early & Start Voting"}
+            </button>
           </div>
         )}
 
-        {/* Close early button */}
-        {wager.status === "accepted" && (isParticipant || user.isAdmin) && (
-          <button
-            onClick={handleCloseEarly}
-            disabled={loading === "close"}
-            className="btn-ghost w-full"
-          >
-            {loading === "close" ? "Closing..." : "Close Early & Start Voting"}
-          </button>
-        )}
-
-        {/* Voting section */}
-        {(wager.status === "voting" || wager.status === "accepted") && wager.acceptor && (
+        {/* Voting */}
+        {wager.status === "voting" && (
           <div className="card space-y-4">
-            <h3 className="font-semibold text-white">Who won?</h3>
+            <h3 className="font-semibold text-white">Vote — who was right?</h3>
             <p className="text-sm text-slate-400">
-              Vote for the winner. Settles when a majority agrees (min 2 votes).
+              Settles automatically once 2+ votes agree on the same side.
             </p>
-
             <div className="grid grid-cols-2 gap-3">
               <button
-                onClick={() => handleVote("creator")}
+                onClick={() => handleVote("for")}
                 disabled={loading === "vote"}
                 className={`p-3 rounded-xl text-center transition-all ${
-                  userVote?.choice === "creator"
+                  userVote?.choice === "for"
                     ? "bg-violet-600 text-white ring-2 ring-violet-400"
                     : "bg-white/5 text-slate-300 hover:bg-white/10"
                 }`}
               >
-                <p className="text-sm font-medium">{wager.creator.username}</p>
-                <p className="text-xs text-slate-400 mt-0.5">{creatorVotes} vote{creatorVotes !== 1 ? "s" : ""}</p>
+                <p className="text-sm font-medium">For wins</p>
+                <p className="text-xs text-slate-400 mt-0.5">{forVotes} vote{forVotes !== 1 ? "s" : ""}</p>
               </button>
               <button
-                onClick={() => handleVote("acceptor")}
+                onClick={() => handleVote("against")}
                 disabled={loading === "vote"}
                 className={`p-3 rounded-xl text-center transition-all ${
-                  userVote?.choice === "acceptor"
-                    ? "bg-sky-600 text-white ring-2 ring-sky-400"
+                  userVote?.choice === "against"
+                    ? "bg-rose-600 text-white ring-2 ring-rose-400"
                     : "bg-white/5 text-slate-300 hover:bg-white/10"
                 }`}
               >
-                <p className="text-sm font-medium">{wager.acceptor.username}</p>
-                <p className="text-xs text-slate-400 mt-0.5">{acceptorVotes} vote{acceptorVotes !== 1 ? "s" : ""}</p>
+                <p className="text-sm font-medium">Against wins</p>
+                <p className="text-xs text-slate-400 mt-0.5">{againstVotes} vote{againstVotes !== 1 ? "s" : ""}</p>
               </button>
             </div>
-
             {wager.votes.length > 0 && (
               <div className="text-xs text-slate-500 space-y-0.5">
                 {wager.votes.map((v) => (
                   <p key={v.id}>
-                    {v.user.username} voted for{" "}
-                    <span className={v.choice === "creator" ? "text-violet-400" : "text-sky-400"}>
-                      {v.choice === "creator" ? wager.creator.username : wager.acceptor!.username}
+                    {v.user.username} →{" "}
+                    <span className={v.choice === "for" ? "text-violet-400" : "text-rose-400"}>
+                      {v.choice}
                     </span>
                   </p>
                 ))}
@@ -370,36 +340,40 @@ export default function WagerDetailPage() {
         )}
 
         {/* Admin settle override */}
-        {user.isAdmin && wager.acceptor && wager.status !== "settled" && wager.status !== "cancelled" && wager.status !== "open" && (
-          <div className="card space-y-3">
-            <h3 className="font-semibold text-amber-400">Admin: Settle Wager</h3>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={() => handleAdminSettle(wager.creator.id)}
-                disabled={loading === "settle"}
-                className="btn-primary"
-              >
-                {wager.creator.username} wins
-              </button>
-              <button
-                onClick={() => handleAdminSettle(wager.acceptor!.id)}
-                disabled={loading === "settle"}
-                className="btn-success"
-              >
-                {wager.acceptor!.username} wins
-              </button>
+        {user.isAdmin &&
+          wager.status !== "settled" &&
+          wager.status !== "cancelled" &&
+          wager.status !== "open" &&
+          againstEntries.length > 0 && (
+            <div className="card space-y-3">
+              <h3 className="font-semibold text-amber-400">Admin: Force Settle</h3>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => handleAdminSettle("for")}
+                  disabled={loading === "settle"}
+                  className="btn-primary"
+                >
+                  For side wins
+                </button>
+                <button
+                  onClick={() => handleAdminSettle("against")}
+                  disabled={loading === "settle"}
+                  className="btn-danger"
+                >
+                  Against side wins
+                </button>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
         {/* Settled result */}
         {wager.status === "settled" && (
-          <div className="card text-center space-y-2">
-            <p className="text-emerald-400 font-bold text-lg">
-              {wager.winnerId === wager.creator.id ? wager.creator.username : wager.acceptor?.username} won!
+          <div className="card text-center space-y-3">
+            <p className={`font-bold text-lg ${wager.winnerSide === "for" ? "text-violet-300" : "text-rose-300"}`}>
+              {wager.winnerSide === "for" ? "For" : "Against"} side won!
             </p>
             <p className="text-sm text-slate-400">
-              Won {formatPoints(wager.creatorStake + (wager.acceptorStake || 0))} pts
+              Total pool of {formatPoints(totalPool)} pts distributed to winners
               {" "}(settled by {wager.settledBy})
             </p>
             {wager.settledAt && (

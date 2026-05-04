@@ -49,7 +49,7 @@ export function getStatusBg(status: string): string {
   switch (status) {
     case "open":
       return "bg-violet-500/20 text-violet-300";
-    case "accepted":
+    case "started":
       return "bg-sky-500/20 text-sky-300";
     case "voting":
       return "bg-amber-500/20 text-amber-300";

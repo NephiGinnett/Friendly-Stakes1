@@ -12,11 +12,11 @@ export async function POST(
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
-    const { choice } = await req.json(); // "creator" or "acceptor"
+    const { choice } = await req.json(); // "for" or "against"
     const wagerId = parseInt(params.id);
 
-    if (choice !== "creator" && choice !== "acceptor") {
-      return NextResponse.json({ error: "Choice must be 'creator' or 'acceptor'" }, { status: 400 });
+    if (choice !== "for" && choice !== "against") {
+      return NextResponse.json({ error: "Choice must be 'for' or 'against'" }, { status: 400 });
     }
 
     const wager = await prisma.wager.findUnique({
@@ -25,29 +25,26 @@ export async function POST(
     });
 
     if (!wager) return NextResponse.json({ error: "Wager not found" }, { status: 404 });
-    if (wager.status !== "voting" && wager.status !== "accepted") {
+    if (wager.status !== "voting") {
       return NextResponse.json({ error: "Wager is not open for voting" }, { status: 400 });
     }
 
-    // Create or update vote
     await prisma.vote.upsert({
       where: { wagerId_userId: { wagerId, userId: user.id } },
       create: { wagerId, userId: user.id, choice },
       update: { choice },
     });
 
-    // Check if auto-settle is possible
     const allVotes = await prisma.vote.findMany({ where: { wagerId } });
 
     if (allVotes.length >= MIN_VOTES_TO_SETTLE) {
-      const creatorVotes = allVotes.filter((v) => v.choice === "creator").length;
-      const acceptorVotes = allVotes.filter((v) => v.choice === "acceptor").length;
+      const forVotes = allVotes.filter((v) => v.choice === "for").length;
+      const againstVotes = allVotes.filter((v) => v.choice === "against").length;
 
-      // Need a clear majority
-      if (creatorVotes > acceptorVotes && creatorVotes > allVotes.length / 2) {
-        await settleWager(wager, wager.creatorId, "vote");
-      } else if (acceptorVotes > creatorVotes && acceptorVotes > allVotes.length / 2) {
-        await settleWager(wager, wager.acceptorId!, "vote");
+      if (forVotes > againstVotes && forVotes > allVotes.length / 2) {
+        await settleWager(wagerId, "for", "vote");
+      } else if (againstVotes > forVotes && againstVotes > allVotes.length / 2) {
+        await settleWager(wagerId, "against", "vote");
       }
     }
 
@@ -57,26 +54,51 @@ export async function POST(
   }
 }
 
-async function settleWager(
-  wager: { id: number; creatorId: number; creatorStake: number; acceptorId: number | null; acceptorStake: number | null },
-  winnerId: number,
-  method: string
-) {
-  const totalPool = wager.creatorStake + (wager.acceptorStake || 0);
+export async function settleWager(wagerId: number, winnerSide: string, method: string) {
+  const wager = await prisma.wager.findUnique({
+    where: { id: wagerId },
+    include: { entries: true },
+  });
+  if (!wager) return;
+
+  const totalPool =
+    wager.creatorStake + wager.entries.reduce((sum, e) => sum + e.stake, 0);
+
+  // Build winners list
+  const winners: { userId: number; stake: number }[] = [];
+  if (winnerSide === "for") {
+    winners.push({ userId: wager.creatorId, stake: wager.creatorStake });
+    wager.entries
+      .filter((e) => e.side === "for")
+      .forEach((e) => winners.push({ userId: e.userId, stake: e.stake }));
+  } else {
+    wager.entries
+      .filter((e) => e.side === "against")
+      .forEach((e) => winners.push({ userId: e.userId, stake: e.stake }));
+  }
+
+  if (winners.length === 0) return;
+
+  const winnerTotalStake = winners.reduce((sum, w) => sum + w.stake, 0);
+  const payouts = winners.map((w) => ({
+    userId: w.userId,
+    amount: Math.floor((w.stake / winnerTotalStake) * totalPool),
+  }));
+
+  // Give any rounding remainder to the first winner
+  const distributed = payouts.reduce((sum, p) => sum + p.amount, 0);
+  payouts[0].amount += totalPool - distributed;
 
   await prisma.$transaction([
     prisma.wager.update({
-      where: { id: wager.id },
-      data: {
-        status: "settled",
-        winnerId,
-        settledAt: new Date(),
-        settledBy: method,
-      },
+      where: { id: wagerId },
+      data: { status: "settled", winnerSide, settledAt: new Date(), settledBy: method },
     }),
-    prisma.user.update({
-      where: { id: winnerId },
-      data: { points: { increment: totalPool } },
-    }),
+    ...payouts.map((p) =>
+      prisma.user.update({
+        where: { id: p.userId },
+        data: { points: { increment: p.amount } },
+      })
+    ),
   ]);
 }
