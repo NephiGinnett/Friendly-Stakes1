@@ -86,11 +86,28 @@ Since your friends need to access this away from home, you'll want to deploy it.
 
 ### Option A: Railway (recommended for SQLite)
 
-1. Push this project to a GitHub repo
-2. Go to [railway.app](https://railway.app) and sign in with GitHub
-3. Click "New Project" → "Deploy from GitHub repo"
-4. It auto-detects Next.js — just deploy!
-5. Railway gives you a public URL your friends can use
+Railway needs two things to work correctly: a **Volume** (so your database isn't wiped on redeploy) and a **DATABASE_URL** env variable pointing to it.
+
+**Step 1 — Add a Volume for persistent storage**
+1. In your Railway project dashboard, click your service
+2. Go to **Settings** → **Volumes** → **Add Volume**
+3. Set the mount path to `/data`
+4. Save
+
+**Step 2 — Set the DATABASE_URL environment variable**
+1. Go to your service → **Variables**
+2. Add a new variable:
+   - Key: `DATABASE_URL`
+   - Value: `file:/data/prod.db`
+3. Save (Railway will redeploy automatically)
+
+**Step 3 — Redeploy**
+After setting the variable, Railway will rebuild and deploy. The build now automatically:
+- Generates the Prisma client
+- Creates the database
+- Seeds your admin account (`zoe` / `0000`)
+
+Your public URL will work as soon as the deploy finishes!
 
 ### Option B: Vercel + Hosted Database
 
