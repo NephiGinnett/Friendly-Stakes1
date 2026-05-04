@@ -16,11 +16,10 @@ model User {
   isAdmin   Boolean   @default(false)
   createdAt DateTime  @default(now())
 
-  sessions       Session[]
-  createdWagers  Wager[]        @relation("creator")
-  wagerEntries   WagerEntry[]
-  counterOffers  CounterOffer[]
-  votes          Vote[]
+  sessions      Session[]
+  createdWagers Wager[]      @relation("creator")
+  wagerEntries  WagerEntry[]
+  votes         Vote[]
 }
 
 model Session {
@@ -46,10 +45,9 @@ model Wager {
   settledAt  DateTime?
   settledBy  String?  // "vote" or "admin"
 
-  createdAt     DateTime       @default(now())
-  entries       WagerEntry[]
-  counterOffers CounterOffer[]
-  votes         Vote[]
+  createdAt DateTime     @default(now())
+  entries   WagerEntry[]
+  votes     Vote[]
 }
 
 // Each person who joins a wager (besides the creator, who is implicit "for")
@@ -64,19 +62,6 @@ model WagerEntry {
   createdAt DateTime @default(now())
 
   @@unique([wagerId, userId])
-}
-
-model CounterOffer {
-  id               Int      @id @default(autoincrement())
-  wagerId          Int
-  wager            Wager    @relation(fields: [wagerId], references: [id])
-  userId           Int
-  user             User     @relation(fields: [userId], references: [id])
-  proposedStake    Int
-  wantCreatorStake Int
-  message          String?
-  status           String   @default("pending") // pending, accepted, rejected
-  createdAt        DateTime @default(now())
 }
 
 model Vote {
