@@ -5,11 +5,11 @@ import { hashPin, createSession, setSessionCookie } from "@/lib/auth";
 // ── Edit this list to control who can sign up ──────────────────────────────
 const ALLOWED_USERNAMES = [
   "nephi",
-  // Add your friends' names below (all lowercase):
-  // "dave",
-  // "sam",
-  // "taylor",
-  // "jordan",
+  "cj",
+  "marcel",
+  "vaughn",
+  "scott",
+  "kyle",
 ];
 // ───────────────────────────────────────────────────────────────────────────
 

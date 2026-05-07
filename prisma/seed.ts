@@ -15,7 +15,7 @@ async function main() {
   const adminPin = hashPin("0000");
   await prisma.user.upsert({
     where: { username: "nephi" },
-    update: {},
+    update: { isAdmin: true },
     create: {
       username: "nephi",
       pinHash: adminPin.hash,
