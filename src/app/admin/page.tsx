@@ -26,6 +26,11 @@ export default function AdminPage() {
   const [addItemsMsg, setAddItemsMsg] = useState("");
   const [approvingId, setApprovingId] = useState<number | null>(null);
 
+  // Restart state
+  const [confirmRestart, setConfirmRestart] = useState(false);
+  const [restarting, setRestarting] = useState(false);
+  const [restartResult, setRestartResult] = useState<{ filename: string; snapshot: string[] } | null>(null);
+
   const fetchAll = () => {
     fetch("/api/admin/users").then((r) => r.ok ? r.json() : []).then(setUsers);
     fetch("/api/admin/bingo/claims").then((r) => r.ok ? r.json() : []).then(setClaims);
@@ -90,6 +95,19 @@ export default function AdminPage() {
       fetchAll();
     } else {
       setAddItemsMsg(data.error ?? "Something went wrong.");
+    }
+  };
+
+  const restartGame = async () => {
+    setRestarting(true);
+    setRestartResult(null);
+    const res = await fetch("/api/admin/restart", { method: "POST" });
+    const data = await res.json();
+    setRestarting(false);
+    setConfirmRestart(false);
+    if (res.ok) {
+      setRestartResult({ filename: data.filename, snapshot: data.snapshot });
+      fetchAll();
     }
   };
 
@@ -236,6 +254,58 @@ export default function AdminPage() {
               </div>
             </div>
           ))}
+        </section>
+
+        {/* ── Restart Game ── */}
+        <section className="space-y-3 pb-4">
+          <h2 className="font-semibold text-white">🔄 Restart Game</h2>
+
+          {restartResult ? (
+            <div className="card space-y-3 border-emerald-500/30 bg-emerald-500/5">
+              <p className="text-emerald-400 font-semibold">Game restarted! Record saved.</p>
+              <p className="text-xs text-slate-500 font-mono">{restartResult.filename}</p>
+              <div className="bg-black/30 rounded-lg p-3 max-h-48 overflow-y-auto">
+                {restartResult.snapshot.map((line, i) => (
+                  <p key={i} className="text-xs font-mono text-slate-300 leading-relaxed">{line || "\u00A0"}</p>
+                ))}
+              </div>
+              <button onClick={() => setRestartResult(null)} className="text-xs text-slate-500 hover:text-slate-300">
+                Dismiss
+              </button>
+            </div>
+          ) : !confirmRestart ? (
+            <div className="card space-y-3">
+              <p className="text-sm text-slate-400">
+                Saves a record of current point totals, then resets all players to 1,000 pts and clears all wagers, items, achievements, and bingo cards. Bingo items pool is kept.
+              </p>
+              <button
+                onClick={() => setConfirmRestart(true)}
+                className="w-full px-4 py-2.5 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 transition-colors font-semibold text-sm"
+              >
+                Restart Game Instance
+              </button>
+            </div>
+          ) : (
+            <div className="card space-y-3 border-red-500/30 bg-red-500/5">
+              <p className="font-semibold text-red-400">Are you sure? This cannot be undone.</p>
+              <p className="text-sm text-slate-400">All points, wagers, items, and achievements will be reset. A record file will be saved first.</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={restartGame}
+                  disabled={restarting}
+                  className="flex-1 px-4 py-2.5 rounded-xl bg-red-500/20 text-red-300 hover:bg-red-500/30 border border-red-500/30 transition-colors font-semibold text-sm"
+                >
+                  {restarting ? "Resetting..." : "Yes, restart"}
+                </button>
+                <button
+                  onClick={() => setConfirmRestart(false)}
+                  className="flex-1 px-4 py-2.5 rounded-xl bg-white/5 text-slate-400 hover:bg-white/10 border border-white/10 transition-colors text-sm"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
         </section>
       </div>
 

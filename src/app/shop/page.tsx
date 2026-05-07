@@ -9,7 +9,7 @@ import { SHOP_ITEMS, EARLYBIRD_TIERS, EARLYBIRD_TOTAL } from "@/lib/shop";
 
 type User = { id: number; username: string; points: number; isAdmin: boolean };
 type OwnedItem = { id: number; itemType: string; usesLeft: number };
-type EarlybirdStatus = { purchased: number; remaining: number; nextTier: number | null };
+type EarlybirdStatus = { purchased: number; remaining: number; nextTier: number | null; userClaimed: number };
 type AllUsers = { id: number; username: string }[];
 
 export default function ShopPage() {
@@ -20,6 +20,7 @@ export default function ShopPage() {
     purchased: 0,
     remaining: EARLYBIRD_TOTAL,
     nextTier: EARLYBIRD_TIERS[0],
+    userClaimed: 0,
   });
   const [allUsers, setAllUsers] = useState<AllUsers>([]);
   const [xrayTarget, setXrayTarget] = useState("");
@@ -187,11 +188,12 @@ export default function ShopPage() {
               Numbers shown are ×100 pts (e.g. 15 = 1,500 pts)
             </p>
 
-            {claimedEarlybird ? (
-              <div className="bg-amber-500/10 text-amber-300 text-sm px-3 py-2 rounded-xl text-center">
-                ⭐ You claimed your Early Adopter slot!
+            {earlybird.userClaimed > 0 && (
+              <div className="bg-amber-500/10 text-amber-300 text-xs px-3 py-1.5 rounded-xl text-center">
+                ⭐ You&apos;ve claimed {earlybird.userClaimed} slot{earlybird.userClaimed !== 1 ? "s" : ""} so far
               </div>
-            ) : earlybird.remaining === 0 ? (
+            )}
+            {earlybird.remaining === 0 ? (
               <div className="bg-slate-500/10 text-slate-500 text-sm px-3 py-2 rounded-xl text-center">
                 All slots claimed!
               </div>
