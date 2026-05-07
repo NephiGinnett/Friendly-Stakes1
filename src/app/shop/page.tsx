@@ -24,7 +24,7 @@ export default function ShopPage() {
   });
   const [allUsers, setAllUsers] = useState<AllUsers>([]);
   const [xrayTarget, setXrayTarget] = useState("");
-  const [xrayResult, setXrayResult] = useState<string | null>(null);
+  const [xrayPeeks, setXrayPeeks] = useState<Record<string, string>>({});
   const [newPin, setNewPin] = useState("");
   const [pinResetMsg, setPinResetMsg] = useState("");
   const [donateTarget, setDonateTarget] = useState("");
@@ -44,6 +44,13 @@ export default function ShopPage() {
     fetch("/api/admin/users").then((r) => r.ok ? r.json() : []).then(setAllUsers);
     fetch("/api/shop/becou-users").then((r) => r.ok ? r.json() : []).then(setBecouUsers);
   };
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("xray_peeks");
+      if (saved) setXrayPeeks(JSON.parse(saved));
+    } catch { /* ignore */ }
+  }, []);
 
   useEffect(() => {
     fetch("/api/auth/me")
@@ -85,7 +92,6 @@ export default function ShopPage() {
   const useXray = async () => {
     if (!xrayTarget) return;
     setLoading("xray");
-    setXrayResult(null);
     setMessage("");
     const res = await fetch("/api/shop/use/xray", {
       method: "POST",
@@ -95,7 +101,9 @@ export default function ShopPage() {
     const data = await res.json();
     setLoading("");
     if (res.ok) {
-      setXrayResult(data.pin);
+      const updated = { ...xrayPeeks, [xrayTarget]: data.pin };
+      setXrayPeeks(updated);
+      try { localStorage.setItem("xray_peeks", JSON.stringify(updated)); } catch { /* ignore */ }
       fetchData();
     } else {
       setMessage(data.error);
@@ -299,42 +307,53 @@ export default function ShopPage() {
         </div>
 
         {/* Inventory — active use panels */}
-        {(ownedXray || ownedThumb || ownedPinreset || ownedStsins) && (
+        {(ownedXray || ownedThumb || ownedPinreset || ownedStsins || Object.keys(xrayPeeks).length > 0) && (
           <>
             <h2 className="font-semibold text-slate-400 text-sm uppercase tracking-wide pt-2">Use Your Items</h2>
 
-            {ownedXray && ownedXray.usesLeft > 0 && (
+            {ownedXray && (
               <div className="card space-y-3">
-                <p className="font-semibold text-white">👁️ Use X-Ray Vision</p>
-                <p className="text-sm text-slate-400">Pick a player to peek at their PIN. Uses your one charge.</p>
-                <div className="flex gap-2">
-                  <select
-                    className="input flex-1"
-                    value={xrayTarget}
-                    onChange={(e) => { setXrayTarget(e.target.value); setXrayResult(null); }}
-                  >
-                    <option value="">Select a player...</option>
-                    {allUsers
-                      .filter((u) => u.username !== user.username)
-                      .map((u) => (
-                        <option key={u.id} value={u.username}>{u.username}</option>
-                      ))}
-                  </select>
-                  <button
-                    onClick={useXray}
-                    disabled={!xrayTarget || loading === "xray"}
-                    className="btn-primary"
-                  >
-                    {loading === "xray" ? "..." : "Peek"}
-                  </button>
-                </div>
+                <p className="font-semibold text-white">👁️ X-Ray Vision</p>
 
-                {xrayResult && (
-                  <div className="bg-violet-500/20 border border-violet-500/30 rounded-xl p-4 text-center space-y-1">
-                    <p className="text-xs text-slate-400">{xrayTarget}&apos;s PIN is</p>
-                    <p className="text-4xl font-bold tracking-[0.3em] text-violet-300">{xrayResult}</p>
-                    <p className="text-xs text-slate-500">Use it wisely... 😈</p>
+                {/* Saved peeks — always visible */}
+                {Object.keys(xrayPeeks).length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-xs text-slate-500 uppercase tracking-wide">Peeked PINs</p>
+                    {Object.entries(xrayPeeks).map(([username, pin]) => (
+                      <div key={username} className="bg-violet-500/10 border border-violet-500/20 rounded-xl px-4 py-3 flex items-center justify-between">
+                        <p className="text-sm text-slate-400">{username}</p>
+                        <p className="text-2xl font-bold tracking-[0.25em] text-violet-300">{pin}</p>
+                      </div>
+                    ))}
                   </div>
+                )}
+
+                {/* Use panel — only when charge remains */}
+                {ownedXray.usesLeft > 0 && (
+                  <>
+                    <p className="text-sm text-slate-400">Pick a player to peek at their PIN. Uses your one charge.</p>
+                    <div className="flex gap-2">
+                      <select
+                        className="input flex-1"
+                        value={xrayTarget}
+                        onChange={(e) => setXrayTarget(e.target.value)}
+                      >
+                        <option value="">Select a player...</option>
+                        {allUsers
+                          .filter((u) => u.username !== user.username)
+                          .map((u) => (
+                            <option key={u.id} value={u.username}>{u.username}</option>
+                          ))}
+                      </select>
+                      <button
+                        onClick={useXray}
+                        disabled={!xrayTarget || loading === "xray"}
+                        className="btn-primary"
+                      >
+                        {loading === "xray" ? "..." : "Peek"}
+                      </button>
+                    </div>
+                  </>
                 )}
               </div>
             )}

@@ -276,7 +276,7 @@ export default function AdminPage() {
           ) : !confirmRestart ? (
             <div className="card space-y-3">
               <p className="text-sm text-slate-400">
-                Saves a record of current point totals, then resets all players to 1,000 pts and clears all wagers, items, achievements, and bingo cards. Bingo items pool is kept.
+                Saves a record of current point totals, then deletes all accounts and gameplay data. The nephi admin account is recreated fresh with PIN 0000. Everyone must re-register. Bingo items pool is kept.
               </p>
               <button
                 onClick={() => setConfirmRestart(true)}
@@ -288,7 +288,7 @@ export default function AdminPage() {
           ) : (
             <div className="card space-y-3 border-red-500/30 bg-red-500/5">
               <p className="font-semibold text-red-400">Are you sure? This cannot be undone.</p>
-              <p className="text-sm text-slate-400">All points, wagers, items, and achievements will be reset. A record file will be saved first.</p>
+              <p className="text-sm text-slate-400">All accounts deleted. nephi recreated with PIN 0000. Everyone re-registers. Record saved first.</p>
               <div className="flex gap-2">
                 <button
                   onClick={restartGame}

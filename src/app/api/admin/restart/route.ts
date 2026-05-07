@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import { hashPin } from "@/lib/auth";
 import fs from "fs";
 import path from "path";
 
@@ -43,19 +44,31 @@ export async function POST() {
     fs.writeFileSync(path.join(recordsDir, filename), lines.join("\n"), "utf8");
 
     // ── Reset the game ──────────────────────────────────────────────────────
+    // Delete everything in FK order, including all user accounts.
+    // Then immediately recreate the nephi admin so the app stays usable.
     await prisma.$transaction([
-      // Clear all gameplay data
       prisma.vote.deleteMany(),
       prisma.wagerEntry.deleteMany(),
       prisma.wager.deleteMany(),
       prisma.bingoSquare.deleteMany(),
       prisma.userItem.deleteMany(),
       prisma.userAchievement.deleteMany(),
-      // Reset all users to 1000 points, clear donation totals
-      prisma.user.updateMany({
-        data: { points: 1000, totalDonated: 0 },
-      }),
+      prisma.session.deleteMany(),
+      prisma.user.deleteMany(),
     ]);
+
+    // Recreate admin account fresh with PIN 0000
+    const { hash, salt } = hashPin("0000");
+    await prisma.user.create({
+      data: {
+        username: "nephi",
+        pinHash: hash,
+        pinSalt: salt,
+        pinPlain: "0000",
+        points: 1000,
+        isAdmin: true,
+      },
+    });
 
     return NextResponse.json({ ok: true, filename, snapshot: lines });
   } catch (e) {
