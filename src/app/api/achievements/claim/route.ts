@@ -1,0 +1,83 @@
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
+import { getCurrentUser } from "@/lib/auth";
+import { ACHIEVEMENTS, AchievementId } from "@/lib/achievements";
+
+export async function POST(req: Request) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  try {
+    const { achievementId } = await req.json();
+
+    const achievement = ACHIEVEMENTS[achievementId as AchievementId];
+    if (!achievement) {
+      return NextResponse.json({ error: "Unknown achievement" }, { status: 400 });
+    }
+
+    const record = await prisma.userAchievement.findUnique({
+      where: { userId_achievementId: { userId: user.id, achievementId } },
+    });
+
+    if (!record) {
+      return NextResponse.json({ error: "You haven't unlocked this achievement yet" }, { status: 403 });
+    }
+    if (record.claimed) {
+      return NextResponse.json({ error: "Already claimed!" }, { status: 409 });
+    }
+
+    if (achievement.rewardType === "item") {
+      await prisma.$transaction(async (tx) => {
+        await tx.userAchievement.update({
+          where: { userId_achievementId: { userId: user.id, achievementId } },
+          data: { claimed: true },
+        });
+        await tx.userItem.create({
+          data: {
+            userId: user.id,
+            itemType: (achievement as { rewardItem: string }).rewardItem,
+            usesLeft: (achievement as { rewardItemUses: number }).rewardItemUses,
+          },
+        });
+      });
+
+      const currentUser = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: { points: true },
+      });
+
+      return NextResponse.json({
+        ok: true,
+        newPoints: currentUser!.points,
+        rewardType: "item",
+        rewardLabel: achievement.reward,
+      });
+    }
+
+    const pointsData =
+      achievement.rewardType === "swap"
+        ? { points: achievement.rewardPoints }
+        : { points: { increment: achievement.rewardPoints } };
+
+    const updatedUser = await prisma.$transaction(async (tx) => {
+      await tx.userAchievement.update({
+        where: { userId_achievementId: { userId: user.id, achievementId } },
+        data: { claimed: true },
+      });
+      return tx.user.update({
+        where: { id: user.id },
+        data: pointsData,
+        select: { points: true },
+      });
+    });
+
+    return NextResponse.json({
+      ok: true,
+      newPoints: updatedUser.points,
+      rewardType: achievement.rewardType,
+      rewardPoints: achievement.rewardPoints,
+    });
+  } catch {
+    return NextResponse.json({ error: "Something went wrong" }, { status: 500 });
+  }
+}

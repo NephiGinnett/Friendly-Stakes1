@@ -32,7 +32,7 @@ export function getStatusColor(status: string): string {
   switch (status) {
     case "open":
       return "text-violet-400";
-    case "accepted":
+    case "started":
       return "text-sky-400";
     case "voting":
       return "text-amber-400";
@@ -49,7 +49,7 @@ export function getStatusBg(status: string): string {
   switch (status) {
     case "open":
       return "bg-violet-500/20 text-violet-300";
-    case "accepted":
+    case "started":
       return "bg-sky-500/20 text-sky-300";
     case "voting":
       return "bg-amber-500/20 text-amber-300";
@@ -62,9 +62,3 @@ export function getStatusBg(status: string): string {
   }
 }
 
-export function impliedOdds(stake1: number, stake2: number): string {
-  if (stake1 === stake2) return "Even";
-  const ratio = Math.max(stake1, stake2) / Math.min(stake1, stake2);
-  if (stake1 > stake2) return `${ratio.toFixed(1)}:1 (creator favored)`;
-  return `${ratio.toFixed(1)}:1 (acceptor favored)`;
-}

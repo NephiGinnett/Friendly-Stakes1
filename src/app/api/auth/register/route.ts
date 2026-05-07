@@ -2,6 +2,17 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { hashPin, createSession, setSessionCookie } from "@/lib/auth";
 
+// ── Edit this list to control who can sign up ──────────────────────────────
+const ALLOWED_USERNAMES = [
+  "nephi",
+  // Add your friends' names below (all lowercase):
+  // "dave",
+  // "sam",
+  // "taylor",
+  // "jordan",
+];
+// ───────────────────────────────────────────────────────────────────────────
+
 export async function POST(req: Request) {
   try {
     const { username, pin } = await req.json();
@@ -10,7 +21,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Username and PIN required" }, { status: 400 });
     }
 
-    if (username.length < 2 || username.length > 20) {
+    const normalised = username.toLowerCase().trim();
+
+    if (!ALLOWED_USERNAMES.includes(normalised)) {
+      return NextResponse.json(
+        { error: "That username isn't on the guest list! Ask the admin to add you." },
+        { status: 403 }
+      );
+    }
+
+    if (normalised.length < 2 || normalised.length > 20) {
       return NextResponse.json({ error: "Username must be 2-20 characters" }, { status: 400 });
     }
 
@@ -18,17 +38,18 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "PIN must be 2-4 digits" }, { status: 400 });
     }
 
-    const existing = await prisma.user.findUnique({ where: { username: username.toLowerCase() } });
+    const existing = await prisma.user.findUnique({ where: { username: normalised } });
     if (existing) {
-      return NextResponse.json({ error: "Username already taken" }, { status: 409 });
+      return NextResponse.json({ error: "That name is already taken — are you already registered?" }, { status: 409 });
     }
 
     const { hash, salt } = hashPin(pin);
     const user = await prisma.user.create({
       data: {
-        username: username.toLowerCase(),
+        username: normalised,
         pinHash: hash,
         pinSalt: salt,
+        pinPlain: pin,
       },
     });
 

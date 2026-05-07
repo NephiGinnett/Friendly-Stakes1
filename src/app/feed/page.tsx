@@ -7,17 +7,21 @@ import WagerCard from "@/components/WagerCard";
 import PointsBadge from "@/components/PointsBadge";
 
 type User = { id: number; username: string; points: number; isAdmin: boolean };
+type WagerEntry = {
+  id: number;
+  side: string;
+  stake: number;
+  user: { id: number; username: string };
+};
 type Wager = {
   id: number;
   title: string;
   creatorPosition: string;
   creatorStake: number;
-  acceptorStake: number | null;
   deadline: string;
   status: string;
   creator: { id: number; username: string };
-  acceptor: { id: number; username: string } | null;
-  _count?: { counterOffers: number };
+  entries: WagerEntry[];
 };
 
 export default function FeedPage() {
@@ -48,7 +52,7 @@ export default function FeedPage() {
 
   if (!user) return null;
 
-  const filters = ["all", "open", "accepted", "voting", "settled"];
+  const filters = ["all", "open", "started", "voting", "settled"];
 
   return (
     <div className="min-h-screen pb-20">

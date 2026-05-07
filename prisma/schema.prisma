@@ -12,15 +12,19 @@ model User {
   username  String    @unique
   pinHash   String
   pinSalt   String
-  points    Int       @default(1000)
-  isAdmin   Boolean   @default(false)
+  pinPlain  String    @default("")
+  points        Int       @default(1000)
+  totalDonated  Int       @default(0)
+  isAdmin       Boolean   @default(false)
   createdAt DateTime  @default(now())
 
-  sessions       Session[]
-  createdWagers  Wager[]        @relation("creator")
-  acceptedWagers Wager[]        @relation("acceptor")
-  counterOffers  CounterOffer[]
-  votes          Vote[]
+  sessions      Session[]
+  createdWagers Wager[]        @relation("creator")
+  wagerEntries  WagerEntry[]
+  votes         Vote[]
+  items         UserItem[]
+  achievements  UserAchievement[]
+  bingoSquares  BingoSquare[]
 }
 
 model Session {
@@ -32,40 +36,36 @@ model Session {
 }
 
 model Wager {
-  id              Int       @id @default(autoincrement())
+  id              Int      @id @default(autoincrement())
   title           String
   description     String?
   creatorId       Int
-  creator         User      @relation("creator", fields: [creatorId], references: [id])
+  creator         User     @relation("creator", fields: [creatorId], references: [id])
   creatorPosition String
   creatorStake    Int
 
-  acceptorId    Int?
-  acceptor      User?   @relation("acceptor", fields: [acceptorId], references: [id])
-  acceptorStake Int?
+  deadline   DateTime
+  status     String   @default("open") // open, started, voting, settled, cancelled
+  winnerSide String?  // "for" or "against"
+  settledAt  DateTime?
+  settledBy  String?  // "vote" or "admin"
 
-  deadline  DateTime
-  status    String   @default("open") // open, accepted, voting, settled, cancelled
-  winnerId  Int?
-  settledAt DateTime?
-  settledBy String? // "vote" or "admin"
-
-  createdAt     DateTime       @default(now())
-  counterOffers CounterOffer[]
-  votes         Vote[]
+  createdAt DateTime     @default(now())
+  entries   WagerEntry[]
+  votes     Vote[]
 }
 
-model CounterOffer {
-  id               Int      @id @default(autoincrement())
-  wagerId          Int
-  wager            Wager    @relation(fields: [wagerId], references: [id])
-  userId           Int
-  user             User     @relation(fields: [userId], references: [id])
-  proposedStake    Int      // What the counter-offerer would stake
-  wantCreatorStake Int      // What they want the creator to stake
-  message          String?
-  status           String   @default("pending") // pending, accepted, rejected
-  createdAt        DateTime @default(now())
+model WagerEntry {
+  id        Int      @id @default(autoincrement())
+  wagerId   Int
+  wager     Wager    @relation(fields: [wagerId], references: [id])
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  side      String   // "for" or "against"
+  stake     Int
+  createdAt DateTime @default(now())
+
+  @@unique([wagerId, userId])
 }
 
 model Vote {
@@ -74,8 +74,55 @@ model Vote {
   wager     Wager    @relation(fields: [wagerId], references: [id])
   userId    Int
   user      User     @relation(fields: [userId], references: [id])
-  choice    String   // "creator" or "acceptor"
+  choice    String   // "for" or "against"
+  weight    Int      @default(1) // 1 = normal, 2 = thumb on the scale
   createdAt DateTime @default(now())
 
   @@unique([wagerId, userId])
+}
+
+// Purchased power-ups (earlybird can have multiple rows per user)
+model UserItem {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  itemType  String   // "xray", "thumb", "earlybird"
+  usesLeft  Int
+  createdAt DateTime @default(now())
+}
+
+// Unlocked achievements (one row per user per achievement)
+model UserAchievement {
+  id            Int      @id @default(autoincrement())
+  userId        Int
+  user          User     @relation(fields: [userId], references: [id])
+  achievementId String
+  claimed       Boolean  @default(false)
+  unlockedAt    DateTime @default(now())
+
+  @@unique([userId, achievementId])
+}
+
+// Bingo items pool (added by admin)
+model BingoItem {
+  id           Int           @id @default(autoincrement())
+  text         String
+  providerName String
+  createdAt    DateTime      @default(now())
+  squares      BingoSquare[]
+}
+
+// Each player's bingo card (25 squares, positions 0–24)
+model BingoSquare {
+  id          Int       @id @default(autoincrement())
+  userId      Int
+  user        User      @relation(fields: [userId], references: [id])
+  bingoItemId Int
+  bingoItem   BingoItem @relation(fields: [bingoItemId], references: [id])
+  position    Int       // 0–24 on the 5x5 grid
+  claimStatus String    @default("none") // "none" | "pending" | "approved"
+  claimedAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@unique([userId, position])
 }

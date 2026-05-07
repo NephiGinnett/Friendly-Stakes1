@@ -5,19 +5,12 @@ import { getCurrentUser } from "@/lib/auth";
 export async function GET() {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (!user.isAdmin) return NextResponse.json({ error: "Admin only" }, { status: 403 });
 
-  const users = await prisma.user.findMany({
-    select: {
-      id: true,
-      username: true,
-      points: true,
-      isAdmin: true,
-      createdAt: true,
-      pinPlain: true,
-    },
-    orderBy: { createdAt: "asc" },
+  const items = await prisma.userItem.findMany({
+    where: { itemType: "becou" },
+    include: { user: { select: { id: true, username: true } } },
   });
 
+  const users = items.map((i) => ({ id: i.user.id, username: i.user.username }));
   return NextResponse.json(users);
 }
