@@ -37,3 +37,17 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Something went wrong" }, { status: 500 });
   }
 }
+
+export async function DELETE() {
+  const user = await getCurrentUser();
+  if (!user?.isAdmin) return NextResponse.json({ error: "Admin only" }, { status: 403 });
+
+  try {
+    // Must delete all bingo squares first (they reference bingo items)
+    await prisma.bingoSquare.deleteMany();
+    const { count } = await prisma.bingoItem.deleteMany();
+    return NextResponse.json({ ok: true, deleted: count });
+  } catch {
+    return NextResponse.json({ error: "Something went wrong" }, { status: 500 });
+  }
+}

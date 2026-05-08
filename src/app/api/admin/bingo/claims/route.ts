@@ -22,6 +22,7 @@ export async function GET() {
       position: s.position,
       text: s.bingoItem.text,
       providerName: s.bingoItem.providerName,
+      claimNote: s.claimNote ?? null,
     }))
   );
 }

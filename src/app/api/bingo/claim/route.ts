@@ -7,7 +7,7 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
-    const { squareId } = await req.json();
+    const { squareId, note } = await req.json();
 
     const square = await prisma.bingoSquare.findUnique({
       where: { id: squareId },
@@ -23,7 +23,7 @@ export async function POST(req: Request) {
 
     await prisma.bingoSquare.update({
       where: { id: squareId },
-      data: { claimStatus: "pending" },
+      data: { claimStatus: "pending", claimNote: note?.trim() || null },
     });
 
     return NextResponse.json({ ok: true });

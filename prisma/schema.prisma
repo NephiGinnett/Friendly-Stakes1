@@ -121,6 +121,7 @@ model BingoSquare {
   bingoItem   BingoItem @relation(fields: [bingoItemId], references: [id])
   position    Int       // 0–24 on the 5x5 grid
   claimStatus String    @default("none") // "none" | "pending" | "approved"
+  claimNote   String?   // player's explanation when claiming
   claimedAt   DateTime?
   createdAt   DateTime  @default(now())
 

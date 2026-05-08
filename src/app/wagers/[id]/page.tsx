@@ -425,6 +425,11 @@ export default function WagerDetailPage() {
               Total pool of {formatPoints(totalPool)} pts distributed to winners
               {" "}(settled by {wager.settledBy})
             </p>
+            <p className="text-xs text-slate-500">
+              Votes: <span className="text-violet-400">{forVotes} for</span>
+              {" · "}
+              <span className="text-rose-400">{againstVotes} against</span>
+            </p>
             {wager.settledAt && (
               <p className="text-xs text-slate-500">{formatDate(wager.settledAt)}</p>
             )}

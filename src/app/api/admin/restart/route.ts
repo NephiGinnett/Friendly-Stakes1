@@ -12,10 +12,20 @@ export async function POST() {
 
   try {
     // ── Snapshot current standings ─────────────────────────────────────────
-    const users = await prisma.user.findMany({
-      select: { username: true, points: true },
-      orderBy: { points: "desc" },
-    });
+    const [users, approvedSquares] = await Promise.all([
+      prisma.user.findMany({
+        select: { username: true, points: true },
+        orderBy: { points: "desc" },
+      }),
+      prisma.bingoSquare.findMany({
+        where: { claimStatus: "approved" },
+        include: {
+          user: { select: { username: true } },
+          bingoItem: { select: { text: true } },
+        },
+        orderBy: { claimedAt: "asc" },
+      }),
+    ]);
 
     const timestamp = new Date()
       .toISOString()
@@ -23,11 +33,29 @@ export async function POST() {
       .replace(/:/g, "-")
       .replace(/\..+/, "");
 
+    const bingoLines = approvedSquares.length > 0
+      ? [
+          ``,
+          `--- Bingo Memories ---`,
+          ``,
+          ...approvedSquares.map((s) => {
+            const date = s.claimedAt
+              ? new Date(s.claimedAt).toDateString()
+              : "unknown date";
+            const note = s.claimNote ? `\n    "${s.claimNote}"` : "";
+            return `${s.user.username} — ${s.bingoItem.text} (${date})${note}`;
+          }),
+        ]
+      : [];
+
     const lines = [
       `=== Friendly Stakes — Instance Record ===`,
       `Saved: ${new Date().toUTCString()}`,
       ``,
+      `--- Final Standings ---`,
+      ``,
       ...users.map((u) => `${u.username}: ${u.points} pts`),
+      ...bingoLines,
     ];
 
     // Write to /data/records/ (Railway volume) or ./records/ (local dev)

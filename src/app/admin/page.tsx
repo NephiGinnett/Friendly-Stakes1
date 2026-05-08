@@ -8,7 +8,7 @@ import { posLabel } from "@/lib/bingo";
 
 type User = { id: number; username: string; points: number; isAdmin: boolean };
 type AdminUser = { id: number; username: string; points: number; isAdmin: boolean; pinPlain: string };
-type BingoClaim = { id: number; username: string; position: number; text: string; providerName: string };
+type BingoClaim = { id: number; username: string; position: number; text: string; providerName: string; claimNote: string | null };
 type BingoItemRecord = { id: number; text: string; providerName: string };
 
 export default function AdminPage() {
@@ -25,6 +25,10 @@ export default function AdminPage() {
   const [addingItems, setAddingItems] = useState(false);
   const [addItemsMsg, setAddItemsMsg] = useState("");
   const [approvingId, setApprovingId] = useState<number | null>(null);
+
+  // Bingo items reset state
+  const [confirmResetItems, setConfirmResetItems] = useState(false);
+  const [resettingItems, setResettingItems] = useState(false);
 
   // Restart state
   const [confirmRestart, setConfirmRestart] = useState(false);
@@ -98,6 +102,14 @@ export default function AdminPage() {
     }
   };
 
+  const resetBingoItems = async () => {
+    setResettingItems(true);
+    await fetch("/api/admin/bingo/items", { method: "DELETE" });
+    setResettingItems(false);
+    setConfirmResetItems(false);
+    fetchAll();
+  };
+
   const restartGame = async () => {
     setRestarting(true);
     setRestartResult(null);
@@ -151,6 +163,11 @@ export default function AdminPage() {
                   </div>
                   <p className="text-sm text-slate-300 mt-1">{c.text}</p>
                   <p className="text-xs text-slate-500 mt-0.5">Suggested by {c.providerName}</p>
+                  {c.claimNote && (
+                    <p className="text-sm text-slate-400 mt-2 italic border-l-2 border-violet-500/40 pl-2">
+                      &ldquo;{c.claimNote}&rdquo;
+                    </p>
+                  )}
                 </div>
                 <div className="flex gap-2">
                   <button
@@ -206,14 +223,44 @@ export default function AdminPage() {
           </div>
 
           {bingoItems.length > 0 && (
-            <div className="space-y-1 max-h-64 overflow-y-auto">
-              {bingoItems.map((item) => (
-                <div key={item.id} className="flex items-start gap-2 text-xs py-1.5 border-b border-white/5">
-                  <span className="flex-1 text-slate-300">{item.text}</span>
-                  <span className="shrink-0 text-slate-500">{item.providerName}</span>
+            <>
+              <div className="space-y-1 max-h-64 overflow-y-auto">
+                {bingoItems.map((item) => (
+                  <div key={item.id} className="flex items-start gap-2 text-xs py-1.5 border-b border-white/5">
+                    <span className="flex-1 text-slate-300">{item.text}</span>
+                    <span className="shrink-0 text-slate-500">{item.providerName}</span>
+                  </div>
+                ))}
+              </div>
+
+              {!confirmResetItems ? (
+                <button
+                  onClick={() => setConfirmResetItems(true)}
+                  className="w-full px-4 py-2 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 transition-colors text-sm font-medium"
+                >
+                  Clear All Bingo Items
+                </button>
+              ) : (
+                <div className="rounded-xl bg-red-500/5 border border-red-500/30 p-3 space-y-3">
+                  <p className="text-sm font-semibold text-red-400">Delete all {bingoItems.length} items? This also resets everyone&apos;s bingo cards.</p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={resetBingoItems}
+                      disabled={resettingItems}
+                      className="flex-1 px-4 py-2 rounded-xl bg-red-500/20 text-red-300 hover:bg-red-500/30 border border-red-500/30 transition-colors text-sm font-semibold"
+                    >
+                      {resettingItems ? "Clearing..." : "Yes, clear all"}
+                    </button>
+                    <button
+                      onClick={() => setConfirmResetItems(false)}
+                      className="flex-1 px-4 py-2 rounded-xl bg-white/5 text-slate-400 hover:bg-white/10 border border-white/10 transition-colors text-sm"
+                    >
+                      Cancel
+                    </button>
+                  </div>
                 </div>
-              ))}
-            </div>
+              )}
+            </>
           )}
         </section>
 

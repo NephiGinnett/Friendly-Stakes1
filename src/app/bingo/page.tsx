@@ -23,6 +23,7 @@ export default function BingoPage() {
   const [selected, setSelected] = useState<BingoSquare | null>(null);
   const [claiming, setClaiming] = useState(false);
   const [claimMsg, setClaimMsg] = useState("");
+  const [claimNote, setClaimNote] = useState("");
 
   const fetchCard = () => {
     fetch("/api/bingo/card")
@@ -46,6 +47,7 @@ export default function BingoPage() {
   const openSquare = (s: BingoSquare) => {
     setSelected(s);
     setClaimMsg("");
+    setClaimNote("");
   };
 
   const claim = async (square: BingoSquare) => {
@@ -54,7 +56,7 @@ export default function BingoPage() {
     const res = await fetch("/api/bingo/claim", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ squareId: square.id }),
+      body: JSON.stringify({ squareId: square.id, note: claimNote }),
     });
     const data = await res.json();
     setClaiming(false);
@@ -167,10 +169,10 @@ export default function BingoPage() {
       {/* Square detail modal */}
       {selected && (
         <div
-          className="fixed inset-0 bg-black/70 flex items-end justify-center z-50 p-4"
+          className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
           onClick={(e) => e.target === e.currentTarget && setSelected(null)}
         >
-          <div className="card w-full max-w-lg space-y-4 mb-2">
+          <div className="card w-full max-w-lg space-y-4">
             <div className="flex items-start gap-3">
               <div className="flex-1">
                 <p className="text-white font-semibold text-base leading-snug">{selected.text}</p>
@@ -207,13 +209,27 @@ export default function BingoPage() {
                     {claimMsg}
                   </div>
                 ) : (
-                  <button
-                    onClick={() => claim(selected)}
-                    disabled={claiming}
-                    className="btn-primary w-full"
-                  >
-                    {claiming ? "Submitting..." : "Claim this square"}
-                  </button>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-xs text-slate-400 mb-1 block">
+                        What happened? <span className="text-slate-600">(optional — the admin will see this)</span>
+                      </label>
+                      <textarea
+                        className="input w-full text-sm resize-none h-20"
+                        placeholder="Tell the story..."
+                        value={claimNote}
+                        onChange={(e) => setClaimNote(e.target.value)}
+                        maxLength={300}
+                      />
+                    </div>
+                    <button
+                      onClick={() => claim(selected)}
+                      disabled={claiming}
+                      className="btn-primary w-full"
+                    >
+                      {claiming ? "Submitting..." : "Claim this square"}
+                    </button>
+                  </div>
                 )}
               </>
             )}
