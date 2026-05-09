@@ -41,9 +41,9 @@ export async function POST(req: Request) {
       data: { claimStatus: "approved", claimedAt: new Date() },
     });
 
-    // Award 50 pts to the item provider
+    // Award 50 pts to the item provider (case-insensitive match)
     const provider = await prisma.user.findFirst({
-      where: { username: square.bingoItem.providerName },
+      where: { username: square.bingoItem.providerName.toLowerCase() },
     });
     if (provider) {
       await prisma.user.update({
