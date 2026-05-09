@@ -17,6 +17,9 @@ type Challenge = {
   status: string;
   offer: number;
   multiplier: number;
+  creatorId: number;
+  targetId: number | null;
+  acceptedById: number | null;
   winnerUserId: number | null;
   settledAt: string | null;
   createdAt: string;
