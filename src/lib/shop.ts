@@ -10,7 +10,7 @@ export const SHOP_ITEMS = {
   ward: {
     id: "ward",
     name: "Ward",
-    description: "Passively protects your PIN. Each attempt has a 40–75% chance of being blocked and reflected back at the attacker.",
+    description: "Passively protects your PIN. Each attempt has a 40–75% chance of being blocked.",
     price: 400,
     maxUses: 1,
     emoji: "🛡️",
@@ -18,9 +18,9 @@ export const SHOP_ITEMS = {
   thumb: {
     id: "thumb",
     name: "Thumb on the Scale",
-    description: "Your vote counts double on one wager. 3 uses.",
+    description: "Your vote counts double during resolution. 2 uses.",
     price: 750,
-    maxUses: 3,
+    maxUses: 2,
     emoji: "👍",
   },
   earlybird: {

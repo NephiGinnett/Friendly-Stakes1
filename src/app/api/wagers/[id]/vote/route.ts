@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
-import { doSettle } from "@/lib/settle";
+import { doSettle, checkThumbAchievement } from "@/lib/settle";
 
 const MIN_VOTES_TO_SETTLE = 2;
 
@@ -54,6 +54,7 @@ export async function POST(
         where: { id: thumbItemId },
         data: { usesLeft: { decrement: 1 } },
       });
+      await checkThumbAchievement(user.id);
     }
 
     // Auto-settle: tally by weight, not count

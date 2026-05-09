@@ -232,7 +232,7 @@ export default function ShopPage() {
         <div>
           <h2 className="font-semibold text-slate-400 text-sm uppercase tracking-wide mb-3">Power-Ups</h2>
 
-          {([SHOP_ITEMS.xray, SHOP_ITEMS.ward, SHOP_ITEMS.thumb, SHOP_ITEMS.pinreset, SHOP_ITEMS.becou, SHOP_ITEMS.stsins] as typeof SHOP_ITEMS[keyof typeof SHOP_ITEMS][]).map((item) => {
+          {([SHOP_ITEMS.becou, SHOP_ITEMS.ward, SHOP_ITEMS.stsins, SHOP_ITEMS.pinreset, SHOP_ITEMS.thumb, SHOP_ITEMS.xray] as typeof SHOP_ITEMS[keyof typeof SHOP_ITEMS][]).map((item) => {
             const alreadyOwned =
               item.id === "xray" ? ownedXray :
               item.id === "ward" ? ownedWard :

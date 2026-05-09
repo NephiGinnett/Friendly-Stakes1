@@ -1,5 +1,26 @@
 import { prisma } from "@/lib/db";
 
+// Call after decrementing a thumb use — unlocks Little Jack Horner at 4 total uses across all purchases
+export async function checkThumbAchievement(userId: number) {
+  const existing = await prisma.userAchievement.findUnique({
+    where: { userId_achievementId: { userId, achievementId: "little_jack_horner" } },
+  });
+  if (existing) return;
+
+  // Count total thumb uses consumed = sum of (maxUses - usesLeft) across all thumb items
+  const thumbItems = await prisma.userItem.findMany({
+    where: { userId, itemType: "thumb" },
+    select: { usesLeft: true },
+  });
+  const totalUsed = thumbItems.reduce((sum, i) => sum + (2 - i.usesLeft), 0);
+
+  if (totalUsed >= 4) {
+    await prisma.userAchievement.create({
+      data: { userId, achievementId: "little_jack_horner" },
+    });
+  }
+}
+
 export async function doSettle(wagerId: number, winnerSide: string, method: string) {
   const wager = await prisma.wager.findUnique({
     where: { id: wagerId },

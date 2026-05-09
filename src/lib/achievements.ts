@@ -60,6 +60,16 @@ export const ACHIEVEMENTS = {
     rewardType: "increment" as const,
     emoji: "🪃",
   },
+  little_jack_horner: {
+    id: "little_jack_horner",
+    name: "Little Jack Horner",
+    description: "You used your thumb on the scale 4 times! But... if you only have two thumbs... don't tell me.",
+    hint: "???",
+    reward: "Earn 500 pts",
+    rewardPoints: 500,
+    rewardType: "increment" as const,
+    emoji: "👍",
+  },
   inspiring_friend: {
     id: "inspiring_friend",
     name: "Inspiring Friend",

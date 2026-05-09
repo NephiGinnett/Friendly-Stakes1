@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import { checkThumbAchievement } from "@/lib/settle";
 
 const CHALLENGE_FEE = 50;
 const BARON_RATE = 0.15;
@@ -33,6 +34,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       if (thumbItem) {
         weight = 2;
         await prisma.userItem.update({ where: { id: thumbItem.id }, data: { usesLeft: { decrement: 1 } } });
+        await checkThumbAchievement(user.id);
       }
     }
 
