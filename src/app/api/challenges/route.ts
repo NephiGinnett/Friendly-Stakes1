@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import { logPoints } from "@/lib/pointLog";
 
 const CHALLENGE_FEE = 50;
 
@@ -50,11 +51,9 @@ export async function POST(req: Request) {
     const challenge = await prisma.$transaction(async (tx) => {
       await tx.user.update({
         where: { id: user.id },
-        data: {
-          points: { decrement: offer },
-          challengeMultiplier: 1, // consume the multiplier
-        },
+        data: { points: { decrement: offer }, challengeMultiplier: 1 },
       });
+      await logPoints(tx, user.id, -offer, `Posted bounty: "${title.trim()}"`);
       return tx.challenge.create({
         data: {
           title: title.trim(),

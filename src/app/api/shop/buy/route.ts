@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { SHOP_ITEMS, ItemType, EARLYBIRD_TIERS, EARLYBIRD_TOTAL } from "@/lib/shop";
+import { logPoints } from "@/lib/pointLog";
 
 const BINDLE_THRESHOLD = 3; // earlybird claims needed to unlock Bindle
 
@@ -34,10 +35,8 @@ export async function POST(req: Request) {
         });
 
         // Swap user's balance to this tier
-        await tx.user.update({
-          where: { id: user.id },
-          data: { points: tierValue },
-        });
+        await tx.user.update({ where: { id: user.id }, data: { points: tierValue } });
+        await logPoints(tx, user.id, tierValue - user.points, `Early Adopter slot #${globalCount + 1}`);
 
         // How many earlybird slots has THIS user now claimed?
         const userCount = await tx.userItem.count({
@@ -121,15 +120,11 @@ export async function POST(req: Request) {
       );
     }
 
-    await prisma.$transaction([
-      prisma.userItem.create({
-        data: { userId: user.id, itemType, usesLeft: item.maxUses },
-      }),
-      prisma.user.update({
-        where: { id: user.id },
-        data: { points: { decrement: item.price } },
-      }),
-    ]);
+    await prisma.$transaction(async (tx) => {
+      await tx.userItem.create({ data: { userId: user.id, itemType, usesLeft: item.maxUses } });
+      await tx.user.update({ where: { id: user.id }, data: { points: { decrement: item.price } } });
+      await logPoints(tx, user.id, -item.price, `Bought: ${item.name}`);
+    });
 
     return NextResponse.json({ ok: true });
   } catch {

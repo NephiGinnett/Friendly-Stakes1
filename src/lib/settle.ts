@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { logPoints } from "@/lib/pointLog";
 
 // Call after decrementing a thumb use — unlocks Little Jack Horner at 4 total uses across all purchases
 export async function checkThumbAchievement(userId: number) {
@@ -53,18 +54,16 @@ export async function doSettle(wagerId: number, winnerSide: string, method: stri
   const distributed = payouts.reduce((sum, p) => sum + p.amount, 0);
   payouts[0].amount += totalPool - distributed;
 
-  await prisma.$transaction([
-    prisma.wager.update({
+  await prisma.$transaction(async (tx) => {
+    await tx.wager.update({
       where: { id: wagerId },
       data: { status: "settled", winnerSide, settledAt: new Date(), settledBy: method },
-    }),
-    ...payouts.map((p) =>
-      prisma.user.update({
-        where: { id: p.userId },
-        data: { points: { increment: p.amount } },
-      })
-    ),
-  ]);
+    });
+    for (const p of payouts) {
+      await tx.user.update({ where: { id: p.userId }, data: { points: { increment: p.amount } } });
+      await logPoints(tx, p.userId, p.amount, `Won wager: ${wager.title}`);
+    }
+  });
 
   // Lone Wolf: sole winner against at least 2 opponents
   if (winners.length === 1 && losers.length >= 2) {

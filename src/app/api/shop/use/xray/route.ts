@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { SHOP_ITEMS } from "@/lib/shop";
+import { logPoints } from "@/lib/pointLog";
 
 function randomFakeIp() {
   return Array.from({ length: 4 }, () => Math.floor(Math.random() * 256)).join(".");
@@ -62,9 +63,9 @@ export async function POST(req: Request) {
 
         // Deduct penalty equal to the xray item cost
         const penalty = SHOP_ITEMS.xray.price;
-        await prisma.user.update({
-          where: { id: user.id },
-          data: { points: { decrement: penalty } },
+        await prisma.$transaction(async (tx) => {
+          await tx.user.update({ where: { id: user.id }, data: { points: { decrement: penalty } } });
+          await logPoints(tx, user.id, -penalty, `Ward reflection penalty — tried to crack ${target.username}`);
         });
 
         // Award fuck_you achievement

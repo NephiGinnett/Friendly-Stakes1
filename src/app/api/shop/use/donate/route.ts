@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import { logPoints } from "@/lib/pointLog";
 
 export async function POST(req: Request) {
   const user = await getCurrentUser();
@@ -46,10 +47,9 @@ export async function POST(req: Request) {
         data: { points: { decrement: amount }, totalDonated: { increment: amount } },
         select: { totalDonated: true },
       });
-      await tx.user.update({
-        where: { id: target.id },
-        data: { points: { increment: amount } },
-      });
+      await tx.user.update({ where: { id: target.id }, data: { points: { increment: amount } } });
+      await logPoints(tx, user.id, -amount, `Donated to ${target.username} (St Sins)`);
+      await logPoints(tx, target.id, amount, `Received donation from ${user.username} (Be Cou)`);
       return updated;
     });
 

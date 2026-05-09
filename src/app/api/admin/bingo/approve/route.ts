@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { hasNewBingo, isBlackout } from "@/lib/bingo";
+import { log } from "@/lib/pointLog";
 
 export async function POST(req: Request) {
   const user = await getCurrentUser();
@@ -46,10 +47,8 @@ export async function POST(req: Request) {
       where: { username: square.bingoItem.providerName.toLowerCase() },
     });
     if (provider) {
-      await prisma.user.update({
-        where: { id: provider.id },
-        data: { points: { increment: 50 } },
-      });
+      await prisma.user.update({ where: { id: provider.id }, data: { points: { increment: 50 } } });
+      await log(provider.id, 50, `Bingo square claimed: "${square.bingoItem.text}"`);
     }
 
     const newApproved = [...prevApproved, square.position];
@@ -58,10 +57,8 @@ export async function POST(req: Request) {
 
     // Award bingo bonus (100 pts) and first-collective-bingo achievement
     if (newBingo) {
-      await prisma.user.update({
-        where: { id: square.userId },
-        data: { points: { increment: 100 } },
-      });
+      await prisma.user.update({ where: { id: square.userId }, data: { points: { increment: 100 } } });
+      await log(square.userId, 100, "Completed a bingo line!");
 
       const anyBingo = await prisma.userAchievement.findFirst({
         where: { achievementId: "bingo" },
@@ -75,10 +72,8 @@ export async function POST(req: Request) {
 
     // Award blackout bonus (350 pts) and first-collective-blackout achievement
     if (newBlackout) {
-      await prisma.user.update({
-        where: { id: square.userId },
-        data: { points: { increment: 350 } },
-      });
+      await prisma.user.update({ where: { id: square.userId }, data: { points: { increment: 350 } } });
+      await log(square.userId, 350, "Bingo blackout — all 25 squares!");
 
       const anyBlackout = await prisma.userAchievement.findFirst({
         where: { achievementId: "blackout" },

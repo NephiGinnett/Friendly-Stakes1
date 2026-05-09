@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { ACHIEVEMENTS, AchievementId } from "@/lib/achievements";
+import { logPoints } from "@/lib/pointLog";
 
 export async function POST(req: Request) {
   const user = await getCurrentUser();
@@ -74,11 +75,12 @@ export async function POST(req: Request) {
         where: { userId_achievementId: { userId: user.id, achievementId } },
         data: { claimed: true },
       });
-      return tx.user.update({
-        where: { id: user.id },
-        data: pointsData,
-        select: { points: true },
-      });
+      const updated = await tx.user.update({ where: { id: user.id }, data: pointsData, select: { points: true } });
+      const delta = achievement.rewardType === "swap"
+        ? achievement.rewardPoints - user.points
+        : achievement.rewardPoints;
+      await logPoints(tx, user.id, delta, `Achievement: ${achievement.name}`);
+      return updated;
     });
 
     return NextResponse.json({

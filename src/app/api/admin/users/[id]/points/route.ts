@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import { logPoints } from "@/lib/pointLog";
 
 export async function PATCH(
   req: Request,
@@ -21,9 +22,14 @@ export async function PATCH(
       return NextResponse.json({ error: "Would result in negative balance" }, { status: 400 });
     }
 
-    const updated = await prisma.user.update({
-      where: { id: targetId },
-      data: { points: { increment: amount } },
+    const updated = await prisma.$transaction(async (tx) => {
+      const u = await tx.user.update({
+        where: { id: targetId },
+        data: { points: { increment: amount } },
+      });
+      const label = amount >= 0 ? `Admin adjustment: +${amount} pts` : `Admin adjustment: ${amount} pts`;
+      await logPoints(tx, targetId, amount, label);
+      return u;
     });
 
     return NextResponse.json({ id: updated.id, username: updated.username, points: updated.points });

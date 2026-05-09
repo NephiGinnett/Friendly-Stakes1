@@ -14,11 +14,13 @@ type Wager = {
   creator: { id: number; username: string };
   entries: WagerEntry[];
 };
+type PointLog = { id: number; amount: number; reason: string; createdAt: string };
 
 export default function ProfilePage() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [wagers, setWagers] = useState<Wager[]>([]);
+  const [pointLogs, setPointLogs] = useState<PointLog[]>([]);
 
   useEffect(() => {
     fetch("/api/auth/me")
@@ -27,6 +29,9 @@ export default function ProfilePage() {
     fetch("/api/wagers")
       .then((r) => r.json())
       .then(setWagers);
+    fetch("/api/point-log")
+      .then((r) => r.json())
+      .then(setPointLogs);
   }, [router]);
 
   if (!user) return null;
@@ -114,6 +119,23 @@ export default function ProfilePage() {
                   </button>
                 );
               })}
+            </div>
+          )}
+        </div>
+        <div>
+          <h3 className="font-semibold text-white mb-3">Point History</h3>
+          {pointLogs.length === 0 ? (
+            <p className="text-sm text-slate-500 text-center py-6">No point changes yet</p>
+          ) : (
+            <div className="space-y-1.5">
+              {pointLogs.map((log) => (
+                <div key={log.id} className="flex items-center justify-between px-3 py-2 rounded-lg bg-white/5 text-sm">
+                  <span className="text-slate-300 truncate pr-3">{log.reason}</span>
+                  <span className={`shrink-0 font-semibold tabular-nums ${log.amount >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                    {log.amount >= 0 ? `+${log.amount}` : log.amount}
+                  </span>
+                </div>
+              ))}
             </div>
           )}
         </div>

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { checkThumbAchievement } from "@/lib/settle";
+import { logPoints } from "@/lib/pointLog";
 
 const CHALLENGE_FEE = 50;
 const BARON_RATE = 0.15;
@@ -69,16 +70,12 @@ export async function POST(req: Request, { params }: { params: { id: string } })
         const winnerPayout = basePayout - baronPool;
 
         await prisma.$transaction(async (tx) => {
-          await tx.user.update({
-            where: { id: challenge.acceptedById! },
-            data: { points: { increment: winnerPayout } },
-          });
+          await tx.user.update({ where: { id: challenge.acceptedById! }, data: { points: { increment: winnerPayout } } });
+          await logPoints(tx, challenge.acceptedById!, winnerPayout, `Completed bounty: "${challenge.title}"`);
           for (const baron of baronRecords) {
             if (perBaron > 0) {
-              await tx.user.update({
-                where: { id: baron.user.id },
-                data: { points: { increment: perBaron } },
-              });
+              await tx.user.update({ where: { id: baron.user.id }, data: { points: { increment: perBaron } } });
+              await logPoints(tx, baron.user.id, perBaron, `Baron tax from bounty: "${challenge.title}"`);
             }
           }
           await tx.challenge.update({
@@ -88,13 +85,14 @@ export async function POST(req: Request, { params }: { params: { id: string } })
         });
       } else {
         // Task not completed — refund full offer to creator
-        await prisma.$transaction([
-          prisma.user.update({ where: { id: challenge.creatorId }, data: { points: { increment: challenge.offer } } }),
-          prisma.challenge.update({
+        await prisma.$transaction(async (tx) => {
+          await tx.user.update({ where: { id: challenge.creatorId }, data: { points: { increment: challenge.offer } } });
+          await logPoints(tx, challenge.creatorId, challenge.offer, `Bounty refunded (not completed): "${challenge.title}"`);
+          await tx.challenge.update({
             where: { id: challenge.id },
             data: { status: "settled", winnerUserId: challenge.creatorId, settledAt: new Date() },
-          }),
-        ]);
+          });
+        });
       }
     }
 

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import { logPoints } from "@/lib/pointLog";
 
 export async function POST(_req: Request, { params }: { params: { id: string } }) {
   const user = await getCurrentUser();
@@ -18,10 +19,11 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
   }
 
   // Refund full offer to creator
-  await prisma.$transaction([
-    prisma.user.update({ where: { id: challenge.creatorId }, data: { points: { increment: challenge.offer } } }),
-    prisma.challenge.update({ where: { id: challenge.id }, data: { status: "cancelled" } }),
-  ]);
+  await prisma.$transaction(async (tx) => {
+    await tx.user.update({ where: { id: challenge.creatorId }, data: { points: { increment: challenge.offer } } });
+    await logPoints(tx, challenge.creatorId, challenge.offer, `Bounty cancelled/declined: "${challenge.title}"`);
+    await tx.challenge.update({ where: { id: challenge.id }, data: { status: "cancelled" } });
+  });
 
   return NextResponse.json({ ok: true });
 }

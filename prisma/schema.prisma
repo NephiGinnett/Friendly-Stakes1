@@ -30,6 +30,7 @@ model User {
   challengesTargeted Challenge[]       @relation("ChallengeTarget")
   challengesAccepted Challenge[]       @relation("ChallengeAcceptor")
   challengeVotes     ChallengeVote[]
+  pointLogs          PointLog[]
 }
 
 model Session {
@@ -107,6 +108,16 @@ model UserAchievement {
   unlockedAt    DateTime @default(now())
 
   @@unique([userId, achievementId])
+}
+
+// Point change history
+model PointLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  amount    Int      // positive = gain, negative = loss
+  reason    String   // human-readable label
+  createdAt DateTime @default(now())
 }
 
 // Bingo items pool (added by admin)
