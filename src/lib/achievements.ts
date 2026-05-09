@@ -50,6 +50,34 @@ export const ACHIEVEMENTS = {
     rewardItemUses: 1,
     emoji: "🫀",
   },
+  fuck_you: {
+    id: "fuck_you",
+    name: "Fuck You.",
+    description: "You tried to hack a warded player. Here's a pat on the back for some killer instinct.",
+    hint: "???",
+    reward: "Earn 250 pts",
+    rewardPoints: 250,
+    rewardType: "increment" as const,
+    emoji: "🪃",
+  },
+  inspiring_friend: {
+    id: "inspiring_friend",
+    name: "Inspiring Friend",
+    description: "You created 10 challenges that other players accepted. Thank you! Good job bossing your friends around. Friends are just resources in a game like this. Right?",
+    hint: "???",
+    reward: "Your next challenge pays out 2x (or 3x if one is already active)",
+    rewardType: "passive" as const,
+    emoji: "🫵",
+  },
+  baron: {
+    id: "baron",
+    name: "Baron",
+    description: "You really can't stop. This is really your show anyways. Make sure you thank your background characters when you tax their fun.",
+    hint: "???",
+    reward: "Collect 15% tax on all future challenge payouts",
+    rewardType: "passive" as const,
+    emoji: "👑",
+  },
 } as const;
 
 export type AchievementId = keyof typeof ACHIEVEMENTS;

@@ -7,25 +7,35 @@ export async function GET() {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const unlocked = await prisma.userAchievement.findMany({
-    where: { userId: user.id },
-  });
+  const [unlocked, fuckYouFirst] = await Promise.all([
+    prisma.userAchievement.findMany({ where: { userId: user.id } }),
+    // Anyone can see the first claimer's frozen data once they unlock the achievement
+    prisma.userAchievement.findFirst({
+      where: { achievementId: "fuck_you", frozenData: { not: null } },
+      orderBy: { unlockedAt: "asc" },
+      select: { frozenData: true },
+    }),
+  ]);
 
-  // Return all achievement IDs so the UI knows what exists,
-  // but only reveal details for ones the user has unlocked
   const result = Object.values(ACHIEVEMENTS).map((a) => {
     const record = unlocked.find((u) => u.achievementId === a.id);
-    return {
+    const base = {
       id: a.id,
       unlocked: !!record,
       claimed: record?.claimed ?? false,
       unlockedAt: record?.unlockedAt ?? null,
-      // Only reveal details if unlocked
       name: record ? a.name : "???",
       description: record ? a.description : null,
-      reward: record ? a.reward : null,
+      reward: record ? (a.reward ?? null) : null,
       emoji: record ? a.emoji : "🔒",
+      frozenData: null as string | null,
     };
+
+    if (a.id === "fuck_you" && fuckYouFirst?.frozenData) {
+      base.frozenData = fuckYouFirst.frozenData;
+    }
+
+    return base;
   });
 
   return NextResponse.json(result);

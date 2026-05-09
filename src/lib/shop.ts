@@ -1,11 +1,19 @@
 export const SHOP_ITEMS = {
   xray: {
     id: "xray",
-    name: "X-Ray Vision",
-    description: "Peek at another player's PIN. One-time use.",
-    price: 750,
+    name: "PIN Crack",
+    description: "Crack another player's PIN. One-time use.",
+    price: 1000,
     maxUses: 1,
-    emoji: "👁️",
+    emoji: "💀",
+  },
+  ward: {
+    id: "ward",
+    name: "Ward",
+    description: "Passively protects your PIN. Each attempt has a 40–75% chance of being blocked and reflected back at the attacker.",
+    price: 400,
+    maxUses: 1,
+    emoji: "🛡️",
   },
   thumb: {
     id: "thumb",

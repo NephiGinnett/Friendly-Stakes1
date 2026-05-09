@@ -101,9 +101,13 @@ export default function ShopPage() {
     const data = await res.json();
     setLoading("");
     if (res.ok) {
-      const updated = { ...xrayPeeks, [xrayTarget]: data.pin };
-      setXrayPeeks(updated);
-      try { localStorage.setItem("xray_peeks", JSON.stringify(updated)); } catch { /* ignore */ }
+      if (data.reflected) {
+        setMessage(`🪃 Reflected! ${xrayTarget} was warded. You lost an extra ${data.penalty} pts as a penalty. Check your achievements.`);
+      } else {
+        const updated = { ...xrayPeeks, [xrayTarget]: data.pin };
+        setXrayPeeks(updated);
+        try { localStorage.setItem("xray_peeks", JSON.stringify(updated)); } catch { /* ignore */ }
+      }
       fetchData();
     } else {
       setMessage(data.error);
@@ -117,6 +121,7 @@ export default function ShopPage() {
   const ownedPinreset = owned.find((i) => i.itemType === "pinreset");
   const ownedBecou = owned.find((i) => i.itemType === "becou");
   const ownedStsins = owned.find((i) => i.itemType === "stsins");
+  const ownedWard = owned.find((i) => i.itemType === "ward");
   const ownedEarlybird = owned.find((i) => i.itemType === "earlybird");
   const hasEarlybird = !!ownedEarlybird ||
     !!(earlybird.remaining < EARLYBIRD_TOTAL &&
@@ -227,9 +232,10 @@ export default function ShopPage() {
         <div>
           <h2 className="font-semibold text-slate-400 text-sm uppercase tracking-wide mb-3">Power-Ups</h2>
 
-          {([SHOP_ITEMS.xray, SHOP_ITEMS.thumb, SHOP_ITEMS.pinreset, SHOP_ITEMS.becou, SHOP_ITEMS.stsins] as typeof SHOP_ITEMS[keyof typeof SHOP_ITEMS][]).map((item) => {
+          {([SHOP_ITEMS.xray, SHOP_ITEMS.ward, SHOP_ITEMS.thumb, SHOP_ITEMS.pinreset, SHOP_ITEMS.becou, SHOP_ITEMS.stsins] as typeof SHOP_ITEMS[keyof typeof SHOP_ITEMS][]).map((item) => {
             const alreadyOwned =
               item.id === "xray" ? ownedXray :
+              item.id === "ward" ? ownedWard :
               item.id === "thumb" ? ownedThumb :
               item.id === "pinreset" ? ownedPinreset :
               item.id === "becou" ? ownedBecou :
@@ -255,6 +261,14 @@ export default function ShopPage() {
                         😈 You have the St Sins tag
                       </div>
                       <p className="text-xs text-slate-500 text-center">Scroll down to donate points to a Be Cou player.</p>
+                    </div>
+                  ) : item.id === "ward" ? (
+                    <div className={`text-sm px-3 py-2 rounded-xl text-center font-semibold ${
+                      alreadyOwned.usesLeft > 0
+                        ? "bg-sky-500/10 text-sky-300"
+                        : "bg-slate-500/10 text-slate-500"
+                    }`}>
+                      {alreadyOwned.usesLeft > 0 ? "🛡️ Ward active — PIN is protected" : "🛡️ Ward was triggered (0 uses left)"}
                     </div>
                   ) : (
                     <div className="bg-emerald-500/10 text-emerald-400 text-sm px-3 py-2 rounded-xl">
@@ -307,7 +321,7 @@ export default function ShopPage() {
         </div>
 
         {/* Inventory — active use panels */}
-        {(ownedXray || ownedThumb || ownedPinreset || ownedStsins || Object.keys(xrayPeeks).length > 0) && (
+        {(ownedXray || ownedThumb || ownedPinreset || ownedStsins || ownedWard || Object.keys(xrayPeeks).length > 0) && (
           <>
             <h2 className="font-semibold text-slate-400 text-sm uppercase tracking-wide pt-2">Use Your Items</h2>
 

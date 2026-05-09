@@ -16,6 +16,7 @@ type AchievementEntry = {
   description: string | null;
   reward: string | null;
   emoji: string;
+  frozenData: string | null;
 };
 
 export default function AchievementsPage() {
@@ -26,7 +27,7 @@ export default function AchievementsPage() {
   const [claimResult, setClaimResult] = useState<{
     name: string;
     newPoints: number;
-    rewardType: "swap" | "increment" | "item";
+    rewardType: "swap" | "increment" | "item" | "passive";
     rewardPoints?: number;
     rewardLabel?: string;
   } | null>(null);
@@ -97,6 +98,8 @@ export default function AchievementsPage() {
                   <span className="text-white font-bold">{claimResult.rewardLabel}</span>
                   {" "}added to your inventory!
                 </>
+              ) : claimResult.rewardType === "passive" ? (
+                <span className="text-white font-bold">Perk is active!</span>
               ) : (
                 <>
                   <span className="text-white font-bold">+{formatPoints(claimResult.rewardPoints!)} pts</span>
@@ -146,6 +149,25 @@ export default function AchievementsPage() {
                 {a.unlocked ? (
                   <>
                     <p className="text-sm text-slate-400">{a.description}</p>
+                    {a.id === "fuck_you" && (() => {
+                      const d = a.frozenData ? JSON.parse(a.frozenData) as { username: string; victimUsername: string; attemptedAt: string; ip: string; pin: string } : null;
+                      return (
+                        <div className="mt-2 text-xs text-slate-500 font-mono space-y-1 border-l-2 border-red-500/40 pl-3">
+                          <p>{d ? `${d.username} just tried to hack a warded player.` : "Someone just tried to hack a warded player."} From this point forward, a PIN Crack attempt on a warded player will be reflected back between 40 and 75%. Because {d ? `${d.username} was` : "they were"} the first, everyone who gets this achievement after them is going to see this.</p>
+                          {d && (
+                            <>
+                              <p className="text-slate-400">{"_".repeat(8)}</p>
+                              <p><span className="text-slate-300">{d.username}</span> attempted to crack <span className="text-rose-300">{d.victimUsername}</span></p>
+                              <p className="text-slate-400">{d.attemptedAt}</p>
+                              <p className="text-slate-400">{"_".repeat(8)}</p>
+                              <p>{d.username}: <span className="text-slate-300">{d.ip}</span></p>
+                              <p>{d.username}: <span className="text-red-300 tracking-widest">{d.pin}</span></p>
+                              <p className="text-slate-500 italic">Sure would suck to have someone else see that... Huh?</p>
+                            </>
+                          )}
+                        </div>
+                      );
+                    })()}
                     {a.reward && (
                       <p className="text-xs text-violet-400 mt-1">Reward: {a.reward}</p>
                     )}

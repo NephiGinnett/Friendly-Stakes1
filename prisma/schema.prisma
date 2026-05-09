@@ -13,18 +13,23 @@ model User {
   pinHash   String
   pinSalt   String
   pinPlain  String    @default("")
-  points        Int       @default(1000)
-  totalDonated  Int       @default(0)
-  isAdmin       Boolean   @default(false)
+  points            Int       @default(1000)
+  totalDonated      Int       @default(0)
+  challengeMultiplier Int     @default(1) // pending Inspiring Friend multiplier (2x) for next challenge created
+  isAdmin           Boolean   @default(false)
   createdAt DateTime  @default(now())
 
-  sessions      Session[]
-  createdWagers Wager[]        @relation("creator")
-  wagerEntries  WagerEntry[]
-  votes         Vote[]
-  items         UserItem[]
-  achievements  UserAchievement[]
-  bingoSquares  BingoSquare[]
+  sessions           Session[]
+  createdWagers      Wager[]           @relation("creator")
+  wagerEntries       WagerEntry[]
+  votes              Vote[]
+  items              UserItem[]
+  achievements       UserAchievement[]
+  bingoSquares       BingoSquare[]
+  challengesCreated  Challenge[]       @relation("ChallengeCreator")
+  challengesTargeted Challenge[]       @relation("ChallengeTarget")
+  challengesAccepted Challenge[]       @relation("ChallengeAcceptor")
+  challengeVotes     ChallengeVote[]
 }
 
 model Session {
@@ -86,7 +91,7 @@ model UserItem {
   id        Int      @id @default(autoincrement())
   userId    Int
   user      User     @relation(fields: [userId], references: [id])
-  itemType  String   // "xray", "thumb", "earlybird"
+  itemType  String   // "xray", "thumb", "earlybird", "ward", etc.
   usesLeft  Int
   createdAt DateTime @default(now())
 }
@@ -98,6 +103,7 @@ model UserAchievement {
   user          User     @relation(fields: [userId], references: [id])
   achievementId String
   claimed       Boolean  @default(false)
+  frozenData    String?  // JSON — used by fuck_you to store first-claimer info
   unlockedAt    DateTime @default(now())
 
   @@unique([userId, achievementId])
@@ -110,6 +116,39 @@ model BingoItem {
   providerName String
   createdAt    DateTime      @default(now())
   squares      BingoSquare[]
+}
+
+// Bounty-style challenges posted by players
+model Challenge {
+  id           Int       @id @default(autoincrement())
+  title        String
+  description  String?
+  creatorId    Int
+  creator      User      @relation("ChallengeCreator", fields: [creatorId], references: [id])
+  targetId     Int?      // null = open to any player
+  target       User?     @relation("ChallengeTarget", fields: [targetId], references: [id])
+  acceptedById Int?      // who accepted it (set on acceptance)
+  acceptedBy   User?     @relation("ChallengeAcceptor", fields: [acceptedById], references: [id])
+  offer        Int       // pts escrowed by creator; 50 pt fee deducted at settlement
+  multiplier   Int       @default(1) // payout multiplier from Inspiring Friend (1, 2, or 3)
+  status       String    @default("pending") // pending, active, voting, settled, cancelled
+  winnerUserId Int?      // acceptedById if completed, creatorId if refunded
+  settledAt    DateTime?
+  createdAt    DateTime  @default(now())
+  votes        ChallengeVote[]
+}
+
+model ChallengeVote {
+  id          Int       @id @default(autoincrement())
+  challengeId Int
+  challenge   Challenge @relation(fields: [challengeId], references: [id])
+  userId      Int
+  user        User      @relation(fields: [userId], references: [id])
+  choice      String    // "completed" or "incomplete"
+  weight      Int       @default(1)
+  createdAt   DateTime  @default(now())
+
+  @@unique([challengeId, userId])
 }
 
 // Each player's bingo card (25 squares, positions 0–24)

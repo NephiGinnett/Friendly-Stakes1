@@ -26,6 +26,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Already claimed!" }, { status: 409 });
     }
 
+    // Passive achievements (Baron, Inspiring Friend) — just acknowledge
+    if (achievement.rewardType === "passive") {
+      await prisma.userAchievement.update({
+        where: { userId_achievementId: { userId: user.id, achievementId } },
+        data: { claimed: true },
+      });
+      const currentUser = await prisma.user.findUnique({ where: { id: user.id }, select: { points: true } });
+      return NextResponse.json({ ok: true, newPoints: currentUser!.points, rewardType: "passive" });
+    }
+
     if (achievement.rewardType === "item") {
       await prisma.$transaction(async (tx) => {
         await tx.userAchievement.update({

@@ -35,6 +35,7 @@ export default function Navbar() {
     { href: "/wagers/new", label: "+" },
     { href: "/shop", label: "Shop" },
     { href: "/achievements", label: "🏆" },
+    { href: "/challenges", label: "⚔️" },
     { href: "/bingo", label: "🎱" },
     { href: "/profile", label: user.username },
   ];

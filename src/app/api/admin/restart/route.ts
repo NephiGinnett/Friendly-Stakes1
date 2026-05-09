@@ -78,6 +78,8 @@ export async function POST() {
       prisma.vote.deleteMany(),
       prisma.wagerEntry.deleteMany(),
       prisma.wager.deleteMany(),
+      prisma.challengeVote.deleteMany(),
+      prisma.challenge.deleteMany(),
       prisma.bingoSquare.deleteMany(),
       prisma.userItem.deleteMany(),
       prisma.userAchievement.deleteMany(),
