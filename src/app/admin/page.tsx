@@ -34,6 +34,7 @@ export default function AdminPage() {
   const [confirmRestart, setConfirmRestart] = useState(false);
   const [restarting, setRestarting] = useState(false);
   const [restartResult, setRestartResult] = useState<{ filename: string; snapshot: string[] } | null>(null);
+  const [restartError, setRestartError] = useState<string | null>(null);
 
   const fetchAll = () => {
     fetch("/api/admin/users").then((r) => r.ok ? r.json() : []).then(setUsers);
@@ -113,6 +114,7 @@ export default function AdminPage() {
   const restartGame = async () => {
     setRestarting(true);
     setRestartResult(null);
+    setRestartError(null);
     const res = await fetch("/api/admin/restart", { method: "POST" });
     const data = await res.json();
     setRestarting(false);
@@ -120,6 +122,8 @@ export default function AdminPage() {
     if (res.ok) {
       setRestartResult({ filename: data.filename, snapshot: data.snapshot });
       fetchAll();
+    } else {
+      setRestartError(data.error ?? "Something went wrong.");
     }
   };
 
@@ -306,6 +310,13 @@ export default function AdminPage() {
         {/* ── Restart Game ── */}
         <section className="space-y-3 pb-4">
           <h2 className="font-semibold text-white">🔄 Restart Game</h2>
+
+          {restartError && (
+            <div className="card border-red-500/30 bg-red-500/5">
+              <p className="text-sm text-red-400 font-semibold">Reset failed: {restartError}</p>
+              <button onClick={() => setRestartError(null)} className="text-xs text-slate-500 hover:text-slate-300 mt-1">Dismiss</button>
+            </div>
+          )}
 
           {restartResult ? (
             <div className="card space-y-3 border-emerald-500/30 bg-emerald-500/5">
