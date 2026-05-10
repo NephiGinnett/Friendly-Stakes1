@@ -15,41 +15,90 @@ type Wager = {
   entries: WagerEntry[];
 };
 type PointLog = { id: number; amount: number; reason: string; createdAt: string };
+type PlayerInfo = { id: number; username: string; points: number; isAdmin: boolean };
 
 export default function ProfilePage() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
+  const [allUsers, setAllUsers] = useState<{ id: number; username: string }[]>([]);
+  const [viewing, setViewing] = useState<string>(""); // username being viewed; "" = self
+  const [profilePlayer, setProfilePlayer] = useState<PlayerInfo | null>(null);
   const [wagers, setWagers] = useState<Wager[]>([]);
   const [pointLogs, setPointLogs] = useState<PointLog[]>([]);
+  const [notifsEnabled, setNotifsEnabled] = useState(true);
 
+  // Load notification preference
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("notifsEnabled");
+      if (stored === "false") setNotifsEnabled(false);
+    } catch { /* ignore */ }
+  }, []);
+
+  // Initial load: self data
   useEffect(() => {
     fetch("/api/auth/me")
       .then((r) => { if (!r.ok) { router.push("/login"); return null; } return r.json(); })
-      .then(setUser);
+      .then((u) => {
+        setUser(u);
+        if (u) setProfilePlayer(u);
+      });
     fetch("/api/wagers")
       .then((r) => r.json())
       .then(setWagers);
     fetch("/api/point-log")
       .then((r) => r.json())
       .then(setPointLogs);
+    fetch("/api/users")
+      .then((r) => r.ok ? r.json() : [])
+      .then(setAllUsers);
   }, [router]);
 
-  if (!user) return null;
+  // When viewing changes to another player, fetch their data
+  useEffect(() => {
+    if (!viewing || !user) return;
+    if (viewing === user.username) {
+      // Revert to self
+      setProfilePlayer(user);
+      fetch("/api/wagers").then((r) => r.json()).then(setWagers);
+      fetch("/api/point-log").then((r) => r.json()).then(setPointLogs);
+    } else {
+      fetch(`/api/players/${viewing}`)
+        .then((r) => r.ok ? r.json() : null)
+        .then((data) => {
+          if (data) {
+            setProfilePlayer(data.player);
+            setWagers(data.wagers);
+            setPointLogs([]);
+          }
+        });
+    }
+  }, [viewing, user]);
 
-  const myWagers = wagers.filter(
-    (w) => w.creator.id === user.id || w.entries.some((e) => e.userId === user.id)
-  );
-
-  const getUserSide = (w: Wager) => {
-    if (w.creator.id === user.id) return "for";
-    return w.entries.find((e) => e.userId === user.id)?.side ?? null;
+  const toggleNotifs = () => {
+    const next = !notifsEnabled;
+    setNotifsEnabled(next);
+    try { localStorage.setItem("notifsEnabled", String(next)); } catch { /* ignore */ }
   };
 
+  if (!user || !profilePlayer) return null;
+
+  const isSelf = profilePlayer.id === user.id;
+
+  const getPlayerSide = (w: Wager) => {
+    if (w.creator.id === profilePlayer.id) return "for";
+    return w.entries.find((e) => e.userId === profilePlayer.id)?.side ?? null;
+  };
+
+  const myWagers = wagers.filter(
+    (w) => w.creator.id === profilePlayer.id || w.entries.some((e) => e.userId === profilePlayer.id)
+  );
+
   const wins = myWagers.filter(
-    (w) => w.status === "settled" && w.winnerSide === getUserSide(w)
+    (w) => w.status === "settled" && w.winnerSide === getPlayerSide(w)
   ).length;
   const losses = myWagers.filter(
-    (w) => w.status === "settled" && w.winnerSide !== null && w.winnerSide !== getUserSide(w)
+    (w) => w.status === "settled" && w.winnerSide !== null && w.winnerSide !== getPlayerSide(w)
   ).length;
   const active = myWagers.filter((w) =>
     ["open", "started", "voting"].includes(w.status)
@@ -58,19 +107,31 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen pb-20">
       <header className="sticky top-0 z-40 bg-[rgb(15,15,22)]/90 backdrop-blur-lg border-b border-white/5">
-        <div className="max-w-lg mx-auto px-4 py-3">
-          <h1 className="text-lg font-bold text-white">Profile</h1>
+        <div className="max-w-lg mx-auto px-4 py-3 flex items-center gap-3">
+          <h1 className="text-lg font-bold text-white shrink-0">Profile</h1>
+          <select
+            className="input flex-1 text-sm py-1.5"
+            value={viewing || user.username}
+            onChange={(e) => setViewing(e.target.value === user.username ? "" : e.target.value)}
+          >
+            <option value={user.username}>{user.username} (you)</option>
+            {allUsers
+              .filter((u) => u.username !== user.username)
+              .map((u) => (
+                <option key={u.id} value={u.username}>{u.username}</option>
+              ))}
+          </select>
         </div>
       </header>
 
       <div className="max-w-lg mx-auto px-4 pt-5 space-y-5">
         <div className="card text-center space-y-3">
           <div className="w-16 h-16 rounded-full bg-violet-600/30 flex items-center justify-center text-2xl font-bold text-violet-300 mx-auto">
-            {user.username[0].toUpperCase()}
+            {profilePlayer.username[0].toUpperCase()}
           </div>
-          <h2 className="text-xl font-bold text-white">{user.username}</h2>
-          <PointsBadge points={user.points} />
-          {user.isAdmin && (
+          <h2 className="text-xl font-bold text-white">{profilePlayer.username}</h2>
+          <PointsBadge points={profilePlayer.points} />
+          {profilePlayer.isAdmin && (
             <span className="inline-block bg-amber-500/20 text-amber-300 text-xs px-2 py-0.5 rounded-full">Admin</span>
           )}
         </div>
@@ -91,18 +152,18 @@ export default function ProfilePage() {
         </div>
 
         <div>
-          <h3 className="font-semibold text-white mb-3">Your Wagers</h3>
+          <h3 className="font-semibold text-white mb-3">
+            {isSelf ? "Your Wagers" : `${profilePlayer.username}'s Wagers`}
+          </h3>
           {myWagers.length === 0 ? (
             <p className="text-sm text-slate-500 text-center py-6">No wagers yet</p>
           ) : (
             <div className="space-y-2">
               {myWagers.map((w) => {
-                const side = getUserSide(w);
+                const side = getPlayerSide(w);
                 const won = w.status === "settled" && w.winnerSide === side;
                 const lost = w.status === "settled" && w.winnerSide !== null && w.winnerSide !== side;
-                const pool =
-                  w.creatorStake +
-                  w.entries.reduce((sum, e) => sum + e.stake, 0);
+                const pool = w.creatorStake + w.entries.reduce((sum, e) => sum + e.stake, 0);
                 return (
                   <button
                     key={w.id}
@@ -122,23 +183,41 @@ export default function ProfilePage() {
             </div>
           )}
         </div>
-        <div>
-          <h3 className="font-semibold text-white mb-3">Point History</h3>
-          {pointLogs.length === 0 ? (
-            <p className="text-sm text-slate-500 text-center py-6">No point changes yet</p>
-          ) : (
-            <div className="space-y-1.5">
-              {pointLogs.map((log) => (
-                <div key={log.id} className="flex items-center justify-between px-3 py-2 rounded-lg bg-white/5 text-sm">
-                  <span className="text-slate-300 truncate pr-3">{log.reason}</span>
-                  <span className={`shrink-0 font-semibold tabular-nums ${log.amount >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
-                    {log.amount >= 0 ? `+${log.amount}` : log.amount}
-                  </span>
-                </div>
-              ))}
+
+        {isSelf && (
+          <div>
+            <h3 className="font-semibold text-white mb-3">Point History</h3>
+            {pointLogs.length === 0 ? (
+              <p className="text-sm text-slate-500 text-center py-6">No point changes yet</p>
+            ) : (
+              <div className="space-y-1.5">
+                {pointLogs.map((log) => (
+                  <div key={log.id} className="flex items-center justify-between px-3 py-2 rounded-lg bg-white/5 text-sm">
+                    <span className="text-slate-300 truncate pr-3">{log.reason}</span>
+                    <span className={`shrink-0 font-semibold tabular-nums ${log.amount >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                      {log.amount >= 0 ? `+${log.amount}` : log.amount}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {isSelf && (
+          <div className="card flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-white">Activity Notifications</p>
+              <p className="text-xs text-slate-500 mt-0.5">Red dots on nav when action is needed</p>
             </div>
-          )}
-        </div>
+            <button
+              onClick={toggleNotifs}
+              className={`relative w-11 h-6 rounded-full transition-colors ${notifsEnabled ? "bg-violet-600" : "bg-slate-600"}`}
+            >
+              <span className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${notifsEnabled ? "left-6" : "left-1"}`} />
+            </button>
+          </div>
+        )}
       </div>
 
       <Navbar />

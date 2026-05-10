@@ -25,6 +25,7 @@ export default function ShopPage() {
   const [allUsers, setAllUsers] = useState<AllUsers>([]);
   const [xrayTarget, setXrayTarget] = useState("");
   const [xrayPeeks, setXrayPeeks] = useState<Record<string, string>>({});
+  const [xrayReveal, setXrayReveal] = useState<{ username: string; pin: string } | null>(null);
   const [newPin, setNewPin] = useState("");
   const [pinResetMsg, setPinResetMsg] = useState("");
   const [donateTarget, setDonateTarget] = useState("");
@@ -41,7 +42,7 @@ export default function ShopPage() {
       setOwned(d.owned ?? []);
       setEarlybird(d.earlybird);
     });
-    fetch("/api/admin/users").then((r) => r.ok ? r.json() : []).then(setAllUsers);
+    fetch("/api/users").then((r) => r.ok ? r.json() : []).then(setAllUsers);
     fetch("/api/shop/becou-users").then((r) => r.ok ? r.json() : []).then(setBecouUsers);
   };
 
@@ -60,7 +61,7 @@ export default function ShopPage() {
       setOwned(d.owned ?? []);
       setEarlybird(d.earlybird);
     });
-    fetch("/api/admin/users").then((r) => r.ok ? r.json() : []).then(setAllUsers);
+    fetch("/api/users").then((r) => r.ok ? r.json() : []).then(setAllUsers);
     fetch("/api/shop/becou-users").then((r) => r.ok ? r.json() : []).then(setBecouUsers);
   }, [router]);
 
@@ -104,14 +105,20 @@ export default function ShopPage() {
       if (data.reflected) {
         setMessage(`🪃 Reflected! ${xrayTarget} was warded. You lost an extra ${data.penalty} pts as a penalty. Check your achievements.`);
       } else {
-        const updated = { ...xrayPeeks, [xrayTarget]: data.pin };
-        setXrayPeeks(updated);
-        try { localStorage.setItem("xray_peeks", JSON.stringify(updated)); } catch { /* ignore */ }
+        setXrayReveal({ username: xrayTarget, pin: data.pin });
       }
       fetchData();
     } else {
       setMessage(data.error);
     }
+  };
+
+  const confirmXrayReveal = () => {
+    if (!xrayReveal) return;
+    const updated = { ...xrayPeeks, [xrayReveal.username]: xrayReveal.pin };
+    setXrayPeeks(updated);
+    try { localStorage.setItem("xray_peeks", JSON.stringify(updated)); } catch { /* ignore */ }
+    setXrayReveal(null);
   };
 
   if (!user) return null;
@@ -327,7 +334,7 @@ export default function ShopPage() {
 
             {ownedXray && (
               <div className="card space-y-3">
-                <p className="font-semibold text-white">👁️ X-Ray Vision</p>
+                <p className="font-semibold text-white">💀 PIN Crack</p>
 
                 {/* Saved peeks — always visible */}
                 {Object.keys(xrayPeeks).length > 0 && (
@@ -499,6 +506,24 @@ export default function ShopPage() {
           </>
         )}
       </div>
+
+      {/* PIN reveal modal */}
+      {xrayReveal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-6">
+          <div className="w-full max-w-sm rounded-2xl bg-[rgb(22,22,32)] border border-violet-500/30 p-6 space-y-5 text-center shadow-2xl">
+            <p className="text-slate-400 text-sm">💀 PIN Crack successful</p>
+            <p className="text-white font-semibold text-lg">{xrayReveal.username}&apos;s PIN</p>
+            <p className="text-6xl font-bold tracking-[0.3em] text-violet-300 py-2">{xrayReveal.pin}</p>
+            <p className="text-xs text-slate-500">Screenshot this — it will be saved below after you dismiss.</p>
+            <button
+              onClick={confirmXrayReveal}
+              className="btn-primary w-full"
+            >
+              Got it
+            </button>
+          </div>
+        </div>
+      )}
 
       <Navbar />
     </div>
