@@ -5,15 +5,22 @@ import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
 type User = { id: number; username: string; points: number; isAdmin: boolean };
-type Notifs = { challenges: number; wagers: number };
+type Notifs = {
+  challenges: number;
+  wagers: number;
+  achievements: number;
+  adminBingo: number;
+  bingo: string | null;
+};
 
 export default function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
   const [user, setUser] = useState<User | null>(null);
-  const [notifs, setNotifs] = useState<Notifs>({ challenges: 0, wagers: 0 });
+  const [notifs, setNotifs] = useState<Notifs>({ challenges: 0, wagers: 0, achievements: 0, adminBingo: 0, bingo: null });
   const [notifsEnabled, setNotifsEnabled] = useState(true);
 
+  // Read notif preference from localStorage
   useEffect(() => {
     try {
       const stored = localStorage.getItem("notifsEnabled");
@@ -21,18 +28,31 @@ export default function Navbar() {
     } catch { /* ignore */ }
   }, []);
 
+  // When the user lands on /bingo, record the visit so the dot clears
+  useEffect(() => {
+    if (pathname === "/bingo") {
+      try { localStorage.setItem("bingoSeenAt", new Date().toISOString()); } catch { /* ignore */ }
+    }
+  }, [pathname]);
+
   useEffect(() => {
     fetch("/api/auth/me")
       .then((r) => (r.ok ? r.json() : null))
       .then(setUser)
       .catch(() => setUser(null));
 
-    if (notifsEnabled) {
-      fetch("/api/notifications")
-        .then((r) => r.ok ? r.json() : { challenges: 0, wagers: 0 })
-        .then(setNotifs)
-        .catch(() => {});
-    }
+    if (!notifsEnabled) return;
+
+    let bingoSeenAt = "";
+    try { bingoSeenAt = localStorage.getItem("bingoSeenAt") ?? ""; } catch { /* ignore */ }
+    const url = bingoSeenAt
+      ? `/api/notifications?bingoSeenAt=${encodeURIComponent(bingoSeenAt)}`
+      : "/api/notifications";
+
+    fetch(url)
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => d && setNotifs(d))
+      .catch(() => {});
   }, [pathname, notifsEnabled]);
 
   const logout = async () => {
@@ -42,18 +62,28 @@ export default function Navbar() {
 
   if (!user) return null;
 
-  const navItems = [
-    { href: "/feed", label: "Feed", dot: notifs.wagers > 0 },
+  const showDot = (key: keyof typeof dotMap) => notifsEnabled && dotMap[key];
+
+  const dotMap = {
+    feed: notifs.wagers > 0,
+    challenges: notifs.challenges > 0,
+    achievements: notifs.achievements > 0,
+    bingo: notifs.bingo !== null,
+    admin: notifs.adminBingo > 0,
+  };
+
+  const navItems: { href: string; label: string; dotKey?: keyof typeof dotMap }[] = [
+    { href: "/feed", label: "Feed", dotKey: "feed" },
     { href: "/wagers/new", label: "+" },
     { href: "/shop", label: "Shop" },
-    { href: "/achievements", label: "🏆" },
-    { href: "/challenges", label: "⚔️", dot: notifs.challenges > 0 },
-    { href: "/bingo", label: "🎱" },
+    { href: "/achievements", label: "🏆", dotKey: "achievements" },
+    { href: "/challenges", label: "⚔️", dotKey: "challenges" },
+    { href: "/bingo", label: "🎱", dotKey: "bingo" },
     { href: "/profile", label: user.username },
   ];
 
   if (user.isAdmin) {
-    navItems.push({ href: "/admin", label: "Admin" });
+    navItems.push({ href: "/admin", label: "Admin", dotKey: "admin" });
   }
 
   return (
@@ -76,8 +106,8 @@ export default function Navbar() {
             ) : (
               <span>{item.label}</span>
             )}
-            {notifsEnabled && "dot" in item && item.dot && (
-              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
+            {item.dotKey && showDot(item.dotKey) && (
+              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full" />
             )}
           </Link>
         ))}

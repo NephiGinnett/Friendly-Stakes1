@@ -35,30 +35,21 @@ export default function ProfilePage() {
     } catch { /* ignore */ }
   }, []);
 
-  // Initial load: self data
+  // Load user list and auth check once
   useEffect(() => {
     fetch("/api/auth/me")
       .then((r) => { if (!r.ok) { router.push("/login"); return null; } return r.json(); })
-      .then((u) => {
-        setUser(u);
-        if (u) setProfilePlayer(u);
-      });
-    fetch("/api/wagers")
-      .then((r) => r.json())
-      .then(setWagers);
-    fetch("/api/point-log")
-      .then((r) => r.json())
-      .then(setPointLogs);
+      .then(setUser);
     fetch("/api/users")
       .then((r) => r.ok ? r.json() : [])
       .then(setAllUsers);
   }, [router]);
 
-  // When viewing changes to another player, fetch their data
+  // Reload profile data whenever viewing target or logged-in user changes
   useEffect(() => {
-    if (!viewing || !user) return;
-    if (viewing === user.username) {
-      // Revert to self
+    if (!user) return;
+    if (!viewing) {
+      // Back to self
       setProfilePlayer(user);
       fetch("/api/wagers").then((r) => r.json()).then(setWagers);
       fetch("/api/point-log").then((r) => r.json()).then(setPointLogs);
