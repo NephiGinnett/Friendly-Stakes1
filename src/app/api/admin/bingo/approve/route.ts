@@ -85,6 +85,34 @@ export async function POST(req: Request) {
       }
     }
 
+    // Boss damage: bingo approval deals 10 HP to The House
+    const boss = await prisma.houseConfig.findUnique({ where: { id: 1 } });
+    if (boss?.bossActive && boss.bossHp > 0) {
+      const hpDamage = 10;
+      const newBossHp = Math.max(0, boss.bossHp - hpDamage);
+      const killed = newBossHp === 0;
+      await prisma.houseDamageLog.create({ data: { userId: square.userId, amount: hpDamage, source: "bingo" } });
+      await prisma.houseConfig.update({
+        where: { id: 1 },
+        data: { bossHp: newBossHp, ...(killed ? { bossActive: false, killerUserId: square.userId } : {}) },
+      });
+      if (killed) {
+        await prisma.userAchievement.upsert({
+          where: { userId_achievementId: { userId: square.userId, achievementId: "last_stand" } },
+          create: { userId: square.userId, achievementId: "last_stand" },
+          update: {},
+        });
+      }
+      const myTotal = await prisma.houseDamageLog.aggregate({ where: { userId: square.userId }, _sum: { amount: true } });
+      if ((myTotal._sum.amount ?? 0) >= 200) {
+        await prisma.userAchievement.upsert({
+          where: { userId_achievementId: { userId: square.userId, achievementId: "resistance_fighter" } },
+          create: { userId: square.userId, achievementId: "resistance_fighter" },
+          update: {},
+        });
+      }
+    }
+
     return NextResponse.json({ ok: true, newBingo, newBlackout });
   } catch {
     return NextResponse.json({ error: "Something went wrong" }, { status: 500 });

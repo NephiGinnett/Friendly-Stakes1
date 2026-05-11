@@ -88,6 +88,36 @@ export const ACHIEVEMENTS = {
     rewardType: "passive" as const,
     emoji: "👑",
   },
+  last_stand: {
+    id: "last_stand",
+    name: "Last Stand",
+    description: "You dealt the killing blow to THE HOUSE. The final strike. The one that ended it. History will remember.",
+    hint: "???",
+    reward: "Earn 500 pts",
+    rewardPoints: 500,
+    rewardType: "increment" as const,
+    emoji: "⚡",
+  },
+  resistance_fighter: {
+    id: "resistance_fighter",
+    name: "Resistance Fighter",
+    description: "You dealt 200+ HP of damage to THE HOUSE during the boss battle. Committed. Relentless. Expensive.",
+    hint: "???",
+    reward: "Earn 300 pts",
+    rewardPoints: 300,
+    rewardType: "increment" as const,
+    emoji: "🗡️",
+  },
+  war_criminal: {
+    id: "war_criminal",
+    name: "War Criminal",
+    description: "THE HOUSE targeted you 3 or more times. It has a personal problem with you. Congratulations, probably.",
+    hint: "???",
+    reward: "Earn 200 pts",
+    rewardPoints: 200,
+    rewardType: "increment" as const,
+    emoji: "🩸",
+  },
 } as const;
 
 export type AchievementId = keyof typeof ACHIEVEMENTS;

@@ -17,6 +17,7 @@ export async function GET(req: Request) {
     unclaimedAchievements,
     adminBingo,
     latestBingoApproval,
+    houseConfig,
   ] = await Promise.all([
     prisma.challenge.count({ where: { targetId: user.id, status: "pending" } }),
 
@@ -42,7 +43,6 @@ export async function GET(req: Request) {
       ? prisma.bingoSquare.count({ where: { claimStatus: "pending" } })
       : Promise.resolve(0),
 
-    // Only return a bingo signal if there's an approved square newer than the client's last seen timestamp
     prisma.bingoSquare.findFirst({
       where: {
         userId: user.id,
@@ -52,6 +52,8 @@ export async function GET(req: Request) {
       orderBy: { claimedAt: "desc" },
       select: { claimedAt: true },
     }),
+
+    prisma.houseConfig.findUnique({ where: { id: 1 } }),
   ]);
 
   const unvotedChallenges = myVotingChallenges.filter((c) => c.votes.length === 0).length;
@@ -63,5 +65,6 @@ export async function GET(req: Request) {
     achievements: unclaimedAchievements,
     adminBingo,
     bingo: latestBingoApproval?.claimedAt ?? null,
+    boss: houseConfig?.bossActive ?? false,
   });
 }

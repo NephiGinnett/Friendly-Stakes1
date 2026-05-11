@@ -31,6 +31,11 @@ model User {
   challengesAccepted Challenge[]       @relation("ChallengeAcceptor")
   challengeVotes     ChallengeVote[]
   pointLogs          PointLog[]
+  houseSpins         HouseSpin[]
+  blackjackGame      BlackjackGame?
+  houseDamageLogs    HouseDamageLog[]
+  houseAttackLogs    HouseAttackLog[]
+  houseBanDate       String            @default("")
 }
 
 model Session {
@@ -160,6 +165,63 @@ model ChallengeVote {
   createdAt   DateTime  @default(now())
 
   @@unique([challengeId, userId])
+}
+
+// ── The House ──────────────────────────────────────────────────────────────
+
+// Global singleton (id=1 always)
+model HouseConfig {
+  id           Int      @id @default(1)
+  phase        Int      @default(0)
+  bossActive   Boolean  @default(false)
+  bossHp       Int      @default(0)
+  bossMaxHp    Int      @default(0)
+  killerUserId Int?
+  nextStrikeAt DateTime?
+  updatedAt    DateTime @updatedAt
+}
+
+model HouseSpin {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  result    Int
+  label     String
+  item      String?
+  createdAt DateTime @default(now())
+}
+
+model BlackjackGame {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @unique
+  user        User     @relation(fields: [userId], references: [id])
+  playerHand  String
+  dealerHand  String
+  deck        String
+  bet         Int
+  status      String   @default("active")
+  dailyPlays  Int      @default(0)
+  dailyDate   String   @default("")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model HouseDamageLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  amount    Int
+  source    String
+  createdAt DateTime @default(now())
+}
+
+model HouseAttackLog {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  user       User     @relation(fields: [userId], references: [id])
+  amount     Int
+  flavorText String
+  createdAt  DateTime @default(now())
 }
 
 // Each player's bingo card (25 squares, positions 0–24)

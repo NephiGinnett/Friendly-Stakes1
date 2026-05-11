@@ -11,16 +11,16 @@ type Notifs = {
   achievements: number;
   adminBingo: number;
   bingo: string | null;
+  boss: boolean;
 };
 
 export default function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
   const [user, setUser] = useState<User | null>(null);
-  const [notifs, setNotifs] = useState<Notifs>({ challenges: 0, wagers: 0, achievements: 0, adminBingo: 0, bingo: null });
+  const [notifs, setNotifs] = useState<Notifs>({ challenges: 0, wagers: 0, achievements: 0, adminBingo: 0, bingo: null, boss: false });
   const [notifsEnabled, setNotifsEnabled] = useState(true);
 
-  // Read notif preference from localStorage
   useEffect(() => {
     try {
       const stored = localStorage.getItem("notifsEnabled");
@@ -28,7 +28,6 @@ export default function Navbar() {
     } catch { /* ignore */ }
   }, []);
 
-  // When the user lands on /bingo, record the visit so the dot clears
   useEffect(() => {
     if (pathname === "/bingo") {
       try { localStorage.setItem("bingoSeenAt", new Date().toISOString()); } catch { /* ignore */ }
@@ -62,15 +61,16 @@ export default function Navbar() {
 
   if (!user) return null;
 
-  const showDot = (key: keyof typeof dotMap) => notifsEnabled && dotMap[key];
-
   const dotMap = {
     feed: notifs.wagers > 0,
     challenges: notifs.challenges > 0,
     achievements: notifs.achievements > 0,
     bingo: notifs.bingo !== null,
     admin: notifs.adminBingo > 0,
+    house: notifs.boss,
   };
+
+  const showDot = (key: keyof typeof dotMap) => notifsEnabled && dotMap[key];
 
   const navItems: { href: string; label: string; dotKey?: keyof typeof dotMap }[] = [
     { href: "/feed", label: "Feed", dotKey: "feed" },
@@ -79,6 +79,7 @@ export default function Navbar() {
     { href: "/achievements", label: "🏆", dotKey: "achievements" },
     { href: "/challenges", label: "⚔️", dotKey: "challenges" },
     { href: "/bingo", label: "🎱", dotKey: "bingo" },
+    { href: "/house", label: "🎰", dotKey: "house" },
     { href: "/profile", label: user.username },
   ];
 
@@ -93,10 +94,10 @@ export default function Navbar() {
           <Link
             key={item.href}
             href={item.href}
-            className={`relative flex flex-col items-center px-3 py-1.5 rounded-xl text-xs font-medium transition-colors ${
+            className={`relative flex flex-col items-center px-2 py-1.5 rounded-xl text-xs font-medium transition-colors ${
               item.label === "+"
                 ? "bg-violet-600 text-white rounded-full w-10 h-10 flex items-center justify-center"
-                : pathname === item.href
+                : pathname === item.href || pathname.startsWith(item.href + "/")
                 ? "text-violet-400"
                 : "text-slate-500 hover:text-slate-300"
             }`}
@@ -113,7 +114,7 @@ export default function Navbar() {
         ))}
         <button
           onClick={logout}
-          className="flex flex-col items-center px-3 py-1.5 text-xs font-medium text-slate-500 hover:text-slate-300"
+          className="flex flex-col items-center px-2 py-1.5 text-xs font-medium text-slate-500 hover:text-slate-300"
         >
           Logout
         </button>
