@@ -106,12 +106,12 @@ function Card({ card }: { card: string }) {
 // ── Status display ──────────────────────────────────────────────────────────
 
 const BJ_STATUS: Record<string, { label: string; color: string }> = {
-  blackjack:    { label: "🃏 Blackjack! You win 1.5×!", color: "text-amber-400" },
-  player_win:   { label: "You win!",                    color: "text-emerald-400" },
-  dealer_bust:  { label: "Dealer busts — you win!",     color: "text-emerald-400" },
-  player_bust:  { label: "Bust! You lose.",             color: "text-rose-400" },
-  dealer_win:   { label: "Dealer wins. Better luck.",   color: "text-rose-400" },
-  push:         { label: "Push — bet returned.",        color: "text-amber-400" },
+  blackjack:    { label: "🃏 Blackjack! You win 1.5×!",  color: "text-amber-400" },
+  player_win:   { label: "You win!",                     color: "text-emerald-400" },
+  dealer_bust:  { label: "Dealer busts — you win!",      color: "text-emerald-400" },
+  player_bust:  { label: "Bust! You lose.",               color: "text-rose-400" },
+  dealer_win:   { label: "Dealer wins. Better luck.",     color: "text-rose-400" },
+  push:         { label: "Push — bet returned.",          color: "text-amber-400" },
 };
 
 // ── Main page ───────────────────────────────────────────────────────────────
@@ -126,6 +126,7 @@ export default function HousePage() {
   const [rotation, setRotation] = useState(0);
   const [spinning, setSpinning] = useState(false);
   const [spinResult, setSpinResult] = useState<SpinOutcome | null>(null);
+  const [showSpinModal, setShowSpinModal] = useState(false);
   const [spinMsg, setSpinMsg] = useState("");
 
   // Blackjack state
@@ -152,7 +153,11 @@ export default function HousePage() {
 
   const loadBJ = async () => {
     const res = await fetch("/api/house/blackjack");
-    if (res.ok) { const d = await res.json(); setBjGame(d.game); }
+    if (res.ok) {
+      const d = await res.json();
+      setBjGame(d.game);
+      if (typeof d.playsRemaining === "number") setBjPlaysRemaining(d.playsRemaining);
+    }
   };
 
   useEffect(() => {
@@ -186,6 +191,7 @@ export default function HousePage() {
     setTimeout(() => {
       setSpinning(false);
       setSpinResult(d.outcome);
+      setShowSpinModal(true);
       setPoints(d.newPoints);
       setData(prev => prev ? { ...prev, hasSpin: true, lastSpinLabel: d.outcome.label } : prev);
     }, 4100);
@@ -218,13 +224,13 @@ export default function HousePage() {
     const res = await fetch("/api/house/blackjack/stand", { method: "POST" });
     const d = await res.json();
     setBjLoading(false);
-    setBjGame(d.game.game); setPoints(d.newPoints);
+    setBjGame(d.game); setPoints(d.newPoints);
   };
 
-  const bjClear = async () => {
-    await fetch("/api/house/blackjack", { method: "DELETE" });
+  const bjClear = () => {
+    // Don't delete the row — dailyPlays/dailyDate live on it.
+    // The next deal upserts over it and reads the count correctly.
     setBjGame(null); setBjMsg(""); setBjLoading(false);
-    load();
   };
 
   const bjActive = bjGame?.status === "active";
@@ -242,6 +248,41 @@ export default function HousePage() {
             opacity: [0, 0.5, 0.8, 1][cfg.glitchLevel],
           }}
         />
+      )}
+
+      {/* Spin result modal */}
+      {showSpinModal && spinResult && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm px-6">
+          <div
+            className="w-full max-w-sm rounded-2xl p-8 text-center space-y-4 border"
+            style={{ background: "rgb(10,8,20)", borderColor: spinResult.color + "80" }}
+          >
+            <p className="text-xs font-mono text-slate-500 tracking-widest">THE HOUSE DECLARES</p>
+            <p
+              className="text-4xl font-bold font-mono tracking-widest"
+              style={{ color: spinResult.color }}
+            >
+              {spinResult.label}
+            </p>
+            {spinResult.amount > 0 && (
+              <p className="text-lg text-emerald-400 font-mono font-bold">+{spinResult.amount} pts added</p>
+            )}
+            {spinResult.amount < 0 && (
+              <p className="text-lg text-rose-400 font-mono font-bold">{spinResult.amount} pts deducted</p>
+            )}
+            {spinResult.amount === 0 && spinResult.item && (
+              <p className="text-lg text-violet-300 font-mono font-bold">Item received!</p>
+            )}
+            <p className="text-sm text-slate-500 font-mono">New balance: {points.toLocaleString()} pts</p>
+            <button
+              onClick={() => setShowSpinModal(false)}
+              className="w-full py-2.5 rounded-xl font-bold font-mono text-sm transition-colors border"
+              style={{ background: spinResult.color + "22", borderColor: spinResult.color + "60", color: spinResult.color }}
+            >
+              ACKNOWLEDGED
+            </button>
+          </div>
+        </div>
       )}
 
       {/* Header */}
@@ -339,22 +380,6 @@ export default function HousePage() {
                   <div className="relative">
                     <SpinWheel rotation={rotation} spinning={spinning} />
                   </div>
-
-                  {/* Result */}
-                  {spinResult && (
-                    <div
-                      className="w-full rounded-xl p-4 text-center border"
-                      style={{ borderColor: spinResult.color, background: `${spinResult.color}22` }}
-                    >
-                      <p className="text-xs text-slate-400 font-mono mb-1">THE HOUSE DECLARES</p>
-                      <p className="text-2xl font-bold font-mono" style={{ color: spinResult.color }}>
-                        {spinResult.label}
-                      </p>
-                      {spinResult.amount > 0 && <p className="text-sm text-slate-300 mt-1">+{spinResult.amount} pts added to your balance</p>}
-                      {spinResult.amount < 0 && <p className="text-sm text-rose-400 mt-1">{spinResult.amount} pts deducted</p>}
-                      {spinResult.item && <p className="text-sm text-violet-300 mt-1">Item added to your inventory!</p>}
-                    </div>
-                  )}
 
                   {spinMsg && <p className="text-sm text-rose-400 text-center font-mono">{spinMsg}</p>}
 

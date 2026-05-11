@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
-import { log } from "@/lib/pointLog";
+import { logPoints } from "@/lib/pointLog";
 import { isStrikeWindow, wakeChance, nightDamageDealt, executeTargetedStrike, tomorrowUtcDate } from "@/lib/houseStrike";
 
 export async function POST(req: Request) {
@@ -30,7 +30,7 @@ export async function POST(req: Request) {
       where: { id: 1 },
       data: { bossHp: newHp, ...(killed ? { bossActive: false, killerUserId: user.id } : {}) },
     });
-    await log(user.id, -amount, `Boss Attack: dealt ${hpDamage} HP to The House`);
+    await logPoints(tx, user.id, -amount, `Boss Attack: dealt ${hpDamage} HP to The House`);
   });
 
   // Resistance fighter achievement: 200+ total HP dealt

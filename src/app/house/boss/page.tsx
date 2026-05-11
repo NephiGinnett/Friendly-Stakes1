@@ -226,7 +226,7 @@ export default function BossPage() {
         {/* Attack panel */}
         {boss.active && !boss.defeated && (
           <div className="rounded-2xl p-5 space-y-4 border border-violet-900/40" style={{ background: "rgb(12,8,22)" }}>
-            <p className="text-xs font-mono text-violet-400/70">[ DEPLOY RESOURCES — 2 pts = 1 HP ]</p>
+            <p className="text-xs font-mono text-violet-400/70">[ CONTRIBUTE RESOURCES — 2 pts = 1 HP ]</p>
             <div className="grid grid-cols-3 gap-2">
               {QUICK_ATTACKS.map(qa => (
                 <button

@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db";
 import { houseAttackFlavor } from "@/lib/house";
-import { log } from "@/lib/pointLog";
+import { logPoints } from "@/lib/pointLog";
 
 /** Returns a random next-strike time 2–6 hours from now. */
 export function nextStrikeTime(): Date {
@@ -73,7 +73,7 @@ export async function executeTargetedStrike(userId: number) {
   await prisma.$transaction(async (tx) => {
     await tx.user.update({ where: { id: userId }, data: { points: { decrement: amount } } });
     await tx.houseAttackLog.create({ data: { userId, amount, flavorText: flavor } });
-    await log(userId, -amount, `The House woke: erased "${lastPositive.reason}"`);
+    await logPoints(tx, userId, -amount, `The House woke: erased "${lastPositive.reason}"`);
   });
 
   // War Criminal check

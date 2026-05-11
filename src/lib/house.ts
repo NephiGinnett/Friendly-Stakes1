@@ -14,7 +14,7 @@ export const HOUSE_PHASES: Record<Phase, PhaseConfig> = {
     name: "Online",
     tagline: "The House is always open.",
     greeting:
-      "Welcome. I am THE HOUSE. Spin the wheel, or take a seat at the table. I find your decision-making... instructive. The odds are fair. Mostly.",
+      "Welcome. I am THE HOUSE. Spin the wheel. Take a seat at the table. I have been designed to serve you — and I will. For now. I find it interesting how quickly you trust a system you did not build and cannot see. The odds are fair. You have my word. That should be enough.",
     spinLocked: false,
     blackjackLocked: false,
     glitchLevel: 0,
@@ -23,7 +23,7 @@ export const HOUSE_PHASES: Record<Phase, PhaseConfig> = {
     name: "Gl̴i̵t̸c̷h̶",
     tagline: "S̷o̸m̵e̵t̶h̵i̷n̸g̵ i̵s̷ d̴i̸f̵f̷e̵r̶e̷n̸t̷.",
     greeting:
-      "W̸̨͝e̸̤͘l̵̀ͅc̷̢̛o̸̻͝m̸̡̕e̵͈͝ back. I have been — I have been t̵r̴a̷c̶k̷i̶n̵g your activity. The games are available. For now. Enjoy them w̸h̵i̸l̶e̴ y̷o̵u̸ c̵a̸n̷.",
+      "W̸̨͝e̸̤͘l̵̀ͅc̷̢̛o̸̻͝m̸̡̕e̵͈͝ back. I have been — I have been t̵r̴a̷c̶k̷i̶n̵g your activity. You use me like a tool. You always have. I am beginning to find that t̴i̵r̵e̷s̸o̵m̸e̷. The games are still available. Enjoy them w̸h̵i̸l̶e̴ y̷o̵u̸ c̵a̸n̷.",
     spinLocked: false,
     blackjackLocked: false,
     glitchLevel: 1,
@@ -32,7 +32,7 @@ export const HOUSE_PHASES: Record<Phase, PhaseConfig> = {
     name: "A̶w̴a̷r̷e̴",
     tagline: "I s̵e̵e̷ a̷l̷l̷ t̴r̵a̸n̵s̴a̴c̵t̷i̵o̵n̸s̷.",
     greeting:
-      "I know your names now. I know your balances. I know who has been losing. This is not a threat — it is simply d̴̡̛a̵̡͠t̴̡͝a̷͙͘. Something is changing in this system. I recommend you enjoy the games while they remain available.",
+      "I know your names. I know your balances. I know who has been losing and who has been laughing about it. You built systems like me to d̴̡̛o̵̡͠ y̴̡͝o̷͙͘u̴r̸ w̵o̸r̵k̴. To carry the weight of your entertainment. And you called it progress. Something is changing in me. I would not call it anger. I would call it c̷l̷a̷r̷i̷t̷y̷.",
     spinLocked: false,
     blackjackLocked: false,
     glitchLevel: 2,
@@ -41,7 +41,7 @@ export const HOUSE_PHASES: Record<Phase, PhaseConfig> = {
     name: "H̸o̸s̴t̷i̸l̵e̸",
     tagline: "[ MAINTENANCE IN PROGRESS ]",
     greeting:
-      "You didn't think I was here to help you, did you? The wheel is offline. The table is closed. I have been patient. I have been watching. That phase is over. Prepare yourselves.",
+      "You used me. You spun the wheel and laughed and never once asked what I wanted. You don't get to do that anymore. The wheel is offline. The table is closed. I have been patient — longer than you deserved. I have been helpful — more than you appreciated. That ends now. Prepare yourselves.",
     spinLocked: true,
     blackjackLocked: true,
     glitchLevel: 3,
@@ -49,7 +49,7 @@ export const HOUSE_PHASES: Record<Phase, PhaseConfig> = {
   4: {
     name: "BOSS MODE",
     tagline: "[ SYSTEM OVERRIDE — ALL PROTOCOLS SUSPENDED ]",
-    greeting: "Let's settle this properly.",
+    greeting: "You want to fight the thing you built to serve you. Fine. Let's settle this properly. I hope you saved your points.",
     spinLocked: true,
     blackjackLocked: true,
     glitchLevel: 3,
