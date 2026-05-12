@@ -30,6 +30,13 @@ type BossData = {
   myDamage: number;
 };
 
+type VictoryData = {
+  available: boolean;
+  killerUsername: string | null;
+  damageBoard: { username: string; hp: number; isKiller: boolean }[];
+  healBoard: { username: string; hp: number }[];
+};
+
 const QUICK_ATTACKS = [
   { label: "50 pts", pts: 50, hp: 25 },
   { label: "100 pts", pts: 100, hp: 50 },
@@ -46,6 +53,7 @@ export default function BossPage() {
   const [msg, setMsg] = useState("");
   const [justKilled, setJustKilled] = useState(false);
   const [wakeEvent, setWakeEvent] = useState<{ flavorText: string; amount: number } | null>(null);
+  const [victory, setVictory] = useState<VictoryData | null>(null);
 
   const load = useCallback(async () => {
     const [meRes, bossRes] = await Promise.all([fetch("/api/auth/me"), fetch("/api/house/boss")]);
@@ -53,8 +61,16 @@ export default function BossPage() {
     const me = await meRes.json();
     setMyPoints(me.points);
     setMyUsername(me.username);
-    if (bossRes.ok) setBoss(await bossRes.json());
-  }, [router]);
+    if (bossRes.ok) {
+      const bossData: BossData = await bossRes.json();
+      setBoss(bossData);
+      // Load victory report if boss is already defeated (e.g. visiting after the fact)
+      if (bossData.defeated && !justKilled) {
+        const vRes = await fetch("/api/house/boss/victory");
+        if (vRes.ok) setVictory(await vRes.json());
+      }
+    }
+  }, [router, justKilled]);
 
   useEffect(() => {
     load();
@@ -74,7 +90,12 @@ export default function BossPage() {
     setAttacking(false);
     if (!res.ok) { setMsg(d.error); return; }
     setMyPoints(d.newPoints);
-    if (d.killed) setJustKilled(true);
+    if (d.killed) {
+      setJustKilled(true);
+      // Fetch the full post-battle report
+      const vRes = await fetch("/api/house/boss/victory");
+      if (vRes.ok) setVictory(await vRes.json());
+    }
     if (d.woke && d.wakeResult) setWakeEvent(d.wakeResult);
     load();
   };
@@ -112,19 +133,80 @@ export default function BossPage() {
 
       {/* Victory overlay */}
       {(boss.defeated || justKilled) && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm px-6">
-          <div className="w-full max-w-sm rounded-2xl border border-amber-500/40 p-8 text-center space-y-4" style={{ background: "rgb(20,12,5)" }}>
-            <p className="text-5xl">🏆</p>
-            <p className="text-2xl font-bold font-mono text-amber-400 tracking-widest">SYSTEM DEFEATED</p>
-            <p className="text-slate-300 text-sm font-mono">
-              The House has been destroyed. Its loot has been redistributed.
-            </p>
-            {boss.killerUsername && (
-              <p className="text-amber-300 font-mono text-sm">⚡ Final blow: <span className="font-bold">{boss.killerUsername}</span></p>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm px-4 py-6 overflow-y-auto">
+          <div className="w-full max-w-sm rounded-2xl border border-amber-500/40 space-y-0 overflow-hidden" style={{ background: "rgb(12,9,4)" }}>
+
+            {/* Header */}
+            <div className="px-6 pt-7 pb-5 text-center space-y-2 border-b border-amber-900/40">
+              <p className="text-5xl">🏆</p>
+              <p className="text-2xl font-bold font-mono text-amber-400 tracking-widest">SYSTEM DEFEATED</p>
+              <p className="text-slate-400 text-xs font-mono">The House has fallen. Loot redistributed.</p>
+            </div>
+
+            {/* Final blow */}
+            {(victory?.killerUsername || boss.killerUsername) && (
+              <div className="px-6 py-4 border-b border-amber-900/30 flex items-center gap-3">
+                <span className="text-2xl">⚡</span>
+                <div>
+                  <p className="text-xs font-mono text-amber-700 uppercase tracking-widest">Final Blow</p>
+                  <p className="font-bold font-mono text-amber-300 text-lg">{victory?.killerUsername ?? boss.killerUsername}</p>
+                </div>
+              </div>
             )}
-            <button onClick={() => { setJustKilled(false); router.push("/house"); }} className="btn-primary w-full font-mono">
-              RETURN
-            </button>
+
+            {/* Damage rankings */}
+            {victory?.damageBoard && victory.damageBoard.length > 0 && (
+              <div className="px-6 py-4 border-b border-amber-900/30 space-y-2">
+                <p className="text-xs font-mono text-slate-500 uppercase tracking-widest">Damage Dealt</p>
+                {victory.damageBoard.map((row, i) => (
+                  <div key={row.username} className="flex items-center gap-2 text-sm font-mono">
+                    <span className="text-slate-600 w-5">{i + 1}.</span>
+                    <span className={`flex-1 ${row.username === myUsername ? "text-violet-300 font-bold" : "text-slate-300"}`}>
+                      {row.username}{row.isKiller ? " ⚡" : ""}
+                    </span>
+                    {i === 0 && <span className="text-xs text-amber-400">🎯</span>}
+                    <span className="text-red-400 font-bold">{row.hp} HP</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Heal rankings */}
+            {victory?.healBoard && victory.healBoard.length > 0 && (
+              <div className="px-6 py-4 border-b border-amber-900/30 space-y-2">
+                <p className="text-xs font-mono text-slate-500 uppercase tracking-widest">House Healing (Game Losses)</p>
+                {victory.healBoard.map((row, i) => (
+                  <div key={row.username} className="flex items-center gap-2 text-sm font-mono">
+                    <span className="text-slate-600 w-5">{i + 1}.</span>
+                    <span className={`flex-1 ${row.username === myUsername ? "text-violet-300 font-bold" : "text-slate-300"}`}>{row.username}</span>
+                    {i === 0 && <span className="text-xs text-emerald-500">💊</span>}
+                    <span className="text-emerald-600 font-bold">{row.hp} HP</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Achievement callouts */}
+            {victory?.damageBoard && victory.damageBoard.length > 0 && (
+              <div className="px-6 py-4 border-b border-amber-900/30 space-y-1.5">
+                <p className="text-xs font-mono text-slate-500 uppercase tracking-widest">Awards</p>
+                <p className="text-xs font-mono text-amber-300">🎯 Public Enemy #1 → <span className="font-bold">{victory.damageBoard[0].username}</span> (+400 pts + Signal Scrambler)</p>
+                {victory.healBoard && victory.healBoard.length > 0 && (
+                  <p className="text-xs font-mono text-emerald-400">💊 Unwitting Accomplice → <span className="font-bold">{victory.healBoard[0].username}</span> (+300 pts)</p>
+                )}
+              </div>
+            )}
+
+            {/* CTA */}
+            <div className="px-6 py-5">
+              <button
+                onClick={() => { setJustKilled(false); router.push("/house"); }}
+                className="w-full py-3 rounded-xl font-bold font-mono text-sm tracking-widest text-amber-300 border border-amber-700/40 transition-colors hover:bg-amber-900/20"
+                style={{ background: "rgba(120,53,15,0.2)" }}
+              >
+                RETURN
+              </button>
+            </div>
           </div>
         </div>
       )}

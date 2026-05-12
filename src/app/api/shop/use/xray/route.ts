@@ -44,9 +44,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "That player cannot be cracked." }, { status: 403 });
     }
 
-    // Check if target has an active Ward
+    // Check if target has an active Ward or Signal Scrambler (permanent ward)
     const ward = await prisma.userItem.findFirst({
-      where: { userId: target.id, itemType: "ward", usesLeft: { gt: 0 } },
+      where: { userId: target.id, itemType: { in: ["ward", "signal_scrambler"] }, usesLeft: { gt: 0 } },
     });
 
     if (ward) {
@@ -55,11 +55,14 @@ export async function POST(req: Request) {
       const blocked = Math.random() * 100 < blockChance;
 
       if (blocked) {
-        // Consume the Ward and the PIN Crack charge atomically
-        await prisma.$transaction([
-          prisma.userItem.update({ where: { id: ward.id }, data: { usesLeft: { decrement: 1 } } }),
-          prisma.userItem.update({ where: { id: xrayItem.id }, data: { usesLeft: { decrement: 1 } } }),
-        ]);
+        // Consume the PIN Crack charge; only consume the ward if it's not a permanent scrambler
+        const ops = ward.itemType === "signal_scrambler"
+          ? [prisma.userItem.update({ where: { id: xrayItem.id }, data: { usesLeft: { decrement: 1 } } })]
+          : [
+              prisma.userItem.update({ where: { id: ward.id }, data: { usesLeft: { decrement: 1 } } }),
+              prisma.userItem.update({ where: { id: xrayItem.id }, data: { usesLeft: { decrement: 1 } } }),
+            ];
+        await prisma.$transaction(ops);
 
         // Deduct penalty equal to the xray item cost
         const penalty = SHOP_ITEMS.xray.price;

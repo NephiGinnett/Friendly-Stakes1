@@ -49,6 +49,47 @@ export async function POST(req: Request) {
       create: { userId: user.id, achievementId: "last_stand" },
       update: {},
     });
+
+    // ── Post-battle awards ────────────────────────────────────────────────────
+    // Top damage dealer → Public Enemy #1 achievement (400 pts) + Signal Scrambler item
+    const topDamage = await prisma.houseDamageLog.groupBy({
+      by: ["userId"],
+      where: { source: { not: "sleep_game" } },
+      _sum: { amount: true },
+      orderBy: { _sum: { amount: "desc" } },
+      take: 1,
+    });
+    if (topDamage.length > 0) {
+      const topId = topDamage[0].userId;
+      await prisma.userAchievement.upsert({
+        where: { userId_achievementId: { userId: topId, achievementId: "top_damage" } },
+        create: { userId: topId, achievementId: "top_damage" },
+        update: {},
+      });
+      await prisma.user.update({ where: { id: topId }, data: { points: { increment: 400 } } });
+      await prisma.pointLog.create({ data: { userId: topId, amount: 400, reason: "Achievement: Public Enemy #1 — top damage dealer" } });
+      // Signal Scrambler — permanent ward (usesLeft: 0 = infinite/passive, handled by ward check)
+      await prisma.userItem.create({ data: { userId: topId, itemType: "signal_scrambler", usesLeft: 999 } });
+    }
+
+    // Top healer (most HP fed to boss via game losses) → Unwitting Accomplice (300 pts)
+    const topHeal = await prisma.houseDamageLog.groupBy({
+      by: ["userId"],
+      where: { source: "sleep_game" },
+      _sum: { amount: true },
+      orderBy: { _sum: { amount: "desc" } },
+      take: 1,
+    });
+    if (topHeal.length > 0 && (topHeal[0]._sum.amount ?? 0) > 0) {
+      const healId = topHeal[0].userId;
+      await prisma.userAchievement.upsert({
+        where: { userId_achievementId: { userId: healId, achievementId: "top_healer" } },
+        create: { userId: healId, achievementId: "top_healer" },
+        update: {},
+      });
+      await prisma.user.update({ where: { id: healId }, data: { points: { increment: 300 } } });
+      await prisma.pointLog.create({ data: { userId: healId, amount: 300, reason: "Achievement: Unwitting Accomplice — top healer" } });
+    }
   }
 
   // ── Wake-up check ──────────────────────────────────────────────────────────

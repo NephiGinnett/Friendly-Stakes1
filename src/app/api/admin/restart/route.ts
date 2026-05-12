@@ -72,9 +72,15 @@ export async function POST() {
     fs.writeFileSync(path.join(recordsDir, filename), lines.join("\n"), "utf8");
 
     // ── Reset the game ──────────────────────────────────────────────────────
-    // Delete everything in FK order, including all user accounts.
-    // Then immediately recreate the nephi admin so the app stays usable.
+    // Delete everything in FK order (House tables reference User, so delete first).
+    // Reset HouseConfig singleton rather than deleting it.
     await prisma.$transaction([
+      // House tables (reference User)
+      prisma.houseDamageLog.deleteMany(),
+      prisma.houseAttackLog.deleteMany(),
+      prisma.houseSpin.deleteMany(),
+      prisma.blackjackGame.deleteMany(),
+      // Core game tables
       prisma.vote.deleteMany(),
       prisma.wagerEntry.deleteMany(),
       prisma.wager.deleteMany(),
@@ -87,6 +93,13 @@ export async function POST() {
       prisma.session.deleteMany(),
       prisma.user.deleteMany(),
     ]);
+
+    // Reset HouseConfig singleton to phase 0
+    await prisma.houseConfig.upsert({
+      where: { id: 1 },
+      create: { id: 1, phase: 0 },
+      update: { phase: 0, bossActive: false, bossHp: 0, bossMaxHp: 0, killerUserId: null, nextStrikeAt: null },
+    });
 
     // Recreate admin account fresh with PIN 0000
     const { hash, salt } = hashPin("0000");

@@ -118,6 +118,26 @@ export const ACHIEVEMENTS = {
     rewardType: "increment" as const,
     emoji: "🩸",
   },
+  top_damage: {
+    id: "top_damage",
+    name: "Public Enemy #1",
+    description: "You dealt the most total HP damage to THE HOUSE across the entire boss battle. The system feared you specifically.",
+    hint: "???",
+    reward: "Earn 400 pts + Signal Scrambler",
+    rewardPoints: 400,
+    rewardType: "increment" as const,
+    emoji: "🎯",
+  },
+  top_healer: {
+    id: "top_healer",
+    name: "Unwitting Accomplice",
+    description: "Your losses at the wheel and table healed THE HOUSE more than anyone else. Whether that's ironic or tragic is up to you.",
+    hint: "???",
+    reward: "Earn 300 pts",
+    rewardPoints: 300,
+    rewardType: "increment" as const,
+    emoji: "💊",
+  },
 } as const;
 
 export type AchievementId = keyof typeof ACHIEVEMENTS;

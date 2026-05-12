@@ -16,6 +16,7 @@ type Wager = {
 };
 type PointLog = { id: number; amount: number; reason: string; createdAt: string };
 type PlayerInfo = { id: number; username: string; points: number; isAdmin: boolean };
+type AchievementBadge = { id: string; name: string; emoji: string; unlockedAt: string };
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -25,6 +26,8 @@ export default function ProfilePage() {
   const [profilePlayer, setProfilePlayer] = useState<PlayerInfo | null>(null);
   const [wagers, setWagers] = useState<Wager[]>([]);
   const [pointLogs, setPointLogs] = useState<PointLog[]>([]);
+  const [achievements, setAchievements] = useState<AchievementBadge[]>([]);
+  const [tooltipId, setTooltipId] = useState<string | null>(null);
   const [notifsEnabled, setNotifsEnabled] = useState(true);
 
   // Load notification preference
@@ -53,6 +56,13 @@ export default function ProfilePage() {
       setProfilePlayer(user);
       fetch("/api/wagers").then((r) => r.json()).then(setWagers);
       fetch("/api/point-log").then((r) => r.json()).then(setPointLogs);
+      fetch("/api/achievements")
+        .then((r) => r.ok ? r.json() : [])
+        .then((data: { id: string; name: string; emoji: string; unlockedAt: string | null; unlocked: boolean }[]) =>
+          setAchievements(data.filter(a => a.unlocked && a.unlockedAt).map(a => ({
+            id: a.id, name: a.name, emoji: a.emoji, unlockedAt: a.unlockedAt!,
+          })))
+        );
     } else {
       fetch(`/api/players/${viewing}`)
         .then((r) => r.ok ? r.json() : null)
@@ -61,9 +71,11 @@ export default function ProfilePage() {
             setProfilePlayer(data.player);
             setWagers(data.wagers);
             setPointLogs([]);
+            setAchievements(data.achievements ?? []);
           }
         });
     }
+    setTooltipId(null);
   }, [viewing, user]);
 
   const toggleNotifs = () => {
@@ -124,6 +136,34 @@ export default function ProfilePage() {
           <PointsBadge points={profilePlayer.points} />
           {profilePlayer.isAdmin && (
             <span className="inline-block bg-amber-500/20 text-amber-300 text-xs px-2 py-0.5 rounded-full">Admin</span>
+          )}
+
+          {/* Achievement badges */}
+          {achievements.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 justify-center pt-1 relative">
+              {achievements.map((a) => (
+                <div key={a.id} className="relative">
+                  <button
+                    onClick={() => setTooltipId(tooltipId === a.id ? null : a.id)}
+                    className="text-xl leading-none hover:scale-125 transition-transform"
+                    title={a.name}
+                  >
+                    {a.emoji}
+                  </button>
+                  {tooltipId === a.id && (
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-20 w-44 rounded-xl bg-slate-900 border border-white/10 p-3 text-left shadow-xl">
+                      <p className="text-xs font-bold text-white">{a.name}</p>
+                      <p className="text-xs text-slate-400 mt-0.5">
+                        {new Date(a.unlockedAt).toLocaleString("en-US", {
+                          month: "short", day: "numeric", year: "numeric",
+                          hour: "numeric", minute: "2-digit", hour12: true,
+                        })}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           )}
         </div>
 
