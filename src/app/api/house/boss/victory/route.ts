@@ -31,7 +31,7 @@ export async function GET() {
     orderBy: { _sum: { amount: "desc" } },
   });
 
-  const allUserIds = [...new Set([...damageRaw.map(r => r.userId), ...healRaw.map(r => r.userId)])];
+  const allUserIds = Array.from(new Set([...damageRaw.map(r => r.userId), ...healRaw.map(r => r.userId)]));
   const users = await prisma.user.findMany({
     where: { id: { in: allUserIds } },
     select: { id: true, username: true },
