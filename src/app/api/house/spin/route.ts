@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { pickSpinOutcome, HOUSE_PHASES } from "@/lib/house";
-import { log } from "@/lib/pointLog";
-import { todayUtcDate } from "@/lib/houseStrike";
+import { logPoints } from "@/lib/pointLog";
+import { todayUtcDate, isStrikeWindow } from "@/lib/houseStrike";
 
 function todayUtcStart() {
   const d = new Date();
@@ -22,8 +22,11 @@ export async function POST() {
     where: { id: 1 }, create: { id: 1, phase: 0 }, update: {},
   });
 
-  const phaseConfig = HOUSE_PHASES[config.phase as 0|1|2|3|4];
-  if (phaseConfig.spinLocked) {
+  const phase = config.phase as 0 | 1 | 2 | 3 | 4;
+  const phaseConfig = HOUSE_PHASES[phase];
+
+  // Phase 4 bypasses the spinLocked gate — games still run, losses heal the boss
+  if (phaseConfig.spinLocked && phase !== 4) {
     return NextResponse.json({ error: "The wheel is offline." }, { status: 403 });
   }
 
@@ -35,6 +38,7 @@ export async function POST() {
   }
 
   const { outcome, index } = pickSpinOutcome();
+  const sleeping = !isStrikeWindow();
 
   await prisma.$transaction(async (tx) => {
     await tx.houseSpin.create({
@@ -46,13 +50,37 @@ export async function POST() {
         where: { id: user.id },
         data: { points: { increment: outcome.amount } },
       });
-      await log(user.id, outcome.amount, `House Spin: ${outcome.label}`);
+      await logPoints(tx, user.id, outcome.amount, `House Spin: ${outcome.label}`);
     } else if (outcome.item) {
       await tx.userItem.create({
         data: { userId: user.id, itemType: outcome.item, usesLeft: 1 },
       });
     }
+
+    // Phase 4: player loss heals the boss (2 pts = 1 HP, same ratio as attacks)
+    if (phase === 4 && outcome.amount < 0 && config.bossActive && config.bossHp > 0) {
+      const healHp = Math.floor(Math.abs(outcome.amount) / 2);
+      await tx.houseConfig.update({
+        where: { id: 1 },
+        data: { bossHp: { increment: healHp } },
+      });
+    }
+
+    // Playing during sleep window counts as a 50-pt "noise contribution" for wake chance
+    if (sleeping) {
+      await tx.houseDamageLog.create({
+        data: { userId: user.id, amount: 25, source: "sleep_game" },
+      });
+    }
   });
+
+  // Cap bossHp at bossMaxHp after healing
+  if (phase === 4 && outcome.amount < 0 && config.bossActive && config.bossHp > 0) {
+    const latest = await prisma.houseConfig.findUnique({ where: { id: 1 } });
+    if (latest && latest.bossHp > latest.bossMaxHp) {
+      await prisma.houseConfig.update({ where: { id: 1 }, data: { bossHp: latest.bossMaxHp } });
+    }
+  }
 
   const updated = await prisma.user.findUnique({ where: { id: user.id }, select: { points: true } });
 

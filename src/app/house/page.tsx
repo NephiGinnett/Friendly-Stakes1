@@ -148,7 +148,7 @@ export default function HousePage() {
     if (!houseRes.ok) return;
     const h: HouseData = await houseRes.json();
     setData(h);
-    if (h.phase === 4) router.push("/house/boss");
+    // Phase 4: no longer auto-redirect — games are still available
   };
 
   const loadBJ = async () => {
@@ -351,8 +351,24 @@ export default function HousePage() {
           </div>
         )}
 
-        {/* Games (phases 0–2) */}
-        {!cfg.spinLocked && (
+        {/* Phase 4: boss link + absorption warning */}
+        {phase === 4 && (
+          <div className="space-y-2">
+            <button
+              onClick={() => router.push("/house/boss")}
+              className="w-full py-3 rounded-2xl font-bold font-mono tracking-widest text-red-300 border border-red-700/60 transition-colors hover:bg-red-900/20"
+              style={{ background: "rgb(20,5,5)" }}
+            >
+              ⚡ ENTER BOSS BATTLE
+            </button>
+            <div className="rounded-xl px-4 py-2 text-center border border-red-900/40" style={{ background: "rgba(127,29,29,0.15)" }}>
+              <p className="text-xs font-mono text-red-500">⚠ RESOURCE ABSORPTION ACTIVE — your losses heal The House</p>
+            </div>
+          </div>
+        )}
+
+        {/* Games (phases 0–2, and phase 4) */}
+        {(!cfg.spinLocked || phase === 4) && (
           <>
             {/* Tabs */}
             <div className="flex gap-2 rounded-xl bg-white/5 p-1">

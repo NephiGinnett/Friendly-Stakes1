@@ -1,6 +1,14 @@
 import { prisma } from "@/lib/db";
-import { houseAttackFlavor } from "@/lib/house";
 import { logPoints } from "@/lib/pointLog";
+
+// Set HOUSE_UTC_OFFSET in .env to your event's UTC offset (e.g. -7 for MDT, -6 for MDT->MST/CDT)
+const HOUSE_UTC_OFFSET = parseInt(process.env.HOUSE_UTC_OFFSET ?? "-7", 10);
+
+/** Current hour in the event's local timezone (0–23). */
+function localHouseHour(): number {
+  const utcHour = new Date().getUTCHours();
+  return ((utcHour + HOUSE_UTC_OFFSET) % 24 + 24) % 24;
+}
 
 /** Returns a random next-strike time 2–6 hours from now. */
 export function nextStrikeTime(): Date {
@@ -8,13 +16,13 @@ export function nextStrikeTime(): Date {
   return new Date(Date.now() + intervalMs);
 }
 
-/** Returns true if current server-local hour is within the 6am–8pm window. */
+/** Returns true if current local hour is within the 6am–8pm window. */
 export function isStrikeWindow(): boolean {
-  const hour = new Date().getHours();
+  const hour = localHouseHour();
   return hour >= 6 && hour < 20;
 }
 
-/** UTC date string for today, e.g. "2026-05-12" */
+/** UTC date string for today in the event's local timezone, e.g. "2026-05-12" */
 export function todayUtcDate(): string {
   const d = new Date();
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
@@ -35,48 +43,68 @@ export function wakeChance(nightDamageHp: number): number {
   return Math.min(5 + Math.floor(nightDamageHp / 10) * 3, 80);
 }
 
-/** HP dealt since the current sleep window started (8pm last day or midnight if unknown). */
+/** HP dealt since the current sleep window started (8pm local time). */
 export async function nightDamageDealt(): Promise<number> {
-  // Sleep window started at 8pm server-local time today (or yesterday if it's past midnight)
-  const now = new Date();
-  const sleepStart = new Date(now);
-  sleepStart.setHours(20, 0, 0, 0);
-  if (now < sleepStart) {
-    // Before 8pm today — sleep window started yesterday at 8pm
-    sleepStart.setDate(sleepStart.getDate() - 1);
+  // Shift "now" into local time by adding offset as ms
+  const localMs = Date.now() + HOUSE_UTC_OFFSET * 3600_000;
+  const localNow = new Date(localMs);
+
+  // In the shifted representation, getUTCHours() == local hour
+  const sleepStartLocal = new Date(localMs);
+  sleepStartLocal.setUTCHours(20, 0, 0, 0);
+
+  if (localNow.getUTCHours() < 20) {
+    // Before 8pm local — sleep window started yesterday at 8pm local
+    sleepStartLocal.setUTCDate(sleepStartLocal.getUTCDate() - 1);
   }
 
+  // Convert shifted timestamp back to real UTC
+  const sleepStartUTC = new Date(sleepStartLocal.getTime() - HOUSE_UTC_OFFSET * 3600_000);
+
   const agg = await prisma.houseDamageLog.aggregate({
-    where: { createdAt: { gte: sleepStart } },
+    where: { createdAt: { gte: sleepStartUTC } },
     _sum: { amount: true },
   });
   return agg._sum.amount ?? 0;
 }
 
-/** Strike a specific user — erases their last positive log entry. */
+/** Strike a specific user — erases their last positive log entry, or takes 50 pts if none exists. */
 export async function executeTargetedStrike(userId: number) {
-  const lastPositive = await prisma.pointLog.findFirst({
-    where: { userId, amount: { gt: 0 } },
-    orderBy: { createdAt: "desc" },
-  });
-  if (!lastPositive) return null;
+  const [lastPositive, targetUser] = await Promise.all([
+    prisma.pointLog.findFirst({
+      where: { userId, amount: { gt: 0 } },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: { username: true, points: true },
+    }),
+  ]);
 
-  const targetUser = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { username: true },
-  });
   if (!targetUser) return null;
 
-  const amount = lastPositive.amount;
-  const flavor = `The House stirs. ${targetUser.username} disturbed its sleep — "${lastPositive.reason}" is erased. ${amount} pts reclaimed. Privileges suspended until morning.`;
+  let amount: number;
+  let flavor: string;
+  let logReason: string;
+
+  if (lastPositive) {
+    amount = lastPositive.amount;
+    flavor = `The House stirs. ${targetUser.username} disturbed its sleep — "${lastPositive.reason}" is erased. ${amount} pts reclaimed. Privileges suspended until morning.`;
+    logReason = `The House woke: erased "${lastPositive.reason}"`;
+  } else {
+    // Fallback: no log entry to erase — levy a flat 50pt silence tax
+    if ((targetUser.points ?? 0) < 50) return null;
+    amount = 50;
+    flavor = `The House stirs. ${targetUser.username}'s record was clean — silence costs 50 pts. Privileges suspended until morning.`;
+    logReason = `The House woke: silence tax`;
+  }
 
   await prisma.$transaction(async (tx) => {
     await tx.user.update({ where: { id: userId }, data: { points: { decrement: amount } } });
     await tx.houseAttackLog.create({ data: { userId, amount, flavorText: flavor } });
-    await logPoints(tx, userId, -amount, `The House woke: erased "${lastPositive.reason}"`);
+    await logPoints(tx, userId, -amount, logReason);
   });
 
-  // War Criminal check
   const totalAttacks = await prisma.houseAttackLog.count({ where: { userId } });
   if (totalAttacks >= 3) {
     await prisma.userAchievement.upsert({
@@ -91,7 +119,7 @@ export async function executeTargetedStrike(userId: number) {
 
 /**
  * Executes one House strike against a random non-admin player.
- * Erases their most recent positive PointLog entry.
+ * Erases their most recent positive PointLog entry, or levies a silence tax.
  */
 export async function executeHouseStrike() {
   const players = await prisma.user.findMany({

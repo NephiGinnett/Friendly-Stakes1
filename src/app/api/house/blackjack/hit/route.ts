@@ -40,6 +40,14 @@ export async function POST() {
 
   if (status === "player_bust") {
     await log(user.id, 0, `Blackjack: bust (${pv}), lost ${game.bet} pts`);
+
+    // Phase 4: bust heals the boss
+    const config = await prisma.houseConfig.findUnique({ where: { id: 1 } });
+    if (config?.bossActive && config.bossHp > 0 && config.phase === 4) {
+      const healHp = Math.floor(game.bet / 2);
+      const newHp = Math.min(config.bossHp + healHp, config.bossMaxHp);
+      await prisma.houseConfig.update({ where: { id: 1 }, data: { bossHp: newHp } });
+    }
   }
 
   const updated = await prisma.user.findUnique({ where: { id: user.id }, select: { points: true } });

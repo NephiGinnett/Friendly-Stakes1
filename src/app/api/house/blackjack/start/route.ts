@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { buildDeck, handValue, isNaturalBlackjack, HOUSE_PHASES } from "@/lib/house";
 import { log } from "@/lib/pointLog";
-import { todayUtcDate } from "@/lib/houseStrike";
+import { todayUtcDate, isStrikeWindow } from "@/lib/houseStrike";
 
 const DAILY_LIMIT = 3;
 
@@ -14,7 +14,9 @@ export async function POST(req: Request) {
   const config = await prisma.houseConfig.upsert({
     where: { id: 1 }, create: { id: 1, phase: 0 }, update: {},
   });
-  if (HOUSE_PHASES[config.phase as 0|1|2|3|4].blackjackLocked) {
+  const phase = config.phase as 0 | 1 | 2 | 3 | 4;
+  // Phase 4 bypasses the blackjackLocked gate — games still run, losses heal the boss
+  if (HOUSE_PHASES[phase].blackjackLocked && phase !== 4) {
     return NextResponse.json({ error: "The table is closed." }, { status: 403 });
   }
 
@@ -45,6 +47,11 @@ export async function POST(req: Request) {
 
   await prisma.user.update({ where: { id: user.id }, data: { points: { decrement: bet } } });
   await log(user.id, -bet, `Blackjack: placed bet of ${bet} pts`);
+
+  // Playing during sleep window counts as noise — adds to wake chance
+  if (!isStrikeWindow()) {
+    await prisma.houseDamageLog.create({ data: { userId: user.id, amount: 25, source: "sleep_game" } });
+  }
 
   let status = "active";
   let payout = 0;

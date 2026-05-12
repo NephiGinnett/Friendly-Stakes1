@@ -63,5 +63,16 @@ export async function POST() {
   }
 
   const result = await runDealer(game);
+
+  // Phase 4: player loss heals the boss
+  if (result.status === "dealer_win" || result.status === "player_bust") {
+    const config = await prisma.houseConfig.findUnique({ where: { id: 1 } });
+    if (config?.bossActive && config.bossHp > 0 && config.phase === 4) {
+      const healHp = Math.floor(game.bet / 2);
+      const newHp = Math.min(config.bossHp + healHp, config.bossMaxHp);
+      await prisma.houseConfig.update({ where: { id: 1 }, data: { bossHp: newHp } });
+    }
+  }
+
   return NextResponse.json({ game: result, newPoints: result.newPoints });
 }

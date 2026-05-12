@@ -31,6 +31,7 @@ export async function GET() {
 
   const [damageLogs, attackLogs, myDamageAgg] = await Promise.all([
     prisma.houseDamageLog.findMany({
+      where: { source: { not: "sleep_game" } },
       orderBy: { createdAt: "desc" },
       take: 30,
       include: { user: { select: { username: true } } },
@@ -40,7 +41,7 @@ export async function GET() {
       take: 30,
       include: { user: { select: { username: true } } },
     }),
-    prisma.houseDamageLog.aggregate({ where: { userId: user.id }, _sum: { amount: true } }),
+    prisma.houseDamageLog.aggregate({ where: { userId: user.id, source: { not: "sleep_game" } }, _sum: { amount: true } }),
   ]);
 
   const killer = config.killerUserId
@@ -49,6 +50,7 @@ export async function GET() {
 
   const leaderboardRaw = await prisma.houseDamageLog.groupBy({
     by: ["userId"],
+    where: { source: { not: "sleep_game" } },
     _sum: { amount: true },
     orderBy: { _sum: { amount: "desc" } },
   });
