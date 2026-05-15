@@ -15,6 +15,14 @@ type HouseData = {
   hasActiveBlackjack: boolean;
 };
 
+type SacrificeVoteEntry = { userId: number; username: string; votes: number };
+type SacrificeState = {
+  open: boolean;
+  votes: SacrificeVoteEntry[];
+  myVote: { targetId: number; targetUsername: string; weight: number } | null;
+  voterCount: number;
+};
+
 type BJGame = {
   playerHand: string[];
   dealerHand: string[];
@@ -137,6 +145,21 @@ export default function HousePage() {
   const [bjPlaysRemaining, setBjPlaysRemaining] = useState(3);
   const rotRef = useRef(0);
 
+  // Sacrifice state
+  const [sacrifice, setSacrifice] = useState<SacrificeState | null>(null);
+  const [sacrificeTarget, setSacrificeTarget] = useState("");
+  const [sacrificeUseThumb, setSacrificeUseThumb] = useState(false);
+  const [sacrificeMsg, setSacrificeMsg] = useState("");
+  const [sacrificeLoading, setSacrificeLoading] = useState(false);
+  const [hasThumb, setHasThumb] = useState(false);
+  const [myUsername, setMyUsername] = useState("");
+  const [allPlayers, setAllPlayers] = useState<{ id: number; username: string }[]>([]);
+
+  const loadSacrifice = async () => {
+    const res = await fetch("/api/house/sacrifice");
+    if (res.ok) setSacrifice(await res.json());
+  };
+
   const load = async () => {
     const [meRes, houseRes] = await Promise.all([
       fetch("/api/auth/me"),
@@ -145,6 +168,14 @@ export default function HousePage() {
     if (!meRes.ok) { router.push("/login"); return; }
     const me = await meRes.json();
     setPoints(me.points);
+    setMyUsername(me.username);
+    fetch("/api/users").then(r => r.ok ? r.json() : []).then(setAllPlayers);
+    // Check for Thumb on the Scale
+    const shopRes = await fetch("/api/shop");
+    if (shopRes.ok) {
+      const shopData: { owned: { itemType: string; usesLeft: number }[] } = await shopRes.json();
+      setHasThumb(shopData.owned.some(i => i.itemType === "thumb" && i.usesLeft > 0));
+    }
     if (!houseRes.ok) return;
     const h: HouseData = await houseRes.json();
     setData(h);
@@ -163,6 +194,9 @@ export default function HousePage() {
   useEffect(() => {
     load();
     loadBJ();
+    loadSacrifice();
+    const interval = setInterval(loadSacrifice, 10000);
+    return () => clearInterval(interval);
   }, []);
 
   if (!data) return null;
@@ -225,6 +259,22 @@ export default function HousePage() {
     const d = await res.json();
     setBjLoading(false);
     setBjGame(d.game); setPoints(d.newPoints);
+  };
+
+  const castSacrificeVote = async () => {
+    if (!sacrificeTarget || sacrificeLoading) return;
+    setSacrificeLoading(true); setSacrificeMsg("");
+    const res = await fetch("/api/house/sacrifice", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ targetUsername: sacrificeTarget, useThumb: sacrificeUseThumb }),
+    });
+    const d = await res.json();
+    setSacrificeLoading(false);
+    if (!res.ok) { setSacrificeMsg(d.error); return; }
+    setSacrificeMsg(`Vote cast for ${d.targetUsername}${d.weight > 1 ? " (2× weighted)" : ""}.`);
+    setSacrificeUseThumb(false);
+    loadSacrifice();
   };
 
   const bjClear = () => {
@@ -336,17 +386,89 @@ export default function HousePage() {
 
         {/* Phase 3 locked state */}
         {cfg.spinLocked && phase < 4 && (
-          <div className="rounded-2xl p-8 text-center border border-red-900/40 bg-red-950/20 space-y-3">
-            <p className="text-4xl">⚠️</p>
-            <p className="font-bold text-red-400 font-mono tracking-widest">ALL SERVICES OFFLINE</p>
-            <p className="text-sm text-slate-500 font-mono">Maintenance in progress. Stand by.</p>
-            {data.bossActive && (
-              <button
-                onClick={() => router.push("/house/boss")}
-                className="mt-2 px-6 py-3 rounded-xl bg-red-900/40 border border-red-700/60 text-red-300 font-bold font-mono hover:bg-red-900/60 transition-colors"
-              >
-                ⚡ ENGAGE THE HOUSE
-              </button>
+          <div className="space-y-4">
+            <div className="rounded-2xl p-6 text-center border border-red-900/40 bg-red-950/20 space-y-2">
+              <p className="text-3xl">⚠️</p>
+              <p className="font-bold text-red-400 font-mono tracking-widest">ALL SERVICES OFFLINE</p>
+              <p className="text-sm text-slate-500 font-mono">The House demands tribute. Maintenance in progress.</p>
+              {data.bossActive && (
+                <button
+                  onClick={() => router.push("/house/boss")}
+                  className="mt-1 px-6 py-2.5 rounded-xl bg-red-900/40 border border-red-700/60 text-red-300 font-bold font-mono hover:bg-red-900/60 transition-colors"
+                >
+                  ⚡ ENGAGE THE HOUSE
+                </button>
+              )}
+            </div>
+
+            {/* Sacrifice voting panel */}
+            {sacrifice?.open && (
+              <div className="rounded-2xl border border-red-800/60 overflow-hidden" style={{ background: "rgb(12,5,5)" }}>
+                <div className="px-5 py-4 border-b border-red-900/40 space-y-1">
+                  <p className="font-bold font-mono text-red-400 tracking-widest text-sm">🩸 THE HOUSE DEMANDS A SACRIFICE</p>
+                  <p className="text-xs font-mono text-slate-500">Vote for who shall be offered. The player with the most votes loses all their points. Half feeds The House. Half is divided among the survivors.</p>
+                </div>
+
+                {/* Tally */}
+                {sacrifice.votes.length > 0 && (
+                  <div className="px-5 py-3 space-y-1.5 border-b border-red-900/30">
+                    <p className="text-xs font-mono text-slate-600 uppercase tracking-widest">Current Tally — {sacrifice.voterCount} vote{sacrifice.voterCount !== 1 ? "s" : ""} cast</p>
+                    {sacrifice.votes.map((v, i) => (
+                      <div key={v.userId} className="flex items-center gap-2 text-sm font-mono">
+                        <span className="text-slate-600 w-4">{i + 1}.</span>
+                        <span className={`flex-1 ${sacrifice.myVote?.targetId === v.userId ? "text-red-300 font-bold" : "text-slate-300"}`}>{v.username}</span>
+                        <span className="text-red-500 font-bold">{v.votes} vote{v.votes !== 1 ? "s" : ""}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Cast vote */}
+                <div className="px-5 py-4 space-y-3">
+                  {sacrifice.myVote && (
+                    <p className="text-xs font-mono text-slate-500">Your vote: <span className="text-red-400 font-bold">{sacrifice.myVote.targetUsername}</span>{sacrifice.myVote.weight > 1 ? " (2×)" : ""} — you may change it below</p>
+                  )}
+                  <select
+                    className="input w-full text-sm font-mono"
+                    value={sacrificeTarget}
+                    onChange={e => setSacrificeTarget(e.target.value)}
+                    style={{ background: "rgb(20,5,5)", borderColor: "#7f1d1d", color: "#fca5a5" }}
+                  >
+                    <option value="">— choose a player —</option>
+                    {allPlayers
+                      .filter(p => p.username !== myUsername)
+                      .map(p => {
+                        const voteRow = sacrifice.votes.find(v => v.username === p.username);
+                        return (
+                          <option key={p.id} value={p.username}>
+                            {p.username}{voteRow ? ` (${voteRow.votes} vote${voteRow.votes !== 1 ? "s" : ""})` : ""}
+                          </option>
+                        );
+                      })
+                    }
+                  </select>
+                  {hasThumb && (
+                    <label className="flex items-center gap-2 text-xs font-mono text-slate-400 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={sacrificeUseThumb}
+                        onChange={e => setSacrificeUseThumb(e.target.checked)}
+                        className="accent-red-600"
+                      />
+                      Use Thumb on the Scale (2× vote weight, consumes 1 charge)
+                    </label>
+                  )}
+                  <button
+                    onClick={castSacrificeVote}
+                    disabled={!sacrificeTarget || sacrificeLoading}
+                    className="w-full py-2.5 rounded-xl font-bold font-mono text-sm text-red-300 border border-red-700/60 transition-colors disabled:opacity-40"
+                    style={{ background: "rgba(127,29,29,0.25)" }}
+                  >
+                    {sacrificeLoading ? "CASTING..." : sacrifice.myVote ? "CHANGE VOTE" : "🩸 CAST VOTE"}
+                  </button>
+                  {sacrificeMsg && <p className={`text-xs font-mono ${sacrificeMsg.includes("Vote cast") ? "text-emerald-400" : "text-red-400"}`}>{sacrificeMsg}</p>}
+                </div>
+              </div>
             )}
           </div>
         )}

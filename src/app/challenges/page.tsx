@@ -56,7 +56,7 @@ export default function ChallengesPage() {
   const fetchAll = () => {
     fetch("/api/auth/me").then((r) => r.ok ? r.json() : null).then(setUser);
     fetch("/api/challenges").then((r) => r.json()).then(setChallenges);
-    fetch("/api/admin/users").then((r) => r.ok ? r.json() : []).then(setAllUsers);
+    fetch("/api/users").then((r) => r.ok ? r.json() : []).then(setAllUsers);
   };
 
   useEffect(() => {
@@ -64,7 +64,7 @@ export default function ChallengesPage() {
       .then((r) => { if (!r.ok) { router.push("/login"); return null; } return r.json(); })
       .then((u) => { if (u) setUser(u); });
     fetch("/api/challenges").then((r) => r.json()).then(setChallenges);
-    fetch("/api/admin/users").then((r) => r.ok ? r.json() : []).then(setAllUsers);
+    fetch("/api/users").then((r) => r.ok ? r.json() : []).then(setAllUsers);
   }, [router]);
 
   const postChallenge = async () => {

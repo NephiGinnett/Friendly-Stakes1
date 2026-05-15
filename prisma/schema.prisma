@@ -36,6 +36,8 @@ model User {
   houseDamageLogs    HouseDamageLog[]
   houseAttackLogs    HouseAttackLog[]
   houseBanDate       String            @default("")
+  sacrificeVotesCast SacrificeVote[]
+  sacrificeVotesReceived SacrificeVote[] @relation("SacrificeTarget")
 }
 
 model Session {
@@ -171,14 +173,29 @@ model ChallengeVote {
 
 // Global singleton (id=1 always)
 model HouseConfig {
-  id           Int      @id @default(1)
-  phase        Int      @default(0)
-  bossActive   Boolean  @default(false)
-  bossHp       Int      @default(0)
-  bossMaxHp    Int      @default(0)
-  killerUserId Int?
-  nextStrikeAt DateTime?
-  updatedAt    DateTime @updatedAt
+  id             Int      @id @default(1)
+  phase          Int      @default(0)
+  bossActive     Boolean  @default(false)
+  bossHp         Int      @default(0)
+  bossMaxHp      Int      @default(0)
+  killerUserId   Int?
+  nextStrikeAt   DateTime?
+  sacrificeOpen     Boolean  @default(false)
+  sacrificeBonusHp  Int      @default(0)
+  casinoOpen        Boolean  @default(true)
+  updatedAt         DateTime @updatedAt
+}
+
+model SacrificeVote {
+  id           Int      @id @default(autoincrement())
+  voterId      Int
+  voter        User     @relation(fields: [voterId], references: [id])
+  targetId     Int
+  target       User     @relation("SacrificeTarget", fields: [targetId], references: [id])
+  weight       Int      @default(1)
+  createdAt    DateTime @default(now())
+
+  @@unique([voterId])
 }
 
 model HouseSpin {

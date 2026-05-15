@@ -36,6 +36,11 @@ export default function AdminPage() {
   const [confirmResetItems, setConfirmResetItems] = useState(false);
   const [resettingItems, setResettingItems] = useState(false);
 
+  // Casino state
+  const [casinoOpen, setCasinoOpen] = useState(true);
+  const [casinoMsg, setCasinoMsg] = useState<string | null>(null);
+  const [casinoLoading, setCasinoLoading] = useState(false);
+
   // The House state
   const [houseStatus, setHouseStatus] = useState<HouseStatus | null>(null);
   const [housePhaseInput, setHousePhaseInput] = useState("");
@@ -44,6 +49,12 @@ export default function AdminPage() {
   const [strikeResult, setStrikeResult] = useState<string | null>(null);
   const [tally, setTally] = useState<TallyData | null>(null);
   const [showTally, setShowTally] = useState(false);
+
+  // Sacrifice state
+  const [sacrificeVotes, setSacrificeVotes] = useState<{ username: string; votes: number }[]>([]);
+  const [sacrificeOpen, setSacrificeOpen] = useState(false);
+  const [sacrificeMsg, setSacrificeMsg] = useState<string | null>(null);
+  const [sacrificing, setSacrificing] = useState(false);
 
   // Restart state
   const [confirmRestart, setConfirmRestart] = useState(false);
@@ -55,7 +66,47 @@ export default function AdminPage() {
     fetch("/api/admin/users").then((r) => r.ok ? r.json() : []).then(setUsers);
     fetch("/api/admin/bingo/claims").then((r) => r.ok ? r.json() : []).then(setClaims);
     fetch("/api/admin/bingo/items").then((r) => r.ok ? r.json() : []).then(setBingoItems);
-    fetch("/api/house").then((r) => r.ok ? r.json() : null).then((d) => d && setHouseStatus({ phase: d.phase, bossActive: d.bossActive, bossHp: d.bossHp, bossMaxHp: d.bossMaxHp }));
+    fetch("/api/house").then((r) => r.ok ? r.json() : null).then((d) => {
+      if (d) {
+        setHouseStatus({ phase: d.phase, bossActive: d.bossActive, bossHp: d.bossHp, bossMaxHp: d.bossMaxHp });
+        setCasinoOpen(d.casinoOpen ?? true);
+      }
+    });
+    fetch("/api/house/sacrifice").then((r) => r.ok ? r.json() : null).then((d) => {
+      if (d) { setSacrificeOpen(d.open); setSacrificeVotes(d.votes ?? []); }
+    });
+  };
+
+  const sacrificeAction = async (action: "open" | "close" | "execute") => {
+    setSacrificing(true); setSacrificeMsg(null);
+    const res = await fetch("/api/admin/house/sacrifice", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action }),
+    });
+    const d = await res.json();
+    setSacrificing(false);
+    if (res.ok) {
+      if (action === "execute") {
+        setSacrificeMsg(`🩸 ${d.username} sacrificed (${d.sacrificedPoints} pts). ${d.playerCount} survivors each receive ${d.sharePerPlayer} pts. House HP healed ${Math.floor(d.houseHeal / 2)} pts.${d.achievementAwarded ? ` Achievement: ${d.achievementAwarded}` : ""}`);
+      } else {
+        setSacrificeMsg(action === "open" ? "Vote opened." : "Vote closed.");
+      }
+      fetchAll();
+    } else {
+      setSacrificeMsg(d.error);
+    }
+  };
+
+  const toggleCasino = async (open: boolean) => {
+    setCasinoLoading(true); setCasinoMsg(null);
+    const res = await fetch("/api/admin/house/casino", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ open }),
+    });
+    const d = await res.json();
+    setCasinoLoading(false);
+    if (res.ok) { setCasinoOpen(d.casinoOpen); setCasinoMsg(d.casinoOpen ? "Casino opened." : "Casino closed."); }
+    else setCasinoMsg(d.error);
   };
 
   const setPhase = async (phase: number) => {
@@ -70,7 +121,7 @@ export default function AdminPage() {
     setHouseMsg("");
     const res = await fetch("/api/admin/house/boss", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "launch" }) });
     const d = await res.json();
-    if (res.ok) { setHouseMsg(`Boss launched! HP: ${d.bossMaxHp}`); fetchAll(); }
+    if (res.ok) { setHouseMsg(`Boss launched! HP: ${d.bossMaxHp}${d.bonusHpApplied ? ` (includes ${d.bonusHpApplied} sacrifice bonus)` : ""}`); fetchAll(); }
     else setHouseMsg(d.error);
   };
 
@@ -372,6 +423,34 @@ export default function AdminPage() {
             </div>
           )}
 
+          {/* Casino open/close */}
+          <div className="card space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium text-white">Casino Floor</p>
+              <span className={`text-xs font-mono font-bold px-2 py-0.5 rounded-full ${casinoOpen ? "text-emerald-400 bg-emerald-500/15" : "text-amber-400 bg-amber-500/15"}`}>
+                {casinoOpen ? "OPEN" : "CLOSED"}
+              </span>
+            </div>
+            <p className="text-xs text-slate-500">Controls access to the spin wheel and blackjack table. Close between sessions (players still see the House page, just not the games).</p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => toggleCasino(true)}
+                disabled={casinoLoading || casinoOpen}
+                className="flex-1 py-2 rounded-xl text-sm font-bold transition-colors bg-emerald-900/30 border border-emerald-800/40 text-emerald-400 hover:bg-emerald-900/50 disabled:opacity-40"
+              >
+                {casinoLoading ? "..." : "Open Casino"}
+              </button>
+              <button
+                onClick={() => toggleCasino(false)}
+                disabled={casinoLoading || !casinoOpen}
+                className="flex-1 py-2 rounded-xl text-sm font-bold transition-colors bg-amber-900/30 border border-amber-800/40 text-amber-400 hover:bg-amber-900/50 disabled:opacity-40"
+              >
+                {casinoLoading ? "..." : "Close Casino"}
+              </button>
+            </div>
+            {casinoMsg && <p className={`text-xs font-mono ${casinoMsg === "Casino opened." ? "text-emerald-400" : casinoMsg === "Casino closed." ? "text-amber-400" : "text-red-400"}`}>{casinoMsg}</p>}
+          </div>
+
           {/* Phase selector */}
           <div className="card space-y-3">
             <p className="text-sm font-medium text-white">Set Phase (0–4)</p>
@@ -418,6 +497,55 @@ export default function AdminPage() {
               </div>
             )}
           </div>
+
+          {/* Sacrifice controls */}
+          {houseStatus?.phase === 3 && (
+            <div className="card space-y-3 border-red-900/40 bg-red-950/10">
+              <p className="text-sm font-medium text-red-300">🩸 Sacrifice a Player (Phase 3)</p>
+
+              {sacrificeOpen && sacrificeVotes.length > 0 && (
+                <div className="space-y-1">
+                  <p className="text-xs text-slate-500">Current tally:</p>
+                  {sacrificeVotes.map(v => (
+                    <div key={v.username} className="flex justify-between text-xs font-mono">
+                      <span className="text-slate-300">{v.username}</span>
+                      <span className="text-red-400 font-bold">{v.votes} vote{v.votes !== 1 ? "s" : ""}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex gap-2">
+                {!sacrificeOpen ? (
+                  <button
+                    onClick={() => sacrificeAction("open")}
+                    disabled={sacrificing}
+                    className="flex-1 py-2 rounded-xl text-sm font-bold bg-red-900/30 border border-red-800/40 text-red-400 hover:bg-red-900/50 transition-colors disabled:opacity-50"
+                  >
+                    {sacrificing ? "..." : "Open Voting"}
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => sacrificeAction("execute")}
+                      disabled={sacrificing}
+                      className="flex-1 py-2 rounded-xl text-sm font-bold bg-red-900/40 border border-red-700/60 text-red-300 hover:bg-red-900/60 transition-colors disabled:opacity-50"
+                    >
+                      {sacrificing ? "..." : "⚡ Execute"}
+                    </button>
+                    <button
+                      onClick={() => sacrificeAction("close")}
+                      disabled={sacrificing}
+                      className="flex-1 py-2 rounded-xl text-sm font-bold bg-white/5 border border-white/10 text-slate-400 hover:bg-white/10 transition-colors disabled:opacity-50"
+                    >
+                      Cancel
+                    </button>
+                  </>
+                )}
+              </div>
+              {sacrificeMsg && <p className={`text-xs font-mono ${sacrificeMsg.startsWith("🩸") ? "text-red-300" : sacrificeMsg === "Vote opened." || sacrificeMsg === "Vote closed." ? "text-emerald-400" : "text-rose-400"}`}>{sacrificeMsg}</p>}
+            </div>
+          )}
 
           {houseMsg && <p className={`text-sm font-mono ${houseMsg.includes("error") || houseMsg.includes("Error") ? "text-red-400" : "text-emerald-400"}`}>{houseMsg}</p>}
         </section>

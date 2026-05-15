@@ -138,6 +138,26 @@ export const ACHIEVEMENTS = {
     rewardType: "increment" as const,
     emoji: "💊",
   },
+  fatted_calf: {
+    id: "fatted_calf",
+    name: "Kill the Fatted Calf",
+    description: "You were chosen to be sacrificed — and you had the most points in the room when it happened. A feast for everyone else. An ending for you.",
+    hint: "???",
+    reward: "Earn 500 pts (small comfort)",
+    rewardPoints: 500,
+    rewardType: "increment" as const,
+    emoji: "🐂",
+  },
+  suffer_meek: {
+    id: "suffer_meek",
+    name: "Suffer the Meek",
+    description: "You were sacrificed to The House while holding the least points. The group needed a scapegoat. You were available.",
+    hint: "???",
+    reward: "Earn 300 pts",
+    rewardPoints: 300,
+    rewardType: "increment" as const,
+    emoji: "🐑",
+  },
 } as const;
 
 export type AchievementId = keyof typeof ACHIEVEMENTS;

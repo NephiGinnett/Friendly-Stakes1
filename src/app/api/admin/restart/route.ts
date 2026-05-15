@@ -76,6 +76,7 @@ export async function POST() {
     // Reset HouseConfig singleton rather than deleting it.
     await prisma.$transaction([
       // House tables (reference User)
+      prisma.sacrificeVote.deleteMany(),
       prisma.houseDamageLog.deleteMany(),
       prisma.houseAttackLog.deleteMany(),
       prisma.houseSpin.deleteMany(),
@@ -98,7 +99,7 @@ export async function POST() {
     await prisma.houseConfig.upsert({
       where: { id: 1 },
       create: { id: 1, phase: 0 },
-      update: { phase: 0, bossActive: false, bossHp: 0, bossMaxHp: 0, killerUserId: null, nextStrikeAt: null },
+      update: { phase: 0, bossActive: false, bossHp: 0, bossMaxHp: 0, killerUserId: null, nextStrikeAt: null, sacrificeOpen: false, sacrificeBonusHp: 0 },
     });
 
     // Recreate admin account fresh with PIN 0000
