@@ -27,6 +27,7 @@ type Challenge = {
   target: { id: number; username: string } | null;
   acceptedBy: { id: number; username: string } | null;
   votes: { id: number; choice: string; weight: number }[];
+  vpnMasked?: boolean;
 };
 type AllUser = { id: number; username: string };
 
@@ -52,11 +53,16 @@ export default function ChallengesPage() {
   const [desc, setDesc] = useState("");
   const [targetUser, setTargetUser] = useState("open");
   const [offer, setOffer] = useState("");
+  const [useVpn, setUseVpn] = useState(false);
+  const [hasVpn, setHasVpn] = useState(false);
 
   const fetchAll = () => {
     fetch("/api/auth/me").then((r) => r.ok ? r.json() : null).then(setUser);
     fetch("/api/challenges").then((r) => r.json()).then(setChallenges);
     fetch("/api/users").then((r) => r.ok ? r.json() : []).then(setAllUsers);
+    fetch("/api/shop").then((r) => r.ok ? r.json() : null).then((d) => {
+      if (d) setHasVpn((d.owned ?? []).some((i: { itemType: string; usesLeft: number }) => i.itemType === "temp_vpn" && i.usesLeft > 0));
+    });
   };
 
   useEffect(() => {
@@ -65,6 +71,9 @@ export default function ChallengesPage() {
       .then((u) => { if (u) setUser(u); });
     fetch("/api/challenges").then((r) => r.json()).then(setChallenges);
     fetch("/api/users").then((r) => r.ok ? r.json() : []).then(setAllUsers);
+    fetch("/api/shop").then((r) => r.ok ? r.json() : null).then((d) => {
+      if (d) setHasVpn((d.owned ?? []).some((i: { itemType: string; usesLeft: number }) => i.itemType === "temp_vpn" && i.usesLeft > 0));
+    });
   }, [router]);
 
   const postChallenge = async () => {
@@ -81,12 +90,13 @@ export default function ChallengesPage() {
         description: desc.trim() || undefined,
         targetUsername: targetUser,
         offer: offerNum,
+        useVpn: useVpn || undefined,
       }),
     });
     const data = await res.json();
     setLoading("");
     if (res.ok) {
-      setTitle(""); setDesc(""); setTargetUser("open"); setOffer("");
+      setTitle(""); setDesc(""); setTargetUser("open"); setOffer(""); setUseVpn(false);
       setShowForm(false);
       fetchAll();
     } else {
@@ -103,6 +113,7 @@ export default function ChallengesPage() {
   const past = challenges.filter((c) => c.status === "settled" || c.status === "cancelled");
 
   const netPayout = (c: Challenge) => (c.offer - CHALLENGE_FEE) * c.multiplier;
+  const pts = (c: Challenge, n: number) => c.vpnMasked ? "???" : formatPoints(n);
 
   return (
     <div className="min-h-screen pb-20">
@@ -172,6 +183,23 @@ export default function ChallengesPage() {
               )}
             </div>
 
+            {hasVpn && (
+              <button
+                type="button"
+                onClick={() => setUseVpn((v) => !v)}
+                className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all text-sm font-medium ${
+                  useVpn ? "bg-violet-500/20 border-violet-500/50 text-violet-300" : "bg-white/5 border-white/10 text-slate-400 hover:text-white"
+                }`}
+              >
+                <span className="text-xl">🕵️</span>
+                <div className="text-left">
+                  <p>{useVpn ? "Temporary VPN — ACTIVE" : "Use Temporary VPN?"}</p>
+                  <p className="text-xs opacity-70">Observers see aliases and ??? for amounts · consumes 1 charge</p>
+                </div>
+                <span className="ml-auto">{useVpn ? "✓" : "○"}</span>
+              </button>
+            )}
+
             {formError && <p className="text-sm text-red-400">{formError}</p>}
 
             <button onClick={postChallenge} disabled={loading === "post" || !title.trim() || parseInt(offer) < CHALLENGE_FEE || parseInt(offer) > user.points} className="btn-primary w-full">
@@ -188,7 +216,7 @@ export default function ChallengesPage() {
               <Link key={c.id} href={`/challenges/${c.id}`} className="card block space-y-2 hover:border-amber-500/40 transition-colors">
                 <div className="flex items-start justify-between gap-2">
                   <p className="font-medium text-white">{c.title}</p>
-                  <span className="shrink-0 text-sm font-bold text-amber-300">{formatPoints(netPayout(c))}</span>
+                  <span className="shrink-0 text-sm font-bold text-amber-300">{pts(c, netPayout(c))}</span>
                 </div>
                 <p className="text-xs text-slate-500">From <span className="text-slate-300">{c.creator.username}</span></p>
               </Link>
@@ -205,7 +233,7 @@ export default function ChallengesPage() {
                 <div className="flex items-start justify-between gap-2">
                   <p className="font-medium text-white">{c.title}</p>
                   <span className={`shrink-0 text-sm font-bold ${c.multiplier > 1 ? "text-amber-300" : "text-violet-300"}`}>
-                    {formatPoints(netPayout(c))}{c.multiplier > 1 && ` ×${c.multiplier}`}
+                    {pts(c, netPayout(c))}{!c.vpnMasked && c.multiplier > 1 && ` ×${c.multiplier}`}
                   </span>
                 </div>
                 <p className="text-xs text-slate-500">Posted by <span className="text-slate-300">{c.creator.username}</span></p>
@@ -223,7 +251,7 @@ export default function ChallengesPage() {
                 <div className="flex items-start justify-between gap-2">
                   <p className="font-medium text-white">{c.title}</p>
                   <span className={`shrink-0 text-sm font-bold ${c.multiplier > 1 ? "text-amber-300" : "text-violet-300"}`}>
-                    {formatPoints(netPayout(c))}{c.multiplier > 1 && ` ×${c.multiplier}🔥`}
+                    {pts(c, netPayout(c))}{!c.vpnMasked && c.multiplier > 1 && ` ×${c.multiplier}🔥`}
                   </span>
                 </div>
                 <p className="text-xs text-slate-500">
@@ -246,7 +274,7 @@ export default function ChallengesPage() {
                 </div>
                 <p className="text-xs text-slate-500">
                   <span className="text-violet-300">{c.creator.username}</span> → <span className="text-emerald-300">{c.acceptedBy?.username ?? "?"}</span>
-                  {" · "}{formatPoints(netPayout(c))} pts{c.multiplier > 1 && ` ×${c.multiplier}`}
+                  {" · "}{pts(c, netPayout(c))} pts{!c.vpnMasked && c.multiplier > 1 && ` ×${c.multiplier}`}
                 </p>
               </Link>
             ))}

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { logPoints } from "@/lib/pointLog";
+import { maskChallenge } from "@/lib/vpn";
 
 const CHALLENGE_FEE = 50;
 
@@ -19,7 +20,7 @@ export async function GET() {
     },
   });
 
-  return NextResponse.json(challenges);
+  return NextResponse.json(challenges.map(c => maskChallenge(c, user.id)));
 }
 
 export async function POST(req: Request) {
@@ -27,7 +28,7 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
-    const { title, description, targetUsername, offer } = await req.json();
+    const { title, description, targetUsername, offer, useVpn } = await req.json();
 
     if (!title?.trim()) return NextResponse.json({ error: "Title required" }, { status: 400 });
     if (!offer || offer < CHALLENGE_FEE) {
@@ -43,6 +44,19 @@ export async function POST(req: Request) {
       const target = await prisma.user.findUnique({ where: { username: targetUsername.toLowerCase() } });
       if (!target) return NextResponse.json({ error: "Player not found" }, { status: 404 });
       targetId = target.id;
+    }
+
+    // VPN activation
+    let vpnActive = false;
+    let vpnSeed = 0;
+    if (useVpn) {
+      const vpnItem = await prisma.userItem.findFirst({
+        where: { userId: user.id, itemType: "temp_vpn", usesLeft: { gt: 0 } },
+      });
+      if (!vpnItem) return NextResponse.json({ error: "You don't have a Temporary VPN item." }, { status: 400 });
+      vpnActive = true;
+      vpnSeed = Math.floor(Math.random() * 1_000_000);
+      await prisma.userItem.update({ where: { id: vpnItem.id }, data: { usesLeft: { decrement: 1 } } });
     }
 
     // Apply pending Inspiring Friend multiplier if set
@@ -62,6 +76,8 @@ export async function POST(req: Request) {
           targetId,
           offer,
           multiplier,
+          vpnActive,
+          vpnSeed,
         },
         include: {
           creator: { select: { id: true, username: true } },

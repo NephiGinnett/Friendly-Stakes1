@@ -2,9 +2,15 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 
-export async function POST(_req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request, { params }: { params: { id: string } }) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  let useVpn = false;
+  try {
+    const body = await req.json();
+    useVpn = !!body?.useVpn;
+  } catch { /* body is optional */ }
 
   const challenge = await prisma.challenge.findUnique({ where: { id: parseInt(params.id) } });
   if (!challenge) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -16,9 +22,20 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
     return NextResponse.json({ error: "This challenge is not for you" }, { status: 403 });
   }
 
+  // VPN activation if requested and not already active
+  let vpnUpdates: { vpnActive?: boolean; vpnSeed?: number } = {};
+  if (useVpn && !challenge.vpnActive) {
+    const vpnItem = await prisma.userItem.findFirst({
+      where: { userId: user.id, itemType: "temp_vpn", usesLeft: { gt: 0 } },
+    });
+    if (!vpnItem) return NextResponse.json({ error: "You don't have a Temporary VPN item." }, { status: 400 });
+    vpnUpdates = { vpnActive: true, vpnSeed: Math.floor(Math.random() * 1_000_000) };
+    await prisma.userItem.update({ where: { id: vpnItem.id }, data: { usesLeft: { decrement: 1 } } });
+  }
+
   await prisma.challenge.update({
     where: { id: challenge.id },
-    data: { status: "active", acceptedById: user.id },
+    data: { status: "active", acceptedById: user.id, ...vpnUpdates },
   });
 
   // Check for Inspiring Friend / Baron milestones for the creator

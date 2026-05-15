@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import { maskWager } from "@/lib/vpn";
 
 export async function GET(req: Request) {
   const user = await getCurrentUser();
@@ -23,7 +24,7 @@ export async function GET(req: Request) {
     orderBy: { createdAt: "desc" },
   });
 
-  return NextResponse.json(wagers);
+  return NextResponse.json(wagers.map(w => maskWager(w, user.id)));
 }
 
 export async function POST(req: Request) {
@@ -31,7 +32,7 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
-    const { title, description, creatorPosition, creatorStake, deadline } = await req.json();
+    const { title, description, creatorPosition, creatorStake, deadline, useVpn } = await req.json();
 
     if (!title || !creatorPosition || !creatorStake || !deadline) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -48,6 +49,18 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Deadline must be in the future" }, { status: 400 });
     }
 
+    let vpnActive = false;
+    let vpnSeed = 0;
+    if (useVpn) {
+      const vpnItem = await prisma.userItem.findFirst({
+        where: { userId: user.id, itemType: "temp_vpn", usesLeft: { gt: 0 } },
+      });
+      if (!vpnItem) return NextResponse.json({ error: "You don't have a Temporary VPN item." }, { status: 400 });
+      vpnActive = true;
+      vpnSeed = Math.floor(Math.random() * 1_000_000);
+      await prisma.userItem.update({ where: { id: vpnItem.id }, data: { usesLeft: { decrement: 1 } } });
+    }
+
     const [wager] = await prisma.$transaction([
       prisma.wager.create({
         data: {
@@ -57,6 +70,8 @@ export async function POST(req: Request) {
           creatorPosition,
           creatorStake,
           deadline: deadlineDate,
+          vpnActive,
+          vpnSeed,
         },
       }),
       prisma.user.update({

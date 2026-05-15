@@ -64,6 +64,22 @@ export const SHOP_ITEMS = {
     maxUses: 1,
     emoji: "😈",
   },
+  temp_vpn: {
+    id: "temp_vpn",
+    name: "Temporary VPN",
+    description: "Anonymizes all participant names and bet amounts in one wager or challenge. Observers see state abbreviation aliases (TX-Gambler, etc.) and ??? for amounts. Activate when posting or accepting.",
+    price: 225,
+    maxUses: 1,
+    emoji: "🕵️",
+  },
+  history_viewer: {
+    id: "history_viewer",
+    name: "Point History Viewer",
+    description: "Peek at another player's full point history log, the same way they see it themselves. One-time use.",
+    price: 500,
+    maxUses: 1,
+    emoji: "📋",
+  },
 } as const;
 
 export type ItemType = keyof typeof SHOP_ITEMS;

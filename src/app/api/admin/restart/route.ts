@@ -99,7 +99,7 @@ export async function POST() {
     await prisma.houseConfig.upsert({
       where: { id: 1 },
       create: { id: 1, phase: 0 },
-      update: { phase: 0, bossActive: false, bossHp: 0, bossMaxHp: 0, killerUserId: null, nextStrikeAt: null, sacrificeOpen: false, sacrificeBonusHp: 0 },
+      update: { phase: 0, bossActive: false, bossHp: 0, bossMaxHp: 0, killerUserId: null, nextStrikeAt: null, sacrificeOpen: false, sacrificeBonusHp: 0, casinoOpen: true },
     });
 
     // Recreate admin account fresh with PIN 0000

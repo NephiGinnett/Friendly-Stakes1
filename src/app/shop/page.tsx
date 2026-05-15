@@ -35,6 +35,8 @@ export default function ShopPage() {
   const [loading, setLoading] = useState("");
   const [message, setMessage] = useState("");
   const [earlybirdResult, setEarlybirdResult] = useState<{ tierValue: number; slot: number } | null>(null);
+  const [historyTarget, setHistoryTarget] = useState("");
+  const [historyResult, setHistoryResult] = useState<{ username: string; logs: { id: number; amount: number; reason: string; createdAt: string }[] } | null>(null);
 
   const fetchData = () => {
     fetch("/api/auth/me").then((r) => r.ok ? r.json() : null).then(setUser);
@@ -130,6 +132,8 @@ export default function ShopPage() {
   const ownedStsins = owned.find((i) => i.itemType === "stsins");
   const ownedWard = owned.find((i) => i.itemType === "ward");
   const ownedEarlybird = owned.find((i) => i.itemType === "earlybird");
+  const ownedVpn = owned.find((i) => i.itemType === "temp_vpn");
+  const ownedHistoryViewer = owned.find((i) => i.itemType === "history_viewer");
   const hasEarlybird = !!ownedEarlybird ||
     !!(earlybird.remaining < EARLYBIRD_TOTAL &&
       owned.length === 0 &&
@@ -239,13 +243,15 @@ export default function ShopPage() {
         <div>
           <h2 className="font-semibold text-slate-400 text-sm uppercase tracking-wide mb-3">Power-Ups</h2>
 
-          {([SHOP_ITEMS.becou, SHOP_ITEMS.ward, SHOP_ITEMS.stsins, SHOP_ITEMS.pinreset, SHOP_ITEMS.thumb, SHOP_ITEMS.xray] as typeof SHOP_ITEMS[keyof typeof SHOP_ITEMS][]).map((item) => {
+          {([SHOP_ITEMS.becou, SHOP_ITEMS.ward, SHOP_ITEMS.stsins, SHOP_ITEMS.pinreset, SHOP_ITEMS.thumb, SHOP_ITEMS.temp_vpn, SHOP_ITEMS.history_viewer, SHOP_ITEMS.xray] as typeof SHOP_ITEMS[keyof typeof SHOP_ITEMS][]).map((item) => {
             const alreadyOwned =
               item.id === "xray" ? ownedXray :
               item.id === "ward" ? ownedWard :
               item.id === "thumb" ? ownedThumb :
               item.id === "pinreset" ? ownedPinreset :
               item.id === "becou" ? ownedBecou :
+              item.id === "temp_vpn" ? ownedVpn :
+              item.id === "history_viewer" ? ownedHistoryViewer :
               ownedStsins;
             return (
               <div key={item.id} className="card space-y-3 mb-3">
@@ -328,7 +334,7 @@ export default function ShopPage() {
         </div>
 
         {/* Inventory — active use panels */}
-        {(ownedXray || ownedThumb || ownedPinreset || ownedStsins || ownedWard || Object.keys(xrayPeeks).length > 0) && (
+        {(ownedXray || ownedThumb || ownedPinreset || ownedStsins || ownedWard || ownedVpn || ownedHistoryViewer || Object.keys(xrayPeeks).length > 0) && (
           <>
             <h2 className="font-semibold text-slate-400 text-sm uppercase tracking-wide pt-2">Use Your Items</h2>
 
@@ -435,6 +441,54 @@ export default function ShopPage() {
               </div>
             )}
 
+            {ownedVpn && ownedVpn.usesLeft > 0 && (
+              <div className="card space-y-2">
+                <p className="font-semibold text-white">🕵️ Temporary VPN — {ownedVpn.usesLeft} use{ownedVpn.usesLeft !== 1 ? "s" : ""} left</p>
+                <p className="text-sm text-slate-400">
+                  Toggle &quot;Use Temporary VPN&quot; when posting or accepting a wager/challenge to anonymize all participant names and amounts from observers. Activate on the wager or challenge page.
+                </p>
+              </div>
+            )}
+
+            {ownedHistoryViewer && ownedHistoryViewer.usesLeft > 0 && (
+              <div className="card space-y-3">
+                <p className="font-semibold text-white">📋 Point History Viewer — {ownedHistoryViewer.usesLeft} use{ownedHistoryViewer.usesLeft !== 1 ? "s" : ""} left</p>
+                <p className="text-sm text-slate-400">Pick a player to see their full point history. Consumes your one charge.</p>
+                <div className="flex gap-2">
+                  <select
+                    className="input flex-1"
+                    value={historyTarget}
+                    onChange={(e) => setHistoryTarget(e.target.value)}
+                  >
+                    <option value="">Select a player...</option>
+                    {allUsers.filter((u) => u.username !== user.username).map((u) => (
+                      <option key={u.id} value={u.username}>{u.username}</option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={async () => {
+                      if (!historyTarget) return;
+                      setLoading("historyview");
+                      setMessage("");
+                      const res = await fetch("/api/shop/use/historyview", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ targetUsername: historyTarget }),
+                      });
+                      const data = await res.json();
+                      setLoading("");
+                      if (res.ok) { setHistoryResult(data); fetchData(); }
+                      else setMessage(data.error ?? "Something went wrong.");
+                    }}
+                    disabled={!historyTarget || loading === "historyview"}
+                    className="btn-primary"
+                  >
+                    {loading === "historyview" ? "..." : "View"}
+                  </button>
+                </div>
+              </div>
+            )}
+
             {ownedStsins && (
               <div className="card space-y-3">
                 <p className="font-semibold text-white">😈 St Sins — Donate Points</p>
@@ -506,6 +560,34 @@ export default function ShopPage() {
           </>
         )}
       </div>
+
+      {/* History viewer modal */}
+      {historyResult && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
+          <div className="w-full max-w-sm rounded-2xl bg-[rgb(22,22,32)] border border-violet-500/30 p-6 space-y-4 shadow-2xl max-h-[80vh] flex flex-col">
+            <div className="flex items-center justify-between shrink-0">
+              <p className="font-semibold text-white">📋 {historyResult.username}&apos;s Point History</p>
+              <button onClick={() => setHistoryResult(null)} className="text-slate-500 hover:text-slate-300 text-sm">✕</button>
+            </div>
+            <div className="overflow-y-auto space-y-1.5 flex-1">
+              {historyResult.logs.length === 0 ? (
+                <p className="text-sm text-slate-500 text-center py-4">No history yet.</p>
+              ) : historyResult.logs.map((log) => (
+                <div key={log.id} className="flex items-start justify-between gap-2 text-xs py-1.5 border-b border-white/5">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-slate-300 truncate">{log.reason}</p>
+                    <p className="text-slate-600">{new Date(log.createdAt).toLocaleString()}</p>
+                  </div>
+                  <span className={`shrink-0 font-mono font-bold ${log.amount >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                    {log.amount >= 0 ? "+" : ""}{log.amount}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <button onClick={() => setHistoryResult(null)} className="btn-primary w-full shrink-0">Close</button>
+          </div>
+        </div>
+      )}
 
       {/* PIN reveal modal */}
       {xrayReveal && (

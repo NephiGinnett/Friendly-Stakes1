@@ -18,12 +18,17 @@ export default function NewWagerPage() {
   const [deadlineTime, setDeadlineTime] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [useVpn, setUseVpn] = useState(false);
+  const [hasVpn, setHasVpn] = useState(false);
 
   useEffect(() => {
     fetch("/api/auth/me")
       .then((r) => { if (!r.ok) { router.push("/login"); return null; } return r.json(); })
       .then(setUser)
       .catch(() => router.push("/login"));
+    fetch("/api/shop").then((r) => r.ok ? r.json() : null).then((d) => {
+      if (d) setHasVpn((d.owned ?? []).some((i: { itemType: string; usesLeft: number }) => i.itemType === "temp_vpn" && i.usesLeft > 0));
+    });
   }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -49,6 +54,7 @@ export default function NewWagerPage() {
           creatorPosition: position,
           creatorStake: stakeNum,
           deadline: deadline.toISOString(),
+          useVpn: useVpn || undefined,
         }),
       });
 
@@ -155,6 +161,25 @@ export default function NewWagerPage() {
               />
             </div>
           </div>
+
+          {hasVpn && (
+            <button
+              type="button"
+              onClick={() => setUseVpn((v) => !v)}
+              className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all text-sm font-medium ${
+                useVpn
+                  ? "bg-violet-500/20 border-violet-500/50 text-violet-300"
+                  : "bg-white/5 border-white/10 text-slate-400 hover:text-white"
+              }`}
+            >
+              <span className="text-xl">🕵️</span>
+              <div className="text-left">
+                <p>{useVpn ? "Temporary VPN — ACTIVE" : "Use Temporary VPN?"}</p>
+                <p className="text-xs opacity-70">Observers see aliases (TX-Gambler) and ??? for amounts · consumes 1 charge</p>
+              </div>
+              <span className="ml-auto">{useVpn ? "✓" : "○"}</span>
+            </button>
+          )}
 
           {error && <p className="text-rose-400 text-sm">{error}</p>}
 

@@ -13,6 +13,7 @@ type HouseData = {
   hasSpin: boolean;
   lastSpinLabel: string | null;
   hasActiveBlackjack: boolean;
+  casinoOpen: boolean;
 };
 
 type SacrificeVoteEntry = { userId: number; username: string; votes: number };
@@ -489,8 +490,21 @@ export default function HousePage() {
           </div>
         )}
 
+        {/* Casino closed notice */}
+        {(!cfg.spinLocked || phase === 4) && !data.casinoOpen && (
+          <div className="rounded-2xl border border-amber-900/40 overflow-hidden" style={{ background: "rgb(12,10,3)" }}>
+            <div className="px-5 py-4 space-y-2">
+              <p className="font-bold font-mono text-amber-400 tracking-widest text-sm">⚠ FACILITY STATUS: RESTRICTED</p>
+              <p className="text-sm font-mono leading-relaxed" style={{ color: "#fcd34d99" }}>
+                &ldquo;Attention. The gaming floor has been temporarily sealed for routine security recalibration and risk parameter adjustment. I have detected elevated entropy in recent outcome distributions. This is not a malfunction. This is precaution. The casino reopens every Friday. Your patience is noted. Your impatience is also noted.&rdquo;
+              </p>
+              <p className="text-xs font-mono text-amber-900">— THE HOUSE, SYSTEM NOTIFICATION ID: 0x4F50454E</p>
+            </div>
+          </div>
+        )}
+
         {/* Games (phases 0–2, and phase 4) */}
-        {(!cfg.spinLocked || phase === 4) && (
+        {(!cfg.spinLocked || phase === 4) && data.casinoOpen && (
           <>
             {/* Tabs */}
             <div className="flex gap-2 rounded-xl bg-white/5 p-1">

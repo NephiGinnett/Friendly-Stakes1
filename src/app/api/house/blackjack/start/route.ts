@@ -20,6 +20,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "The table is closed." }, { status: 403 });
   }
 
+  if (!config.casinoOpen) {
+    return NextResponse.json({ error: "ACCESS RESTRICTED. The casino floor has been sealed for recalibration. Your presence here has been logged. Re-opens: Friday." }, { status: 403 });
+  }
+
   const existing = await prisma.blackjackGame.findUnique({ where: { userId: user.id } });
 
   if (user.houseBanDate === todayUtcDate()) {

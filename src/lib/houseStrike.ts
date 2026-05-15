@@ -1,8 +1,8 @@
 import { prisma } from "@/lib/db";
 import { logPoints } from "@/lib/pointLog";
 
-// Set HOUSE_UTC_OFFSET in .env to your event's UTC offset (e.g. -7 for MDT, -6 for MDT->MST/CDT)
-const HOUSE_UTC_OFFSET = parseInt(process.env.HOUSE_UTC_OFFSET ?? "-7", 10);
+// Set HOUSE_UTC_OFFSET in .env to your event's UTC offset (e.g. -4 for EDT, -5 for EST)
+const HOUSE_UTC_OFFSET = parseInt(process.env.HOUSE_UTC_OFFSET ?? "-4", 10);
 
 /** Current hour in the event's local timezone (0–23). */
 function localHouseHour(): number {

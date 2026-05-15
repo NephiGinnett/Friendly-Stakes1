@@ -62,6 +62,8 @@ model Wager {
   winnerSide String?  // "for" or "against"
   settledAt  DateTime?
   settledBy  String?  // "vote" or "admin"
+  vpnActive  Boolean  @default(false)
+  vpnSeed    Int      @default(0)
 
   createdAt DateTime     @default(now())
   entries   WagerEntry[]
@@ -152,6 +154,8 @@ model Challenge {
   status       String    @default("pending") // pending, active, voting, settled, cancelled
   winnerUserId Int?      // acceptedById if completed, creatorId if refunded
   settledAt    DateTime?
+  vpnActive    Boolean   @default(false)
+  vpnSeed      Int       @default(0)
   createdAt    DateTime  @default(now())
   votes        ChallengeVote[]
 }
@@ -183,6 +187,7 @@ model HouseConfig {
   sacrificeOpen     Boolean  @default(false)
   sacrificeBonusHp  Int      @default(0)
   casinoOpen        Boolean  @default(true)
+  bossHpMultiplier  Int      @default(3000)
   updatedAt         DateTime @updatedAt
 }
 

@@ -17,6 +17,8 @@ type Challenge = {
   status: string;
   offer: number;
   multiplier: number;
+  vpnActive: boolean;
+  vpnMasked: boolean;
   targetId: number | null;
   acceptedById: number | null;
   winnerUserId: number | null;
@@ -44,6 +46,8 @@ export default function ChallengeDetailPage() {
   const [loading, setLoading] = useState("");
   const [useThumb, setUseThumb] = useState(false);
   const [thumbUsesLeft, setThumbUsesLeft] = useState(0);
+  const [useVpn, setUseVpn] = useState(false);
+  const [hasVpn, setHasVpn] = useState(false);
 
   const fetchData = () => {
     fetch("/api/auth/me").then((r) => r.ok ? r.json() : null).then(setUser);
@@ -51,6 +55,7 @@ export default function ChallengeDetailPage() {
     fetch("/api/shop").then((r) => r.json()).then((d) => {
       const thumb = (d.owned ?? []).find((i: { itemType: string; usesLeft: number }) => i.itemType === "thumb");
       setThumbUsesLeft(thumb?.usesLeft ?? 0);
+      setHasVpn((d.owned ?? []).some((i: { itemType: string; usesLeft: number }) => i.itemType === "temp_vpn" && i.usesLeft > 0));
     });
   };
 
@@ -64,12 +69,17 @@ export default function ChallengeDetailPage() {
     fetch("/api/shop").then((r) => r.json()).then((d) => {
       const thumb = (d.owned ?? []).find((i: { itemType: string; usesLeft: number }) => i.itemType === "thumb");
       setThumbUsesLeft(thumb?.usesLeft ?? 0);
+      setHasVpn((d.owned ?? []).some((i: { itemType: string; usesLeft: number }) => i.itemType === "temp_vpn" && i.usesLeft > 0));
     });
   }, [params.id, router]);
 
-  const action = async (path: string) => {
+  const action = async (path: string, body?: object) => {
     setLoading(path);
-    await fetch(`/api/challenges/${params.id}/${path}`, { method: "POST" });
+    await fetch(`/api/challenges/${params.id}/${path}`, {
+      method: "POST",
+      headers: body ? { "Content-Type": "application/json" } : undefined,
+      body: body ? JSON.stringify(body) : undefined,
+    });
     setLoading("");
     fetchData();
   };
@@ -96,6 +106,8 @@ export default function ChallengeDetailPage() {
     (challenge.targetId === null || isTarget);
   const myVote = challenge.votes.find((v) => v.userId === user.id);
 
+  const masked = challenge.vpnMasked;
+  const pts = (n: number) => masked ? "???" : formatPoints(n);
   const basePayout = challenge.offer - CHALLENGE_FEE;
   const netPayout = basePayout * challenge.multiplier;
 
@@ -138,12 +150,13 @@ export default function ChallengeDetailPage() {
             </div>
             <div className="text-right">
               <p className={`text-lg font-bold ${challenge.multiplier > 1 ? "text-amber-300" : "text-violet-300"}`}>
-                {formatPoints(netPayout)} pts
+                {pts(netPayout)} pts
               </p>
-              {challenge.multiplier > 1 && (
+              {!masked && challenge.multiplier > 1 && (
                 <p className="text-xs text-amber-400">×{challenge.multiplier} bonus active!</p>
               )}
-              <p className="text-xs text-slate-600">{formatPoints(challenge.offer)} escrowed · {CHALLENGE_FEE} pt fee</p>
+              <p className="text-xs text-slate-600">{pts(challenge.offer)} escrowed · {CHALLENGE_FEE} pt fee</p>
+              {challenge.vpnActive && <p className="text-xs text-violet-400 mt-0.5">🕵️ VPN active</p>}
             </div>
           </div>
 
@@ -160,13 +173,31 @@ export default function ChallengeDetailPage() {
           <div className="card space-y-3">
             <p className="font-semibold text-white">Take this challenge?</p>
             <p className="text-sm text-slate-400">
-              You&apos;ll earn <span className="text-violet-300 font-semibold">{formatPoints(netPayout)}</span> if the group agrees you completed it.
-              {challenge.multiplier > 1 && (
+              You&apos;ll earn <span className="text-violet-300 font-semibold">{pts(netPayout)}</span> if the group agrees you completed it.
+              {!masked && challenge.multiplier > 1 && (
                 <span className="text-amber-300"> ({challenge.multiplier}x multiplier active!)</span>
               )}
             </p>
+            {challenge.vpnActive ? (
+              <p className="text-xs text-violet-400">🕵️ VPN already active on this challenge</p>
+            ) : hasVpn && (
+              <button
+                type="button"
+                onClick={() => setUseVpn((v) => !v)}
+                className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all text-sm font-medium ${
+                  useVpn ? "bg-violet-500/20 border-violet-500/50 text-violet-300" : "bg-white/5 border-white/10 text-slate-400 hover:text-white"
+                }`}
+              >
+                <span className="text-xl">🕵️</span>
+                <div className="text-left">
+                  <p>{useVpn ? "Temporary VPN — ACTIVE" : "Use Temporary VPN?"}</p>
+                  <p className="text-xs opacity-70">Observers see aliases and ??? for amounts · consumes 1 charge</p>
+                </div>
+                <span className="ml-auto">{useVpn ? "✓" : "○"}</span>
+              </button>
+            )}
             <button
-              onClick={() => action("accept")}
+              onClick={() => action("accept", useVpn ? { useVpn: true } : undefined)}
               disabled={loading === "accept"}
               className="btn-primary w-full"
             >
@@ -191,7 +222,7 @@ export default function ChallengeDetailPage() {
               disabled={loading === "decline"}
               className="text-xs text-slate-600 hover:text-red-400 transition-colors"
             >
-              Cancel & get my {formatPoints(challenge.offer)} back
+              Cancel & get my {pts(challenge.offer)} back
             </button>
           </div>
         )}
@@ -218,7 +249,7 @@ export default function ChallengeDetailPage() {
         {challenge.status === "voting" && (
           <div className="card space-y-4">
             <h3 className="font-semibold text-white">Vote — did <span className="text-emerald-300">{challenge.acceptedBy?.username}</span> complete this?</h3>
-            <p className="text-sm text-slate-400">Settles when 2+ weighted votes agree. If completed, they earn {formatPoints(netPayout)} pts.</p>
+            <p className="text-sm text-slate-400">Settles when 2+ weighted votes agree. If completed, they earn {pts(netPayout)} pts.</p>
 
             {thumbUsesLeft > 0 && (
               <button
@@ -302,12 +333,12 @@ export default function ChallengeDetailPage() {
             {challenge.winnerUserId === challenge.creator.id ? (
               <>
                 <p className="text-slate-300 font-bold text-lg">Not completed</p>
-                <p className="text-sm text-slate-400">{challenge.creator.username} was refunded {formatPoints(challenge.offer)} pts</p>
+                <p className="text-sm text-slate-400">{challenge.creator.username} was refunded {pts(challenge.offer)} pts</p>
               </>
             ) : (
               <>
                 <p className="text-emerald-400 font-bold text-lg">✓ {winnerName} completed it!</p>
-                <p className="text-sm text-slate-400">Earned {formatPoints(netPayout)} pts</p>
+                <p className="text-sm text-slate-400">Earned {pts(netPayout)} pts</p>
                 {challenge.multiplier > 1 && (
                   <p className="text-xs text-amber-400">({challenge.multiplier}x multiplier was applied)</p>
                 )}
@@ -325,7 +356,7 @@ export default function ChallengeDetailPage() {
         {/* Cancelled */}
         {challenge.status === "cancelled" && (
           <div className="card text-center text-slate-500 text-sm py-4">
-            Cancelled. {formatPoints(challenge.offer)} pts refunded to {challenge.creator.username}.
+            Cancelled. {pts(challenge.offer)} pts refunded to {challenge.creator.username}.
           </div>
         )}
       </div>

@@ -30,6 +30,10 @@ export async function POST() {
     return NextResponse.json({ error: "The wheel is offline." }, { status: 403 });
   }
 
+  if (!config.casinoOpen) {
+    return NextResponse.json({ error: "ACCESS RESTRICTED. The casino floor has been sealed for recalibration. Your presence here has been logged. Re-opens: Friday." }, { status: 403 });
+  }
+
   const alreadySpun = await prisma.houseSpin.findFirst({
     where: { userId: user.id, createdAt: { gte: todayUtcStart() } },
   });

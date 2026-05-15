@@ -41,6 +41,12 @@ export default function AdminPage() {
   const [casinoMsg, setCasinoMsg] = useState<string | null>(null);
   const [casinoLoading, setCasinoLoading] = useState(false);
 
+  // Boss HP controls
+  const [bossHpMultiplier, setBossHpMultiplier] = useState(3000);
+  const [multiplierInput, setMultiplierInput] = useState("3000");
+  const [hpDeltaInput, setHpDeltaInput] = useState("");
+  const [bossControlMsg, setBossControlMsg] = useState<string | null>(null);
+
   // The House state
   const [houseStatus, setHouseStatus] = useState<HouseStatus | null>(null);
   const [housePhaseInput, setHousePhaseInput] = useState("");
@@ -70,6 +76,9 @@ export default function AdminPage() {
       if (d) {
         setHouseStatus({ phase: d.phase, bossActive: d.bossActive, bossHp: d.bossHp, bossMaxHp: d.bossMaxHp });
         setCasinoOpen(d.casinoOpen ?? true);
+        const mult = d.bossHpMultiplier ?? 3000;
+        setBossHpMultiplier(mult);
+        setMultiplierInput(String(mult));
       }
     });
     fetch("/api/house/sacrifice").then((r) => r.ok ? r.json() : null).then((d) => {
@@ -95,6 +104,30 @@ export default function AdminPage() {
     } else {
       setSacrificeMsg(d.error);
     }
+  };
+
+  const setBossMultiplier = async () => {
+    const val = parseInt(multiplierInput);
+    if (!val || val < 100) { setBossControlMsg("Must be at least 100."); return; }
+    setBossControlMsg(null);
+    const res = await fetch("/api/admin/house/boss", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "setMultiplier", multiplier: val }),
+    });
+    const d = await res.json();
+    if (res.ok) { setBossHpMultiplier(d.bossHpMultiplier); setBossControlMsg(`Multiplier set to ${d.bossHpMultiplier.toLocaleString()}.`); }
+    else setBossControlMsg(d.error);
+  };
+
+  const adjustBossHp = async (delta: number) => {
+    setBossControlMsg(null);
+    const res = await fetch("/api/admin/house/boss", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "adjustHp", delta }),
+    });
+    const d = await res.json();
+    if (res.ok) { setBossControlMsg(`HP adjusted → ${d.bossHp} / ${d.bossMaxHp}`); fetchAll(); }
+    else setBossControlMsg(d.error);
   };
 
   const toggleCasino = async (open: boolean) => {
@@ -470,6 +503,27 @@ export default function AdminPage() {
             </div>
           </div>
 
+          {/* Boss HP multiplier */}
+          <div className="card space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium text-white">Boss HP Multiplier</p>
+              <span className="text-xs font-mono text-violet-300">{bossHpMultiplier.toLocaleString()} HP / player</span>
+            </div>
+            <p className="text-xs text-slate-500">Sets how much HP the boss gets per non-admin player on launch. Default: 3,000. Total HP = multiplier × players + sacrifice bonus.</p>
+            <div className="flex gap-2">
+              <input
+                type="number"
+                className="input flex-1 text-sm"
+                placeholder="e.g. 3000"
+                min={100}
+                value={multiplierInput}
+                onChange={(e) => setMultiplierInput(e.target.value)}
+              />
+              <button onClick={setBossMultiplier} className="btn-primary text-sm">Set</button>
+            </div>
+            {bossControlMsg && <p className={`text-xs font-mono ${bossControlMsg.includes("error") || bossControlMsg.startsWith("Must") ? "text-red-400" : "text-emerald-400"}`}>{bossControlMsg}</p>}
+          </div>
+
           {/* Boss controls */}
           <div className="card space-y-3">
             <p className="text-sm font-medium text-white">Boss Battle</p>
@@ -494,6 +548,25 @@ export default function AdminPage() {
                     {strikeResult}
                   </div>
                 )}
+                <div className="pt-1 space-y-2">
+                  <p className="text-xs text-slate-500 font-medium">Adjust Boss HP</p>
+                  <div className="flex gap-2">
+                    <input
+                      type="number"
+                      className="input flex-1 text-sm"
+                      placeholder="e.g. 500 or -200"
+                      value={hpDeltaInput}
+                      onChange={(e) => setHpDeltaInput(e.target.value)}
+                    />
+                    <button
+                      onClick={() => { const n = parseInt(hpDeltaInput); if (n) { adjustBossHp(n); setHpDeltaInput(""); } }}
+                      disabled={!hpDeltaInput}
+                      className="btn-primary text-sm"
+                    >
+                      Apply
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
           </div>

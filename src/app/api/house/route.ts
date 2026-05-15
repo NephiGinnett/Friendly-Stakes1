@@ -36,5 +36,7 @@ export async function GET() {
     hasSpin: !!spinToday,
     lastSpinLabel: spinToday?.label ?? null,
     hasActiveBlackjack: bj?.status === "active",
+    casinoOpen: config.casinoOpen,
+    bossHpMultiplier: config.bossHpMultiplier,
   });
 }

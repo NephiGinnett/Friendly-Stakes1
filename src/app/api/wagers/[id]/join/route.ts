@@ -10,7 +10,7 @@ export async function POST(
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
-    const { side, stake } = await req.json();
+    const { side, stake, useVpn } = await req.json();
     const wagerId = parseInt(params.id);
 
     if (side !== "for" && side !== "against") {
@@ -35,6 +35,17 @@ export async function POST(
     const existing = wager.entries.find((e) => e.userId === user.id);
     if (existing) return NextResponse.json({ error: "You've already joined this wager" }, { status: 409 });
 
+    // Activate VPN if requested and not already active
+    let vpnUpdates: { vpnActive?: boolean; vpnSeed?: number } = {};
+    if (useVpn && !wager.vpnActive) {
+      const vpnItem = await prisma.userItem.findFirst({
+        where: { userId: user.id, itemType: "temp_vpn", usesLeft: { gt: 0 } },
+      });
+      if (!vpnItem) return NextResponse.json({ error: "You don't have a Temporary VPN item." }, { status: 400 });
+      vpnUpdates = { vpnActive: true, vpnSeed: Math.floor(Math.random() * 1_000_000) };
+      await prisma.userItem.update({ where: { id: vpnItem.id }, data: { usesLeft: { decrement: 1 } } });
+    }
+
     await prisma.$transaction([
       prisma.wagerEntry.create({
         data: { wagerId, userId: user.id, side, stake },
@@ -43,6 +54,9 @@ export async function POST(
         where: { id: user.id },
         data: { points: { decrement: stake } },
       }),
+      ...(Object.keys(vpnUpdates).length > 0
+        ? [prisma.wager.update({ where: { id: wagerId }, data: vpnUpdates })]
+        : []),
     ]);
 
     return NextResponse.json({ ok: true });

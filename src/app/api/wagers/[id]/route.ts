@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import { maskWager } from "@/lib/vpn";
 
 export async function GET(
   _req: Request,
@@ -27,5 +28,5 @@ export async function GET(
     return NextResponse.json({ error: "Wager not found" }, { status: 404 });
   }
 
-  return NextResponse.json(wager);
+  return NextResponse.json(maskWager(wager, user.id));
 }

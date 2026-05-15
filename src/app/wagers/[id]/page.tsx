@@ -17,6 +17,7 @@ type Wager = {
   id: number; title: string; description: string | null; creatorPosition: string;
   creatorStake: number; deadline: string; status: string;
   winnerSide: string | null; settledBy: string | null; settledAt: string | null;
+  vpnActive: boolean; vpnMasked: boolean;
   creator: { id: number; username: string };
   entries: WagerEntry[];
   votes: Vote[];
@@ -33,13 +34,17 @@ export default function WagerDetailPage() {
   const [soundPlayed, setSoundPlayed] = useState(false);
   const [useThumb, setUseThumb] = useState(false);
   const [thumbUsesLeft, setThumbUsesLeft] = useState(0);
+  const [useVpn, setUseVpn] = useState(false);
+  const [hasVpn, setHasVpn] = useState(false);
 
   const fetchData = () => {
     fetch("/api/auth/me").then((r) => r.ok ? r.json() : null).then(setUser);
     fetch(`/api/wagers/${params.id}`).then((r) => r.json()).then(setWager);
     fetch("/api/shop").then((r) => r.json()).then((d) => {
-      const thumb = (d.owned ?? []).find((i: { itemType: string; usesLeft: number }) => i.itemType === "thumb");
+      const owned = d.owned ?? [];
+      const thumb = owned.find((i: { itemType: string; usesLeft: number }) => i.itemType === "thumb");
       setThumbUsesLeft(thumb?.usesLeft ?? 0);
+      setHasVpn(owned.some((i: { itemType: string; usesLeft: number }) => i.itemType === "temp_vpn" && i.usesLeft > 0));
     });
   };
 
@@ -51,8 +56,10 @@ export default function WagerDetailPage() {
       .then((r) => { if (!r.ok) { router.push("/feed"); return null; } return r.json(); })
       .then(setWager);
     fetch("/api/shop").then((r) => r.json()).then((d) => {
-      const thumb = (d.owned ?? []).find((i: { itemType: string; usesLeft: number }) => i.itemType === "thumb");
+      const owned = d.owned ?? [];
+      const thumb = owned.find((i: { itemType: string; usesLeft: number }) => i.itemType === "thumb");
       setThumbUsesLeft(thumb?.usesLeft ?? 0);
+      setHasVpn(owned.some((i: { itemType: string; usesLeft: number }) => i.itemType === "temp_vpn" && i.usesLeft > 0));
     });
   }, [params.id, router]);
 
@@ -80,9 +87,11 @@ export default function WagerDetailPage() {
 
   const forEntries = wager.entries.filter((e) => e.side === "for");
   const againstEntries = wager.entries.filter((e) => e.side === "against");
+  const masked = wager.vpnMasked;
   const forTotal = wager.creatorStake + forEntries.reduce((sum, e) => sum + e.stake, 0);
   const againstTotal = againstEntries.reduce((sum, e) => sum + e.stake, 0);
   const totalPool = forTotal + againstTotal;
+  const pts = (n: number) => masked ? "???" : formatPoints(n);
 
   const forVotes = wager.votes.filter((v) => v.choice === "for").length;
   const againstVotes = wager.votes.filter((v) => v.choice === "against").length;
@@ -94,10 +103,10 @@ export default function WagerDetailPage() {
     const res = await fetch(`/api/wagers/${wager.id}/join`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ side: joinSide, stake: stakeNum }),
+      body: JSON.stringify({ side: joinSide, stake: stakeNum, useVpn: useVpn || undefined }),
     });
     setLoading("");
-    if (res.ok) { setJoinStake(""); fetchData(); }
+    if (res.ok) { setJoinStake(""); setUseVpn(false); fetchData(); }
     else { const d = await res.json(); alert(d.error); }
   };
 
@@ -179,17 +188,17 @@ export default function WagerDetailPage() {
             <div className="space-y-1.5">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-violet-300 font-medium">{wager.creator.username}</span>
-                <span className="text-slate-300">{formatPoints(wager.creatorStake)}</span>
+                <span className="text-slate-300">{pts(wager.creatorStake)}</span>
               </div>
               {forEntries.map((e) => (
                 <div key={e.id} className="flex items-center justify-between text-sm">
                   <span className="text-slate-300">{e.user.username}</span>
-                  <span className="text-slate-400">{formatPoints(e.stake)}</span>
+                  <span className="text-slate-400">{pts(e.stake)}</span>
                 </div>
               ))}
             </div>
             <p className="text-xs text-violet-400 font-medium pt-1 border-t border-white/5">
-              Total: {formatPoints(forTotal)} pts
+              Total: {pts(forTotal)} pts
             </p>
           </div>
 
@@ -203,19 +212,20 @@ export default function WagerDetailPage() {
                 {againstEntries.map((e) => (
                   <div key={e.id} className="flex items-center justify-between text-sm">
                     <span className="text-slate-300">{e.user.username}</span>
-                    <span className="text-slate-400">{formatPoints(e.stake)}</span>
+                    <span className="text-slate-400">{pts(e.stake)}</span>
                   </div>
                 ))}
               </div>
             )}
             <p className="text-xs text-rose-400 font-medium pt-1 border-t border-white/5">
-              Total: {formatPoints(againstTotal)} pts
+              Total: {pts(againstTotal)} pts
             </p>
           </div>
         </div>
 
         <p className="text-center text-xs text-slate-500 -mt-2">
-          Total pool: {formatPoints(totalPool)} pts
+          Total pool: {pts(totalPool)} pts
+          {masked && <span className="ml-1 text-violet-500">(🕵️ VPN active)</span>}
         </p>
 
         {/* JOIN — open wager, not creator, not already joined */}
@@ -269,6 +279,28 @@ export default function WagerDetailPage() {
                 </button>
               </div>
             </div>
+
+            {hasVpn && !wager.vpnActive && (
+              <button
+                type="button"
+                onClick={() => setUseVpn((v) => !v)}
+                className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all text-sm font-medium ${
+                  useVpn
+                    ? "bg-violet-500/20 border-violet-500/50 text-violet-300"
+                    : "bg-white/5 border-white/10 text-slate-400 hover:text-white"
+                }`}
+              >
+                <span className="text-xl">🕵️</span>
+                <div className="text-left">
+                  <p>{useVpn ? "Temporary VPN — ACTIVE" : "Use Temporary VPN?"}</p>
+                  <p className="text-xs opacity-70">Observers see aliases and ??? for amounts · consumes 1 charge</p>
+                </div>
+                <span className="ml-auto">{useVpn ? "✓" : "○"}</span>
+              </button>
+            )}
+            {wager.vpnActive && (
+              <p className="text-xs text-violet-400 font-mono text-center">🕵️ VPN already active on this wager</p>
+            )}
           </div>
         )}
 
@@ -291,7 +323,7 @@ export default function WagerDetailPage() {
             ) : (
               <>
                 <p className="text-sm text-slate-400">
-                  {1 + forEntries.length} for · {againstEntries.length} against · {formatPoints(totalPool)} pts in the pool
+                  {1 + forEntries.length} for · {againstEntries.length} against · {pts(totalPool)} pts in the pool
                 </p>
                 <button
                   onClick={handleStart}
@@ -422,7 +454,7 @@ export default function WagerDetailPage() {
               {wager.winnerSide === "for" ? "For" : "Against"} side won!
             </p>
             <p className="text-sm text-slate-400">
-              Total pool of {formatPoints(totalPool)} pts distributed to winners
+              Total pool of {pts(totalPool)} pts distributed to winners
               {" "}(settled by {wager.settledBy})
             </p>
             <p className="text-xs text-slate-500">
