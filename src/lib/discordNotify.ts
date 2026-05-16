@@ -17,11 +17,14 @@ export async function notifyDiscord(discordUserId: string, message: string): Pro
       body: JSON.stringify({ recipient_id: discordUserId }),
     });
 
-    if (!dmRes.ok) return;
+    if (!dmRes.ok) {
+      console.error("[Discord] DM channel error:", dmRes.status, await dmRes.text());
+      return;
+    }
     const dm = await dmRes.json() as { id: string };
 
     // Step 2: send message
-    await fetch(`https://discord.com/api/v10/channels/${dm.id}/messages`, {
+    const msgRes = await fetch(`https://discord.com/api/v10/channels/${dm.id}/messages`, {
       method: "POST",
       headers: {
         Authorization: `Bot ${BOT_TOKEN}`,
@@ -29,8 +32,11 @@ export async function notifyDiscord(discordUserId: string, message: string): Pro
       },
       body: JSON.stringify({ content: message }),
     });
-  } catch {
-    // Never let a notification failure break the main request
+    if (!msgRes.ok) {
+      console.error("[Discord] Send message error:", msgRes.status, await msgRes.text());
+    }
+  } catch (e) {
+    console.error("[Discord] Unexpected error:", e);
   }
 }
 
