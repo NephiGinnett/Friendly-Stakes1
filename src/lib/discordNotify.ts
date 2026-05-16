@@ -1,5 +1,9 @@
 const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://friendly-stakes.vercel.app";
+const BASE_URL =
+  process.env.NEXT_PUBLIC_APP_URL ??
+  (process.env.RAILWAY_PUBLIC_DOMAIN
+    ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
+    : "https://friendly-stakes.vercel.app");
 
 // Opens a DM channel with a user and sends them a message.
 // Silently no-ops if the bot token isn't configured or the user has no Discord ID linked.
