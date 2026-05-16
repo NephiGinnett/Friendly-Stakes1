@@ -36,6 +36,7 @@ model User {
   houseDamageLogs    HouseDamageLog[]
   houseAttackLogs    HouseAttackLog[]
   houseBanDate       String            @default("")
+  discordUserId      String?
   sacrificeVotesCast SacrificeVote[]
   sacrificeVotesReceived SacrificeVote[] @relation("SacrificeTarget")
 

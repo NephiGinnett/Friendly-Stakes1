@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import { notifyUser, appUrl } from "@/lib/discordNotify";
 
 export async function POST(
   _req: Request,
@@ -33,6 +34,14 @@ export async function POST(
       where: { id: wagerId },
       data: { status: "voting" },
     });
+
+    // Notify all participants except the one who triggered it
+    const participantIds = [wager.creatorId, ...wager.entries.map((e) => e.userId)];
+    for (const pid of participantIds) {
+      if (pid !== user.id) {
+        void notifyUser(pid, `🗳️ **Voting is open** on wager "${wager.title}" — head to the feed to cast your vote!\n${appUrl(`/wagers/${wagerId}`)}`);
+      }
+    }
 
     return NextResponse.json({ ok: true });
   } catch {

@@ -19,7 +19,7 @@ export async function GET(req: Request) {
       entries: {
         include: { user: { select: { id: true, username: true } } },
       },
-      votes: { select: { userId: true, choice: true } },
+      votes: { include: { user: { select: { id: true, username: true } } } },
     },
     orderBy: { createdAt: "desc" },
   });

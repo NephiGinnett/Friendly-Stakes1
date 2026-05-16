@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { hasNewBingo, isBlackout } from "@/lib/bingo";
 import { log } from "@/lib/pointLog";
+import { notifyUser, appUrl } from "@/lib/discordNotify";
 
 export async function POST(req: Request) {
   const user = await getCurrentUser();
@@ -25,6 +26,7 @@ export async function POST(req: Request) {
         where: { id: squareId },
         data: { claimStatus: "none" },
       });
+      void notifyUser(square.userId, `❌ Your bingo claim was denied.\n> "${square.bingoItem.text}"\n${appUrl("/bingo")}`);
       return NextResponse.json({ ok: true });
     }
 
@@ -112,6 +114,11 @@ export async function POST(req: Request) {
         });
       }
     }
+
+    void notifyUser(
+      square.userId,
+      `⭐ Your bingo claim was approved!\n> "${square.bingoItem.text}"${newBlackout ? "\n🎉 BLACKOUT! You claimed every square!" : newBingo ? "\n🎱 BINGO! You completed a line!" : ""}\n${appUrl("/bingo")}`
+    );
 
     return NextResponse.json({ ok: true, newBingo, newBlackout });
   } catch {

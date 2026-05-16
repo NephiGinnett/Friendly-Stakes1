@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import { notifyUser, appUrl } from "@/lib/discordNotify";
 
 export async function POST(req: Request, { params }: { params: { id: string } }) {
   const user = await getCurrentUser();
@@ -82,6 +83,11 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       data: { userId: challenge.creatorId, achievementId: "baron" },
     });
   }
+
+  void notifyUser(
+    challenge.creatorId,
+    `✅ **${user.username}** accepted your bounty!\n> "${challenge.title}"\n${appUrl(`/challenges`)}`
+  );
 
   return NextResponse.json({ ok: true });
 }

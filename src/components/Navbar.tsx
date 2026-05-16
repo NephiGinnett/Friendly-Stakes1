@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { getDisplayVersion } from "@/lib/version";
 
 type User = { id: number; username: string; points: number; isAdmin: boolean };
 type Notifs = {
@@ -89,7 +90,7 @@ export default function Navbar() {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-surface border-t border-white/10 z-50">
-      <div className="max-w-lg mx-auto flex items-center justify-around py-2">
+      <div className="max-w-lg mx-auto flex items-center justify-around py-2 relative">
         {navItems.map((item) => (
           <Link
             key={item.href}
@@ -118,6 +119,9 @@ export default function Navbar() {
         >
           Logout
         </button>
+        <span className="absolute right-2 bottom-0.5 text-[9px] text-slate-800 select-none pointer-events-none">
+          v{getDisplayVersion(user?.isAdmin ?? false)}
+        </span>
       </div>
     </nav>
   );

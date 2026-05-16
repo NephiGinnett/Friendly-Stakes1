@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import { notifyUser, appUrl } from "@/lib/discordNotify";
 
 export async function POST(_req: Request, { params }: { params: { id: string } }) {
   const user = await getCurrentUser();
@@ -14,6 +15,10 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
   if (!isParticipant && !user.isAdmin) return NextResponse.json({ error: "Only participants can close" }, { status: 403 });
 
   await prisma.challenge.update({ where: { id: challenge.id }, data: { status: "voting" } });
+
+  const msg = `🗳️ **Voting is open** on bounty "${challenge.title}" — did they complete it?\n${appUrl(`/challenges`)}`;
+  if (challenge.creatorId !== user.id) void notifyUser(challenge.creatorId, msg);
+  if (challenge.acceptedById && challenge.acceptedById !== user.id) void notifyUser(challenge.acceptedById, msg);
 
   return NextResponse.json({ ok: true });
 }

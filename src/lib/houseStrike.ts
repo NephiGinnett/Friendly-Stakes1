@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { logPoints } from "@/lib/pointLog";
+import { notifyUser, appUrl } from "@/lib/discordNotify";
 
 // Set HOUSE_UTC_OFFSET in .env to your event's UTC offset (e.g. -4 for EDT, -5 for EST)
 const HOUSE_UTC_OFFSET = parseInt(process.env.HOUSE_UTC_OFFSET ?? "-4", 10);
@@ -113,6 +114,8 @@ export async function executeTargetedStrike(userId: number) {
       update: {},
     });
   }
+
+  void notifyUser(userId, `🏚️ **THE HOUSE strikes!**\n${flavor}\n> -${amount} pts\n${appUrl("/house")}`);
 
   return { username: targetUser.username, amount, flavorText: flavor };
 }

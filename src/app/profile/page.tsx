@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import PointsBadge from "@/components/PointsBadge";
 import { formatPoints, formatDate } from "@/lib/utils";
+import { getDisplayVersion } from "@/lib/version";
 
 type User = { id: number; username: string; points: number; isAdmin: boolean };
 type WagerEntry = { userId: number; side: string; stake: number };
@@ -29,6 +30,10 @@ export default function ProfilePage() {
   const [achievements, setAchievements] = useState<AchievementBadge[]>([]);
   const [tooltipId, setTooltipId] = useState<string | null>(null);
   const [notifsEnabled, setNotifsEnabled] = useState(true);
+  const [discordUserId, setDiscordUserId] = useState<string | null>(null);
+  const [discordInput, setDiscordInput] = useState("");
+  const [discordMsg, setDiscordMsg] = useState<{ text: string; ok: boolean } | null>(null);
+  const [discordLoading, setDiscordLoading] = useState(false);
 
   // Load notification preference
   useEffect(() => {
@@ -46,6 +51,9 @@ export default function ProfilePage() {
     fetch("/api/users")
       .then((r) => r.ok ? r.json() : [])
       .then(setAllUsers);
+    fetch("/api/settings/discord")
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => { if (d) setDiscordUserId(d.discordUserId); });
   }, [router]);
 
   // Reload profile data whenever viewing target or logged-in user changes
@@ -77,6 +85,25 @@ export default function ProfilePage() {
     }
     setTooltipId(null);
   }, [viewing, user]);
+
+  const saveDiscord = async () => {
+    setDiscordLoading(true);
+    setDiscordMsg(null);
+    const res = await fetch("/api/settings/discord", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ discordUserId: discordInput.trim() || null }),
+    });
+    const d = await res.json();
+    setDiscordLoading(false);
+    if (res.ok) {
+      setDiscordUserId(d.discordUserId);
+      setDiscordInput("");
+      setDiscordMsg({ text: d.discordUserId ? "Linked! Check your Discord DMs for a confirmation." : "Discord unlinked.", ok: true });
+    } else {
+      setDiscordMsg({ text: d.error, ok: false });
+    }
+  };
 
   const toggleNotifs = () => {
     const next = !notifsEnabled;
@@ -235,6 +262,62 @@ export default function ProfilePage() {
           </div>
         )}
 
+        {isSelf && (user.isAdmin || new Date() >= new Date("2026-05-16T18:00:00")) && (
+          <div className="card space-y-3">
+            <div className="flex items-center gap-2">
+              <span className="text-lg">🎮</span>
+              <div>
+                <p className="text-sm font-medium text-white">Discord Notifications</p>
+                <p className="text-xs text-slate-500 mt-0.5">Get DMs when someone challenges you, votes open, and more</p>
+              </div>
+            </div>
+
+            {discordUserId ? (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-3 py-2">
+                  <span className="text-emerald-400 text-sm">✓ Linked</span>
+                  <span className="text-xs text-slate-500 font-mono ml-1">{discordUserId}</span>
+                </div>
+                <button
+                  onClick={() => { setDiscordInput(""); saveDiscord(); }}
+                  disabled={discordLoading}
+                  className="text-xs text-slate-500 hover:text-rose-400 transition-colors"
+                >
+                  Unlink Discord
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-xs text-slate-500">
+                  Open Discord → Settings → Advanced → enable Developer Mode → right-click your name → Copy User ID.
+                </p>
+                <div className="flex gap-2">
+                  <input
+                    className="input flex-1 text-sm font-mono"
+                    placeholder="Your Discord User ID"
+                    value={discordInput}
+                    onChange={(e) => setDiscordInput(e.target.value)}
+                    maxLength={20}
+                  />
+                  <button
+                    onClick={saveDiscord}
+                    disabled={discordLoading || !discordInput.trim()}
+                    className="btn-primary text-sm"
+                  >
+                    {discordLoading ? "..." : "Link"}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {discordMsg && (
+              <p className={`text-xs ${discordMsg.ok ? "text-emerald-400" : "text-rose-400"}`}>
+                {discordMsg.text}
+              </p>
+            )}
+          </div>
+        )}
+
         {isSelf && (
           <div className="card flex items-center justify-between">
             <div>
@@ -250,6 +333,12 @@ export default function ProfilePage() {
           </div>
         )}
       </div>
+
+        {isSelf && (
+          <p className="text-center text-xs text-slate-700 pb-2">
+            Friendly Stakes v{getDisplayVersion(user.isAdmin)}
+          </p>
+        )}
 
       <Navbar />
     </div>

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { logPoints } from "@/lib/pointLog";
 import { maskChallenge } from "@/lib/vpn";
+import { notifyUser, appUrl } from "@/lib/discordNotify";
 
 const CHALLENGE_FEE = 50;
 
@@ -87,6 +88,14 @@ export async function POST(req: Request) {
         },
       });
     });
+
+    // Notify the specific target if this is a direct challenge
+    if (targetId) {
+      void notifyUser(
+        targetId,
+        `🎯 **${user.username}** challenged you on the bounty board!\n> "${challenge.title}"\n${appUrl(`/challenges`)}`
+      );
+    }
 
     return NextResponse.json(challenge);
   } catch {
