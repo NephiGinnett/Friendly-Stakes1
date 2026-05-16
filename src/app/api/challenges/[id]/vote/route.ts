@@ -23,6 +23,10 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     });
     if (!challenge) return NextResponse.json({ error: "Not found" }, { status: 404 });
     if (challenge.status !== "voting") return NextResponse.json({ error: "Not in voting phase" }, { status: 400 });
+    const isInvolved = user.id === challenge.creatorId || user.id === challenge.acceptedById;
+    if (!isInvolved) {
+      return NextResponse.json({ error: "Only the two players involved in this challenge can vote." }, { status: 403 });
+    }
     if (challenge.votes.find((v) => v.userId === user.id)) {
       return NextResponse.json({ error: "Already voted" }, { status: 409 });
     }

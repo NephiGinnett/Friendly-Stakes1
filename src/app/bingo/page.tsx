@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import PointsBadge from "@/components/PointsBadge";
 import { posLabel } from "@/lib/bingo";
@@ -154,6 +155,22 @@ export default function BingoPage() {
             <p className="text-xs text-slate-600 text-center mt-3">
               Tap a square to view details and claim
             </p>
+
+            {/* AR Faire event button — hidden from players before 6PM launch */}
+            {(user.isAdmin || new Date() >= new Date("2026-05-16T18:00:00")) && (
+              <>
+                <div className="flex justify-center mt-5">
+                  <Link
+                    href="/ar-faire"
+                    className="flex items-center justify-center w-16 h-16 rounded-full bg-violet-600/20 border-2 border-violet-500/50 hover:border-violet-400 hover:bg-violet-600/30 transition-all active:scale-95"
+                    title="AR Faire — Limited Event"
+                  >
+                    <span className="text-2xl">📖</span>
+                  </Link>
+                </div>
+                <p className="text-xs text-violet-400 text-center mt-1.5">AR Faire</p>
+              </>
+            )}
 
             {approvedCount === 25 && (
               <div className="mt-4 card bg-violet-500/10 border-violet-500/30 text-center py-4">

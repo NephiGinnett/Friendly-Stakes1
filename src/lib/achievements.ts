@@ -158,6 +158,35 @@ export const ACHIEVEMENTS = {
     rewardType: "increment" as const,
     emoji: "🐑",
   },
+  avid_reader: {
+    id: "avid_reader",
+    name: "Avid Reader",
+    description: "You traded in 45 Bookmark Tokens at the AR Faire Event Shop. The House approves of this particular vice.",
+    hint: "Purchase from the AR Faire Event Shop",
+    reward: "Badge of distinction",
+    rewardType: "none" as const,
+    emoji: "📚",
+  },
+  legendary_pull: {
+    id: "legendary_pull",
+    name: "Between the Lines",
+    description: "You pulled a Legendary bookmark from the Gacha. The House notes this is statistically improbable. It is watching.",
+    hint: "???",
+    reward: "Earn 1,000 pts",
+    rewardPoints: 1000,
+    rewardType: "increment" as const,
+    emoji: "🌟",
+  },
+  bookmark_collector: {
+    id: "bookmark_collector",
+    name: "Dog-Eared",
+    description: "You pulled 25 or more bookmarks from the Gacha. Surely there are better uses of your tokens. Surely.",
+    hint: "???",
+    reward: "Earn 25 Bookmark Tokens",
+    rewardType: "tokens" as const,
+    rewardTokens: 25,
+    emoji: "🔖",
+  },
 } as const;
 
 export type AchievementId = keyof typeof ACHIEVEMENTS;

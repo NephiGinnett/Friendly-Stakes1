@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { doSettle, checkThumbAchievement } from "@/lib/settle";
 
-const MIN_VOTES_TO_SETTLE = 2;
+const MIN_VOTES_TO_SETTLE = 3;
 
 export async function POST(
   req: Request,

@@ -16,6 +16,7 @@ export function maskWager<T extends {
   vpnActive: boolean; vpnSeed: number;
   creatorId: number; creator: UserRef; creatorStake: number;
   entries: Array<{ userId: number; user: UserRef; stake: number }>;
+  votes?: Array<{ userId: number; user: UserRef }>;
 }>(wager: T, viewerId: number): T & { vpnMasked: boolean } {
   if (!wager.vpnActive) return { ...wager, vpnMasked: false };
   const participants = new Set([wager.creatorId, ...wager.entries.map(e => e.userId)]);
@@ -30,6 +31,12 @@ export function maskWager<T extends {
       user: { ...e.user, username: vpnAlias(wager.vpnSeed, e.userId) },
       stake: 0,
     })),
+    ...(wager.votes && {
+      votes: wager.votes.map(v => ({
+        ...v,
+        user: { ...v.user, username: vpnAlias(wager.vpnSeed, v.userId) },
+      })),
+    }),
   };
 }
 

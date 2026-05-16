@@ -27,6 +27,25 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Already claimed!" }, { status: 409 });
     }
 
+    // No-reward achievements (already claimed at purchase time, e.g. avid_reader)
+    if (achievement.rewardType === "none") {
+      return NextResponse.json({ ok: true, newPoints: user.points, rewardType: "none" });
+    }
+
+    // Token reward (bookmark_collector)
+    if (achievement.rewardType === "tokens") {
+      const tokens = (achievement as { rewardTokens: number }).rewardTokens;
+      await prisma.$transaction(async (tx) => {
+        await tx.userAchievement.update({
+          where: { userId_achievementId: { userId: user.id, achievementId } },
+          data: { claimed: true },
+        });
+        await tx.user.update({ where: { id: user.id }, data: { bookmarkTokens: { increment: tokens } } });
+      });
+      const currentUser = await prisma.user.findUnique({ where: { id: user.id }, select: { points: true } });
+      return NextResponse.json({ ok: true, newPoints: currentUser!.points, rewardType: "tokens", rewardTokens: tokens });
+    }
+
     // Passive achievements (Baron, Inspiring Friend) — just acknowledge
     if (achievement.rewardType === "passive") {
       await prisma.userAchievement.update({

@@ -38,6 +38,13 @@ model User {
   houseBanDate       String            @default("")
   sacrificeVotesCast SacrificeVote[]
   sacrificeVotesReceived SacrificeVote[] @relation("SacrificeTarget")
+
+  bookmarkTokens     Int               @default(0)
+  arGachaPulls       Int               @default(0)
+  sponsoredQuizzes   ArQuiz[]          @relation("QuizSponsor")
+  arQuizAttempts     ArQuizAttempt[]
+  arQuizCompletions  ArQuizCompletion[]
+  userBookmarks      UserBookmark[]
 }
 
 model Session {
@@ -244,6 +251,83 @@ model HouseAttackLog {
   amount     Int
   flavorText String
   createdAt  DateTime @default(now())
+}
+
+// ── AR Faire ────────────────────────────────────────────────────────────────
+
+model ArBookmark {
+  id        Int      @id @default(autoincrement())
+  label     String
+  imageUrl  String   // base64 data URL or /bookmarks/ path
+  tier      String   // "uncommon" | "rare" | "epic" | "legendary"
+  quizId    Int?     @unique
+  quiz      ArQuiz?  @relation(fields: [quizId], references: [id])
+  createdAt DateTime @default(now())
+  owners    UserBookmark[]
+}
+
+model ArQuiz {
+  id          Int      @id @default(autoincrement())
+  title       String
+  author      String
+  tier        String   // "uncommon" | "rare" | "epic" | "legendary"
+  sponsorId   Int?
+  sponsor     User?    @relation("QuizSponsor", fields: [sponsorId], references: [id])
+  status      String   @default("pending") // "pending" | "approved" | "rejected" | "seeded"
+  imageUrl    String?
+  createdAt   DateTime @default(now())
+  questions   ArQuestion[]
+  attempts    ArQuizAttempt[]
+  completions ArQuizCompletion[]
+  bookmark    ArBookmark?
+}
+
+model ArQuestion {
+  id           Int    @id @default(autoincrement())
+  quizId       Int
+  quiz         ArQuiz @relation(fields: [quizId], references: [id])
+  order        Int
+  text         String
+  choiceA      String
+  choiceB      String
+  choiceC      String
+  correctIndex Int
+}
+
+model ArQuizAttempt {
+  id            Int      @id @default(autoincrement())
+  userId        Int
+  user          User     @relation(fields: [userId], references: [id])
+  quizId        Int
+  quiz          ArQuiz   @relation(fields: [quizId], references: [id])
+  answers       String   // JSON array of chosen indices
+  score         Int
+  total         Int
+  passed        Boolean
+  tokensAwarded Int
+  pointsAwarded Int
+  createdAt     DateTime @default(now())
+}
+
+model ArQuizCompletion {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  quizId    Int
+  quiz      ArQuiz   @relation(fields: [quizId], references: [id])
+  createdAt DateTime @default(now())
+  @@unique([userId, quizId])
+}
+
+model UserBookmark {
+  id         Int        @id @default(autoincrement())
+  userId     Int
+  user       User       @relation(fields: [userId], references: [id])
+  bookmarkId Int
+  bookmark   ArBookmark @relation(fields: [bookmarkId], references: [id])
+  count      Int        @default(1)
+  createdAt  DateTime   @default(now())
+  @@unique([userId, bookmarkId])
 }
 
 // Each player's bingo card (25 squares, positions 0–24)

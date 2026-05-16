@@ -62,6 +62,19 @@ export default function AdminPage() {
   const [sacrificeMsg, setSacrificeMsg] = useState<string | null>(null);
   const [sacrificing, setSacrificing] = useState(false);
 
+  // AR Faire state
+  type ArQuestion = { id: number; order: number; text: string; choiceA: string; choiceB: string; choiceC: string; correctIndex: number };
+  type ArPendingQuiz = { id: number; title: string; author: string; tier: string; imageUrl: string | null; sponsor: { id: number; username: string } | null; questions: ArQuestion[] };
+  const [arPending, setArPending] = useState<ArPendingQuiz[]>([]);
+  const [arMsg, setArMsg] = useState<string | null>(null);
+  const [arExpandedQuiz, setArExpandedQuiz] = useState<number | null>(null);
+  const [arBookmarks, setArBookmarks] = useState<{ id: number; label: string; tier: string; imageUrl: string }[]>([]);
+  const [newBmLabel, setNewBmLabel] = useState("");
+  const [newBmTier, setNewBmTier] = useState("uncommon");
+  const [newBmUrl, setNewBmUrl] = useState("");
+  const [bmMsg, setBmMsg] = useState<string | null>(null);
+  const [scanMsg, setScanMsg] = useState<string | null>(null);
+
   // Restart state
   const [confirmRestart, setConfirmRestart] = useState(false);
   const [restarting, setRestarting] = useState(false);
@@ -84,6 +97,8 @@ export default function AdminPage() {
     fetch("/api/house/sacrifice").then((r) => r.ok ? r.json() : null).then((d) => {
       if (d) { setSacrificeOpen(d.open); setSacrificeVotes(d.votes ?? []); }
     });
+    fetch("/api/admin/ar-faire/pending").then((r) => r.ok ? r.json() : []).then(setArPending);
+    fetch("/api/admin/ar-faire/bookmarks").then((r) => r.ok ? r.json() : []).then(setArBookmarks);
   };
 
   const sacrificeAction = async (action: "open" | "close" | "execute") => {
@@ -241,6 +256,40 @@ export default function AdminPage() {
     fetchAll();
   };
 
+  const reviewQuiz = async (id: number, action: "approve" | "reject") => {
+    setArMsg(null);
+    const res = await fetch(`/api/admin/ar-faire/${id}/review`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action }),
+    });
+    const d = await res.json();
+    if (res.ok) { setArMsg(`Quiz ${action === "approve" ? "approved ✓" : "rejected — points refunded"}`); fetchAll(); }
+    else setArMsg(d.error);
+  };
+
+  const addBookmark = async () => {
+    if (!newBmLabel.trim()) return;
+    setBmMsg(null);
+    const res = await fetch("/api/admin/ar-faire/bookmarks", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "add", label: newBmLabel.trim(), tier: newBmTier, imageUrl: newBmUrl.trim() || "" }),
+    });
+    const d = await res.json();
+    if (res.ok) { setBmMsg("Bookmark added!"); setNewBmLabel(""); setNewBmUrl(""); fetchAll(); }
+    else setBmMsg(d.error);
+  };
+
+  const scanBookmarks = async () => {
+    setScanMsg(null);
+    const res = await fetch("/api/admin/ar-faire/bookmarks", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "scan" }),
+    });
+    const d = await res.json();
+    setScanMsg(res.ok ? `Scanned: ${d.added} added${d.results?.length ? ` (${d.results.join(", ")})` : ""}` : d.error);
+    if (res.ok) fetchAll();
+  };
+
   const restartGame = async () => {
     setRestarting(true);
     setRestartResult(null);
@@ -396,6 +445,118 @@ export default function AdminPage() {
               )}
             </>
           )}
+        </section>
+
+        {/* ── AR Faire ── */}
+        <section className="space-y-3">
+          <h2 className="font-semibold text-white flex items-center gap-2">
+            📖 AR Faire
+            {arPending.length > 0 && (
+              <span className="bg-amber-500/20 text-amber-300 text-xs px-2 py-0.5 rounded-full">
+                {arPending.length} pending
+              </span>
+            )}
+          </h2>
+
+          {arMsg && <p className={`text-sm font-mono ${arMsg.includes("✓") ? "text-emerald-400" : arMsg.includes("refunded") ? "text-amber-400" : "text-red-400"}`}>{arMsg}</p>}
+
+          {/* Pending quiz reviews */}
+          {arPending.length === 0 ? (
+            <p className="text-slate-600 text-sm">No pending quiz submissions.</p>
+          ) : (
+            arPending.map((quiz) => (
+              <div key={quiz.id} className="card space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="font-medium text-white">{quiz.title}</p>
+                    <p className="text-xs text-slate-500">by {quiz.author} · {quiz.tier} tier</p>
+                    {quiz.sponsor && <p className="text-xs text-slate-500">Submitted by {quiz.sponsor.username}</p>}
+                  </div>
+                  <button
+                    onClick={() => setArExpandedQuiz(arExpandedQuiz === quiz.id ? null : quiz.id)}
+                    className="text-xs text-violet-400 hover:text-violet-300 shrink-0"
+                  >
+                    {arExpandedQuiz === quiz.id ? "Hide Q&A" : `View ${quiz.questions.length} Q&A`}
+                  </button>
+                </div>
+
+                {arExpandedQuiz === quiz.id && (
+                  <div className="space-y-3 border-t border-white/5 pt-3">
+                    {quiz.imageUrl && (
+                      <div className="flex gap-3 items-start">
+                        <div className="relative rounded-lg overflow-hidden border-2 border-slate-500" style={{ width: 80, height: 280, flexShrink: 0 }}>
+                          <img src={quiz.imageUrl} alt="bookmark" className="w-full h-full object-cover" />
+                        </div>
+                        <p className="text-xs text-slate-500">Bookmark preview</p>
+                      </div>
+                    )}
+                    {quiz.questions.map((q, i) => (
+                      <div key={q.id} className="space-y-1">
+                        <p className="text-xs font-semibold text-slate-300">Q{i + 1}. {q.text}</p>
+                        {[q.choiceA, q.choiceB, q.choiceC].map((c, ci) => (
+                          <p key={ci} className={`text-xs pl-3 ${ci === q.correctIndex ? "text-emerald-400 font-semibold" : "text-slate-500"}`}>
+                            {["A", "B", "C"][ci]}. {c} {ci === q.correctIndex && "✓"}
+                          </p>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => reviewQuiz(quiz.id, "approve")}
+                    className="btn-primary flex-1 text-sm bg-emerald-600 hover:bg-emerald-500"
+                  >
+                    ✓ Approve
+                  </button>
+                  <button
+                    onClick={() => reviewQuiz(quiz.id, "reject")}
+                    className="flex-1 text-sm px-4 py-2 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 transition-colors"
+                  >
+                    ✕ Reject & Refund
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+
+          {/* Bookmark management */}
+          <div className="card space-y-3">
+            <p className="text-sm font-semibold text-white">Bookmark Pool ({arBookmarks.length} total)</p>
+
+            <div className="space-y-2">
+              <input className="input w-full text-sm" placeholder="Label (e.g. The Giver)" value={newBmLabel} onChange={(e) => setNewBmLabel(e.target.value)} />
+              <select className="input w-full text-sm" value={newBmTier} onChange={(e) => setNewBmTier(e.target.value)}>
+                <option value="uncommon">Uncommon (gray)</option>
+                <option value="rare">Rare (blue)</option>
+                <option value="epic">Epic (purple)</option>
+                <option value="legendary">Legendary (gold)</option>
+              </select>
+              <input className="input w-full text-sm" placeholder="Image URL or base64 (optional)" value={newBmUrl} onChange={(e) => setNewBmUrl(e.target.value)} />
+              {bmMsg && <p className={`text-xs ${bmMsg.includes("!") ? "text-emerald-400" : "text-red-400"}`}>{bmMsg}</p>}
+              <button onClick={addBookmark} disabled={!newBmLabel.trim()} className="btn-primary w-full text-sm">
+                Add Bookmark
+              </button>
+            </div>
+
+            <div className="border-t border-white/5 pt-3">
+              <p className="text-xs text-slate-500 mb-2">Or scan <span className="font-mono">public/bookmarks/</span> for files named <span className="font-mono">title.tier.png</span></p>
+              <button onClick={scanBookmarks} className="btn-ghost w-full text-sm">Scan Folder</button>
+              {scanMsg && <p className="text-xs text-emerald-400 mt-1">{scanMsg}</p>}
+            </div>
+
+            {arBookmarks.length > 0 && (
+              <div className="space-y-1 max-h-40 overflow-y-auto border-t border-white/5 pt-2">
+                {arBookmarks.map((bm) => (
+                  <div key={bm.id} className="flex justify-between text-xs py-0.5">
+                    <span className="text-slate-300">{bm.label}</span>
+                    <span className={`${bm.tier === "legendary" ? "text-amber-400" : bm.tier === "epic" ? "text-violet-400" : bm.tier === "rare" ? "text-blue-400" : "text-slate-500"}`}>{bm.tier}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </section>
 
         {/* ── Manage Users ── */}
