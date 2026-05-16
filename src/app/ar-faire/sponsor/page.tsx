@@ -14,8 +14,8 @@ const TIER_RATES = [
 ];
 
 // Bookmark: 2" × 7" ≈ aspect ratio 2:7 = width:height
-const BM_W = 140;
-const BM_H = 490;
+const BM_W = 70;
+const BM_H = 245;
 
 type Question = { text: string; choiceA: string; choiceB: string; choiceC: string; correctIndex: number | null };
 
@@ -93,11 +93,33 @@ export default function SponsorPage() {
     canvas.height = BM_H;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    // Source crop: width = natural, height = natural * (BM_H/BM_W) portion
-    const srcW = nw;
-    const srcH = nw * (BM_H / BM_W);
-    const clampedY = Math.max(0, Math.min(yOffset, nh - srcH));
-    ctx.drawImage(img, 0, clampedY, srcW, srcH, 0, 0, BM_W, BM_H);
+
+    const bookmarkAspect = BM_H / BM_W; // tall bookmark ratio
+    const imgAspect = nh / nw;
+
+    if (imgAspect >= bookmarkAspect) {
+      // Image is taller than bookmark ratio — fit width, scroll vertically
+      const srcW = nw;
+      const srcH = nw * bookmarkAspect;
+      const maxY = nh - srcH;
+      const clampedY = Math.max(0, Math.min(yOffset, maxY));
+      ctx.drawImage(img, 0, clampedY, srcW, srcH, 0, 0, BM_W, BM_H);
+    } else {
+      // Image is wider than bookmark ratio — draw blurred background to fill,
+      // then center the image scaled to fill width
+      const scale = BM_W / nw;
+      const drawH = nh * scale;
+      const drawY = (BM_H - drawH) / 2 + yOffset;
+
+      // Fill background with tier color
+      const tierFill: Record<number, string> = { 250: "#1d4ed8", 500: "#7c3aed", 1000: "#b45309" };
+      ctx.fillStyle = tierFill[sponsorRate] ?? "#334155";
+      ctx.fillRect(0, 0, BM_W, BM_H);
+
+      // Sharp image centered
+      ctx.drawImage(img, 0, drawY, BM_W, drawH);
+    }
+
     setCroppedDataUrl(canvas.toDataURL("image/jpeg", 0.85));
   };
 
@@ -110,13 +132,27 @@ export default function SponsorPage() {
     if (!isDragging || !dragStart || !imgNaturalSize || !imgRef.current) return;
     const dy = e.clientY - dragStart.y;
     const img = imgRef.current;
-    const srcH = imgNaturalSize.w * (BM_H / BM_W);
-    const maxY = imgNaturalSize.h - srcH;
-    // Dragging down = moving crop window up (negative delta in image coords)
-    const scale = imgNaturalSize.h / BM_H;
-    const newY = Math.max(0, Math.min(dragStart.cropY - dy * scale, maxY));
+    const { w: nw, h: nh } = imgNaturalSize;
+    const bookmarkAspect = BM_H / BM_W;
+    const imgAspect = nh / nw;
+
+    let newY: number;
+    if (imgAspect >= bookmarkAspect) {
+      // Portrait: scroll within vertical crop window
+      const srcH = nw * bookmarkAspect;
+      const maxY = nh - srcH;
+      const scale = nh / BM_H;
+      newY = Math.max(0, Math.min(dragStart.cropY - dy * scale, maxY));
+    } else {
+      // Landscape: nudge the centered image up/down (limited range)
+      const scale = BM_W / nw;
+      const drawH = nh * scale;
+      const maxOffset = (BM_H - drawH) / 2;
+      newY = Math.max(-maxOffset, Math.min(dragStart.cropY - dy, maxOffset));
+    }
+
     setCropY(newY);
-    drawCrop(img, newY, imgNaturalSize.w, imgNaturalSize.h);
+    drawCrop(img, newY, nw, nh);
   };
   const onMouseUp = () => setIsDragging(false);
 

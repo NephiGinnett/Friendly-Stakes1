@@ -3,23 +3,27 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 
 const COST_PER_PULL = 5;
+const MAX_PITY = 15; // caps at double base epic+legendary rates (15% → 30%)
 
-// Tier weights: uncommon=60, rare=25, epic=10, legendary=5
-const TIER_WEIGHTS = { uncommon: 60, rare: 25, epic: 10, legendary: 5 };
-
-function rollTier(): string {
+// Each pity stack shifts +1% from uncommon/rare → epic/legendary (2:1 split epic:legendary)
+function rollTier(pity: number): string {
+  const p = Math.min(pity, MAX_PITY);
+  const legendary = 5 + p / 3;
+  const epic = 10 + (2 * p) / 3;
+  const rare = 25 - p * (25 / 85);
   const roll = Math.random() * 100;
-  if (roll < 5) return "legendary";
-  if (roll < 15) return "epic";
-  if (roll < 40) return "rare";
+  if (roll < legendary) return "legendary";
+  if (roll < legendary + epic) return "epic";
+  if (roll < legendary + epic + rare) return "rare";
   return "uncommon";
 }
 
-async function pullOnce(tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0]): Promise<number | null> {
-  const tier = rollTier();
+async function pullBookmark(
+  tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0],
+  tier: string,
+): Promise<number | null> {
   const bookmarks = await tx.arBookmark.findMany({ where: { tier } });
   if (bookmarks.length === 0) {
-    // Fallback to uncommon if no bookmarks of this tier
     const fallback = await tx.arBookmark.findMany({ where: { tier: "uncommon" } });
     if (fallback.length === 0) return null;
     return fallback[Math.floor(Math.random() * fallback.length)].id;
@@ -35,25 +39,37 @@ export async function POST(req: Request) {
   if (![1, 10].includes(count)) return NextResponse.json({ error: "Count must be 1 or 10" }, { status: 400 });
 
   const totalCost = count * COST_PER_PULL;
-  const fullUser = await prisma.user.findUnique({ where: { id: user.id }, select: { bookmarkTokens: true, arGachaPulls: true } });
+  const fullUser = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { bookmarkTokens: true, arGachaPulls: true, gachaPityCounter: true },
+  });
   if (!fullUser || fullUser.bookmarkTokens < totalCost) {
     return NextResponse.json({ error: `Need ${totalCost} Bookmark Tokens (you have ${fullUser?.bookmarkTokens ?? 0})` }, { status: 400 });
   }
 
-  const pulledIds: number[] = [];
   const wonBookmarks: { bookmarkId: number; label: string; imageUrl: string; tier: string; isNew: boolean }[] = [];
   let legendaryPulled = false;
+  let pulledCount = 0;
+  let currentPity = fullUser.gachaPityCounter;
 
   await prisma.$transaction(async (tx) => {
     for (let i = 0; i < count; i++) {
-      const bookmarkId = await pullOnce(tx);
+      const tier = rollTier(currentPity);
+      const bookmarkId = await pullBookmark(tx, tier);
       if (bookmarkId === null) continue;
-      pulledIds.push(bookmarkId);
+      pulledCount++;
 
       const bookmark = await tx.arBookmark.findUnique({ where: { id: bookmarkId } });
       if (!bookmark) continue;
 
       if (bookmark.tier === "legendary") legendaryPulled = true;
+
+      // Update pity: reset on epic/legendary, increment on uncommon/rare
+      if (tier === "epic" || tier === "legendary") {
+        currentPity = 0;
+      } else {
+        currentPity = Math.min(currentPity + 1, MAX_PITY);
+      }
 
       const existing = await tx.userBookmark.findUnique({
         where: { userId_bookmarkId: { userId: user.id, bookmarkId } },
@@ -71,12 +87,13 @@ export async function POST(req: Request) {
       }
     }
 
-    const newTotal = fullUser.arGachaPulls + pulledIds.length;
+    const newTotal = fullUser.arGachaPulls + pulledCount;
     await tx.user.update({
       where: { id: user.id },
       data: {
-        bookmarkTokens: { decrement: pulledIds.length * COST_PER_PULL },
-        arGachaPulls: { increment: pulledIds.length },
+        bookmarkTokens: { decrement: pulledCount * COST_PER_PULL },
+        arGachaPulls: { increment: pulledCount },
+        gachaPityCounter: currentPity,
       },
     });
 
@@ -96,11 +113,10 @@ export async function POST(req: Request) {
       });
       if (!hasCollector) {
         await tx.userAchievement.create({ data: { userId: user.id, achievementId: "bookmark_collector" } });
-        // Grant 25 tokens immediately
         await tx.user.update({ where: { id: user.id }, data: { bookmarkTokens: { increment: 25 } } });
       }
     }
   });
 
-  return NextResponse.json({ pulls: wonBookmarks, totalCost: pulledIds.length * COST_PER_PULL });
+  return NextResponse.json({ pulls: wonBookmarks, totalCost: pulledCount * COST_PER_PULL });
 }

@@ -42,6 +42,7 @@ model User {
 
   bookmarkTokens     Int               @default(0)
   arGachaPulls       Int               @default(0)
+  gachaPityCounter   Int               @default(0)
   sponsoredQuizzes   ArQuiz[]          @relation("QuizSponsor")
   arQuizAttempts     ArQuizAttempt[]
   arQuizCompletions  ArQuizCompletion[]

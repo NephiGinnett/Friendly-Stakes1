@@ -8,7 +8,7 @@ export async function GET() {
 
   const fullUser = await prisma.user.findUnique({
     where: { id: user.id },
-    select: { bookmarkTokens: true, arGachaPulls: true },
+    select: { bookmarkTokens: true, arGachaPulls: true, gachaPityCounter: true },
   });
 
   const [bookmarks, avidReaderUnlocked] = await Promise.all([
@@ -24,6 +24,7 @@ export async function GET() {
   return NextResponse.json({
     tokens: fullUser?.bookmarkTokens ?? 0,
     gachaPulls: fullUser?.arGachaPulls ?? 0,
+    pityCounter: fullUser?.gachaPityCounter ?? 0,
     avidReaderOwned: !!avidReaderUnlocked,
     bookmarks: bookmarks.map((ub) => ({
       bookmarkId: ub.bookmarkId,

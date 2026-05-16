@@ -8,7 +8,7 @@ import { formatPoints } from "@/lib/utils";
 
 type User = { id: number; username: string; points: number; isAdmin: boolean };
 type BookmarkEntry = { bookmarkId: number; label: string; imageUrl: string; tier: string; count: number };
-type ShopData = { tokens: number; gachaPulls: number; avidReaderOwned: boolean; bookmarks: BookmarkEntry[] };
+type ShopData = { tokens: number; gachaPulls: number; pityCounter: number; avidReaderOwned: boolean; bookmarks: BookmarkEntry[] };
 type GachaPull = { bookmarkId: number; label: string; imageUrl: string; tier: string; isNew: boolean };
 
 const TIER_COLOR: Record<string, string> = {
@@ -17,8 +17,8 @@ const TIER_COLOR: Record<string, string> = {
   epic: "text-violet-300 border-violet-500",
   legendary: "text-amber-300 border-amber-500",
 };
-const BM_W = 80;
-const BM_H = 280;
+const BM_W = 40;
+const BM_H = 140;
 
 function BookmarkCard({ entry }: { entry: BookmarkEntry }) {
   const color = TIER_COLOR[entry.tier];
@@ -41,7 +41,7 @@ function BookmarkCard({ entry }: { entry: BookmarkEntry }) {
           </div>
         )}
       </div>
-      <p className={`text-xs text-center leading-tight max-w-[80px] ${color.split(" ")[0]}`}>{entry.label}</p>
+      <p className={`text-xs text-center leading-tight max-w-[40px] ${color.split(" ")[0]}`}>{entry.label}</p>
     </div>
   );
 }
@@ -68,7 +68,7 @@ function GachaReveal({ pulls, onDone }: { pulls: GachaPull[]; onDone: () => void
         <div className="flex justify-center">
           <div
             className={`relative rounded-lg border-4 overflow-hidden mx-auto ${color.split(" ")[1]}`}
-            style={{ width: 120, height: 420 }}
+            style={{ width: 60, height: 210 }}
           >
             {current.imageUrl ? (
               <img src={current.imageUrl} alt={current.label} className="w-full h-full object-cover" />
@@ -253,7 +253,14 @@ export default function ArShopPage() {
               <p className="text-xs text-slate-500">5 🔖 per pull · Uncommon 60% · Rare 25% · Epic 10% · Legendary 5%</p>
             </div>
           </div>
-          <p className="text-xs text-slate-600">Total pulls: {shop.gachaPulls}</p>
+          <div className="flex items-center justify-between text-xs text-slate-600">
+            <span>Total pulls: {shop.gachaPulls}</span>
+            {shop.pityCounter > 0 && (
+              <span className="text-violet-400/70">
+                ✨ Pity: +{shop.pityCounter}% epic odds
+              </span>
+            )}
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <button
               onClick={() => gacha(1)}
