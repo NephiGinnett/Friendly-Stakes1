@@ -4,7 +4,10 @@ const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://friendly-stakes.ver
 // Opens a DM channel with a user and sends them a message.
 // Silently no-ops if the bot token isn't configured or the user has no Discord ID linked.
 export async function notifyDiscord(discordUserId: string, message: string): Promise<void> {
-  if (!BOT_TOKEN || !discordUserId) return;
+  if (!BOT_TOKEN || !discordUserId) {
+    console.error("[Discord] Skipped — BOT_TOKEN present:", !!BOT_TOKEN, "| discordUserId present:", !!discordUserId);
+    return;
+  }
 
   try {
     // Step 1: create/fetch DM channel
