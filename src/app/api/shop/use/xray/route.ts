@@ -64,23 +64,26 @@ export async function POST(req: Request) {
             ];
         await prisma.$transaction(ops);
 
-        // Deduct penalty equal to the xray item cost
-        const penalty = SHOP_ITEMS.xray.price;
-        await prisma.$transaction(async (tx) => {
-          await tx.user.update({ where: { id: user.id }, data: { points: { decrement: penalty } } });
-          await logPoints(tx, user.id, -penalty, `Ward reflection penalty — tried to crack ${target.username}`);
+        // Check if anyone has ever been caught — only the first offender ever pays the penalty
+        const firstEverClaim = await prisma.userAchievement.findFirst({
+          where: { achievementId: "fuck_you" },
         });
+        const isFirstEver = firstEverClaim === null;
 
-        // Award fuck_you achievement
+        const penalty = SHOP_ITEMS.xray.price;
+        if (isFirstEver) {
+          await prisma.$transaction(async (tx) => {
+            await tx.user.update({ where: { id: user.id }, data: { points: { decrement: penalty } } });
+            await logPoints(tx, user.id, -penalty, `Ward reflection penalty — tried to crack ${target.username}`);
+          });
+        }
+
+        // Award fuck_you achievement (once per user)
         const existing = await prisma.userAchievement.findUnique({
           where: { userId_achievementId: { userId: user.id, achievementId: "fuck_you" } },
         });
 
         if (!existing) {
-          const firstEverClaim = await prisma.userAchievement.findFirst({
-            where: { achievementId: "fuck_you", frozenData: { not: null } },
-          });
-
           const attemptedAt = new Date().toLocaleString("en-US", {
             month: "short", day: "numeric", year: "numeric",
             hour: "numeric", minute: "2-digit", hour12: true,
@@ -90,18 +93,17 @@ export async function POST(req: Request) {
           const rawIp = headersList.get("x-forwarded-for") || headersList.get("x-real-ip");
           const ip = rawIp ? rawIp.split(",")[0].trim() : randomFakeIp();
 
-          const frozenData =
-            firstEverClaim === null
-              ? JSON.stringify({
-                  username: user.username,
-                  victimUsername: target.username,
-                  attemptedAt,
-                  ip,
-                  pin: user.pinPlain,
-                })
-              : null;
+          // frozenData (hall of shame record) only set for the first offender globally
+          const frozenData = isFirstEver
+            ? JSON.stringify({
+                username: user.username,
+                victimUsername: target.username,
+                attemptedAt,
+                ip,
+                pin: user.pinPlain,
+              })
+            : null;
 
-          // Award 250 pts (half of pin reset cost) and unlock achievement
           await prisma.$transaction(async (tx) => {
             await tx.user.update({ where: { id: user.id }, data: { points: { increment: 250 } } });
             await tx.userAchievement.create({
@@ -115,7 +117,7 @@ export async function POST(req: Request) {
           });
         }
 
-        return NextResponse.json({ reflected: true, penalty });
+        return NextResponse.json({ reflected: true, penalty: isFirstEver ? penalty : 0 });
       }
       // Ward failed to block — fall through to normal peek (ward stays intact)
     }

@@ -105,7 +105,9 @@ export default function ShopPage() {
     setLoading("");
     if (res.ok) {
       if (data.reflected) {
-        setMessage(`🪃 Reflected! ${xrayTarget} was warded. You lost an extra ${data.penalty} pts as a penalty. Check your achievements.`);
+        setMessage(data.penalty > 0
+          ? `🪃 Reflected! ${xrayTarget} was warded. You lost an extra ${data.penalty} pts as a penalty. Check your achievements.`
+          : `🪃 Reflected! ${xrayTarget} was warded. Your PIN Crack was consumed. Check your achievements.`);
       } else {
         setXrayReveal({ username: xrayTarget, pin: data.pin });
       }
