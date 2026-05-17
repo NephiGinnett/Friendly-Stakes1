@@ -75,6 +75,13 @@ export default function AdminPage() {
   const [bmMsg, setBmMsg] = useState<string | null>(null);
   const [scanMsg, setScanMsg] = useState<string | null>(null);
 
+  // Wager management state
+  type AdminWager = { id: number; title: string; status: string; creatorStake: number; deadline: string; entryCount: number; totalPool: number };
+  const [wagers, setWagers] = useState<AdminWager[]>([]);
+  const [wagerMsg, setWagerMsg] = useState<string | null>(null);
+  const [cancellingWager, setCancellingWager] = useState<number | null>(null);
+  const [confirmCancelId, setConfirmCancelId] = useState<number | null>(null);
+
   // Restart state
   const [confirmRestart, setConfirmRestart] = useState(false);
   const [restarting, setRestarting] = useState(false);
@@ -99,6 +106,7 @@ export default function AdminPage() {
     });
     fetch("/api/admin/ar-faire/pending").then((r) => r.ok ? r.json() : []).then(setArPending);
     fetch("/api/admin/ar-faire/bookmarks").then((r) => r.ok ? r.json() : []).then(setArBookmarks);
+    fetch("/api/admin/wagers").then((r) => r.ok ? r.json() : []).then(setWagers);
   };
 
   const sacrificeAction = async (action: "open" | "close" | "execute") => {
@@ -290,6 +298,17 @@ export default function AdminPage() {
     if (res.ok) fetchAll();
   };
 
+  const cancelWager = async (id: number) => {
+    setCancellingWager(id);
+    setWagerMsg(null);
+    const res = await fetch(`/api/wagers/${id}/cancel`, { method: "POST" });
+    const d = await res.json();
+    setCancellingWager(null);
+    setConfirmCancelId(null);
+    if (res.ok) { setWagerMsg(`Wager cancelled — ${d.refundCount} player${d.refundCount !== 1 ? "s" : ""} refunded.`); fetchAll(); }
+    else setWagerMsg(d.error);
+  };
+
   const restartGame = async () => {
     setRestarting(true);
     setRestartResult(null);
@@ -322,6 +341,78 @@ export default function AdminPage() {
       </header>
 
       <div className="max-w-lg mx-auto px-4 pt-5 space-y-8">
+
+        {/* ── Wager Management ── */}
+        <section className="space-y-3">
+          <h2 className="font-semibold text-white flex items-center gap-2">
+            🎲 Active Wagers
+            {wagers.filter((w) => w.status !== "settled" && w.status !== "cancelled").length > 0 && (
+              <span className="bg-violet-500/20 text-violet-300 text-xs px-2 py-0.5 rounded-full">
+                {wagers.filter((w) => w.status !== "settled" && w.status !== "cancelled").length} open
+              </span>
+            )}
+          </h2>
+
+          {wagerMsg && (
+            <p className={`text-sm px-3 py-2 rounded-xl ${wagerMsg.includes("error") || wagerMsg.includes("Error") ? "bg-rose-500/15 text-rose-300" : "bg-emerald-500/15 text-emerald-300"}`}>
+              {wagerMsg}
+            </p>
+          )}
+
+          {wagers.length === 0 ? (
+            <p className="text-slate-600 text-sm">No wagers found.</p>
+          ) : (
+            <div className="space-y-2">
+              {wagers.map((w) => (
+                <div key={w.id} className="card space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="font-medium text-white text-sm truncate">{w.title}</p>
+                      <p className="text-xs text-slate-500">
+                        {w.status} · {w.entryCount} player{w.entryCount !== 1 ? "s" : ""} · {formatPoints(w.totalPool)} pool · deadline {new Date(w.deadline).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <span className={`shrink-0 text-xs px-2 py-0.5 rounded-full font-medium ${
+                      w.status === "settled" ? "bg-emerald-500/15 text-emerald-400" :
+                      w.status === "cancelled" ? "bg-slate-500/20 text-slate-500" :
+                      new Date(w.deadline) < new Date() ? "bg-rose-500/15 text-rose-400" :
+                      "bg-violet-500/15 text-violet-400"
+                    }`}>
+                      {new Date(w.deadline) < new Date() && w.status !== "settled" && w.status !== "cancelled" ? "overdue" : w.status}
+                    </span>
+                  </div>
+
+                  {w.status !== "settled" && w.status !== "cancelled" && (
+                    confirmCancelId === w.id ? (
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => cancelWager(w.id)}
+                          disabled={cancellingWager === w.id}
+                          className="flex-1 py-1.5 rounded-xl text-xs font-medium bg-rose-500/20 text-rose-300 hover:bg-rose-500/30"
+                        >
+                          {cancellingWager === w.id ? "Cancelling..." : "Confirm — refund all stakes"}
+                        </button>
+                        <button
+                          onClick={() => setConfirmCancelId(null)}
+                          className="flex-1 py-1.5 rounded-xl text-xs font-medium bg-white/5 text-slate-400 hover:text-white"
+                        >
+                          Keep it
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setConfirmCancelId(w.id)}
+                        className="w-full py-1.5 rounded-xl text-xs font-medium bg-white/5 text-slate-400 hover:text-rose-300 hover:bg-rose-500/10 transition-colors"
+                      >
+                        Cancel &amp; refund
+                      </button>
+                    )
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
 
         {/* ── Pending Bingo Claims ── */}
         <section className="space-y-3">
