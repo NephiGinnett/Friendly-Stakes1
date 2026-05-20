@@ -18,6 +18,8 @@ export async function GET(req: Request) {
     adminBingo,
     latestBingoApproval,
     houseConfig,
+    allDistributions,
+    claimedDistributions,
   ] = await Promise.all([
     prisma.challenge.count({ where: { targetId: user.id, status: "pending" } }),
 
@@ -54,10 +56,15 @@ export async function GET(req: Request) {
     }),
 
     prisma.houseConfig.findUnique({ where: { id: 1 } }),
+
+    prisma.adminDistribution.findMany({ select: { id: true } }),
+    prisma.adminDistributionClaim.findMany({ where: { userId: user.id }, select: { distributionId: true } }),
   ]);
 
   const unvotedChallenges = myVotingChallenges.filter((c) => c.votes.length === 0).length;
   const unvotedWagers = myVotingWagers.filter((w) => w.votes.length === 0).length;
+  const claimedIds = new Set(claimedDistributions.map((c) => c.distributionId));
+  const pendingDistributions = allDistributions.filter((d) => !claimedIds.has(d.id)).length;
 
   return NextResponse.json({
     challenges: pendingTargeted + unvotedChallenges,
@@ -66,5 +73,6 @@ export async function GET(req: Request) {
     adminBingo,
     bingo: latestBingoApproval?.claimedAt ?? null,
     boss: houseConfig?.bossActive ?? false,
+    distributions: pendingDistributions,
   });
 }

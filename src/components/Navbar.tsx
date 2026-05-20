@@ -13,13 +13,14 @@ type Notifs = {
   adminBingo: number;
   bingo: string | null;
   boss: boolean;
+  distributions: number;
 };
 
 export default function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
   const [user, setUser] = useState<User | null>(null);
-  const [notifs, setNotifs] = useState<Notifs>({ challenges: 0, wagers: 0, achievements: 0, adminBingo: 0, bingo: null, boss: false });
+  const [notifs, setNotifs] = useState<Notifs>({ challenges: 0, wagers: 0, achievements: 0, adminBingo: 0, bingo: null, boss: false, distributions: 0 });
   const [notifsEnabled, setNotifsEnabled] = useState(true);
 
   useEffect(() => {
@@ -63,7 +64,7 @@ export default function Navbar() {
   if (!user) return null;
 
   const dotMap = {
-    feed: notifs.wagers > 0,
+    feed: notifs.wagers > 0 || notifs.distributions > 0,
     challenges: notifs.challenges > 0,
     achievements: notifs.achievements > 0,
     bingo: notifs.bingo !== null,

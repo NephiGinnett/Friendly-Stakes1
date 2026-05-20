@@ -82,6 +82,17 @@ export default function AdminPage() {
   const [cancellingWager, setCancellingWager] = useState<number | null>(null);
   const [confirmCancelId, setConfirmCancelId] = useState<number | null>(null);
 
+  // Distribution state
+  type DistributionRecord = { id: number; message: string; rewardType: string; rewardAmount: number; rewardItem: string; rewardItemUses: number; claimCount: number; createdAt: string };
+  const [distributions, setDistributions] = useState<DistributionRecord[]>([]);
+  const [distMsg, setDistMsg] = useState<string | null>(null);
+  const [distSending, setDistSending] = useState(false);
+  const [distRewardType, setDistRewardType] = useState<"points" | "item">("points");
+  const [distAmount, setDistAmount] = useState("");
+  const [distItem, setDistItem] = useState("thumb");
+  const [distItemUses, setDistItemUses] = useState("1");
+  const [distMessage, setDistMessage] = useState("");
+
   // Restart state
   const [confirmRestart, setConfirmRestart] = useState(false);
   const [restarting, setRestarting] = useState(false);
@@ -107,6 +118,7 @@ export default function AdminPage() {
     fetch("/api/admin/ar-faire/pending").then((r) => r.ok ? r.json() : []).then(setArPending);
     fetch("/api/admin/ar-faire/bookmarks").then((r) => r.ok ? r.json() : []).then(setArBookmarks);
     fetch("/api/admin/wagers").then((r) => r.ok ? r.json() : []).then(setWagers);
+    fetch("/api/admin/distribution").then((r) => r.ok ? r.json() : []).then(setDistributions);
   };
 
   const sacrificeAction = async (action: "open" | "close" | "execute") => {
@@ -296,6 +308,21 @@ export default function AdminPage() {
     const d = await res.json();
     setScanMsg(res.ok ? `Scanned: ${d.added} added${d.results?.length ? ` (${d.results.join(", ")})` : ""}` : d.error);
     if (res.ok) fetchAll();
+  };
+
+  const sendDistribution = async () => {
+    if (!distMessage.trim()) return;
+    setDistSending(true); setDistMsg(null);
+    const body = distRewardType === "points"
+      ? { message: distMessage.trim(), rewardType: "points", rewardAmount: parseInt(distAmount) || 0 }
+      : { message: distMessage.trim(), rewardType: "item", rewardItem: distItem, rewardItemUses: parseInt(distItemUses) || 1 };
+    const res = await fetch("/api/admin/distribution", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+    });
+    const d = await res.json();
+    setDistSending(false);
+    if (res.ok) { setDistMsg("Distribution sent! Players will see it on their feed."); setDistMessage(""); setDistAmount(""); fetchAll(); }
+    else setDistMsg(d.error);
   };
 
   const cancelWager = async (id: number) => {
@@ -924,6 +951,101 @@ export default function AdminPage() {
               </div>
 
               <button onClick={() => setShowTally(false)} className="text-xs text-slate-500 hover:text-slate-300">Hide</button>
+            </div>
+          )}
+        </section>
+
+        {/* ── Admin Distribution ── */}
+        <section className="space-y-3">
+          <h2 className="font-semibold text-white">🎁 Send Distribution</h2>
+          <p className="text-xs text-slate-500">Send a claimable reward to all players. They'll see it on their feed until claimed.</p>
+
+          {distMsg && (
+            <p className={`text-sm px-3 py-2 rounded-xl ${distMsg.includes("error") || distMsg.includes("Error") ? "bg-rose-500/15 text-rose-300" : "bg-emerald-500/15 text-emerald-300"}`}>
+              {distMsg}
+            </p>
+          )}
+
+          <div className="card space-y-3">
+            {/* Reward type toggle */}
+            <div className="flex gap-2">
+              {(["points", "item"] as const).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setDistRewardType(t)}
+                  className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all border ${
+                    distRewardType === t
+                      ? "bg-violet-500/20 border-violet-500/50 text-violet-300"
+                      : "bg-white/5 border-white/10 text-slate-400 hover:text-white"
+                  }`}
+                >
+                  {t === "points" ? "💰 Points" : "📦 Item"}
+                </button>
+              ))}
+            </div>
+
+            {distRewardType === "points" ? (
+              <input
+                type="number"
+                className="input w-full"
+                placeholder="Points amount"
+                value={distAmount}
+                onChange={(e) => setDistAmount(e.target.value)}
+              />
+            ) : (
+              <div className="flex gap-2">
+                <select className="input flex-1" value={distItem} onChange={(e) => setDistItem(e.target.value)}>
+                  <option value="thumb">👍 Thumb on the Scale</option>
+                  <option value="ward">🛡️ Ward</option>
+                  <option value="xray">💀 PIN Crack</option>
+                  <option value="pinreset">🔑 Pin Reset</option>
+                  <option value="temp_vpn">🕵️ Temporary VPN</option>
+                  <option value="history_viewer">📋 History Viewer</option>
+                  <option value="becou">🕊️ Be Cou</option>
+                  <option value="stsins">😈 St Sins</option>
+                </select>
+                <input
+                  type="number"
+                  min="1"
+                  className="input w-20"
+                  placeholder="Uses"
+                  value={distItemUses}
+                  onChange={(e) => setDistItemUses(e.target.value)}
+                />
+              </div>
+            )}
+
+            <textarea
+              className="input w-full resize-none"
+              rows={3}
+              placeholder="Message players will see on their feed..."
+              value={distMessage}
+              onChange={(e) => setDistMessage(e.target.value)}
+            />
+
+            <button
+              onClick={sendDistribution}
+              disabled={distSending || !distMessage.trim() || (distRewardType === "points" && !distAmount)}
+              className="btn-primary w-full"
+            >
+              {distSending ? "Sending..." : "Send to all players"}
+            </button>
+          </div>
+
+          {distributions.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs text-slate-500 uppercase tracking-wide">Recent distributions</p>
+              {distributions.map((d) => (
+                <div key={d.id} className="card py-2 px-3 flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-sm text-white truncate">{d.message}</p>
+                    <p className="text-xs text-slate-500">
+                      {d.rewardType === "points" ? `${d.rewardAmount.toLocaleString()} pts` : `${d.rewardItem} ×${d.rewardItemUses}`}
+                      {" · "}{d.claimCount} claimed
+                    </p>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </section>

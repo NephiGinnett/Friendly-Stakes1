@@ -40,6 +40,8 @@ model User {
   sacrificeVotesCast SacrificeVote[]
   sacrificeVotesReceived SacrificeVote[] @relation("SacrificeTarget")
 
+  distributionClaims AdminDistributionClaim[]
+
   bookmarkTokens     Int               @default(0)
   arGachaPulls       Int               @default(0)
   gachaPityCounter   Int               @default(0)
@@ -330,6 +332,29 @@ model UserBookmark {
   count      Int        @default(1)
   createdAt  DateTime   @default(now())
   @@unique([userId, bookmarkId])
+}
+
+// Admin-created point/item drops claimable by all players
+model AdminDistribution {
+  id             Int      @id @default(autoincrement())
+  message        String
+  rewardType     String   // "points" | "item"
+  rewardAmount   Int      @default(0)  // used when rewardType = "points"
+  rewardItem     String   @default("") // item type key when rewardType = "item"
+  rewardItemUses Int      @default(1)
+  createdAt      DateTime @default(now())
+  claims         AdminDistributionClaim[]
+}
+
+model AdminDistributionClaim {
+  id             Int                  @id @default(autoincrement())
+  distributionId Int
+  distribution   AdminDistribution    @relation(fields: [distributionId], references: [id])
+  userId         Int
+  user           User                 @relation(fields: [userId], references: [id])
+  claimedAt      DateTime             @default(now())
+
+  @@unique([distributionId, userId])
 }
 
 // Each player's bingo card (25 squares, positions 0–24)

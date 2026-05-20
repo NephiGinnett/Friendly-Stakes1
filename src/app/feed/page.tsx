@@ -7,6 +7,7 @@ import WagerCard from "@/components/WagerCard";
 import PointsBadge from "@/components/PointsBadge";
 
 type User = { id: number; username: string; points: number; isAdmin: boolean };
+type Distribution = { id: number; message: string; rewardType: string; rewardAmount: number; rewardItem: string; rewardItemUses: number };
 type WagerEntry = {
   id: number;
   side: string;
@@ -30,6 +31,15 @@ export default function FeedPage() {
   const [wagers, setWagers] = useState<Wager[]>([]);
   const [filter, setFilter] = useState<string>("all");
   const [loading, setLoading] = useState(true);
+  const [distributions, setDistributions] = useState<Distribution[]>([]);
+  const [claiming, setClaiming] = useState<number | null>(null);
+
+  const fetchDistributions = () => {
+    fetch("/api/distribution/pending")
+      .then((r) => r.ok ? r.json() : [])
+      .then(setDistributions)
+      .catch(() => {});
+  };
 
   useEffect(() => {
     fetch("/api/auth/me")
@@ -37,8 +47,9 @@ export default function FeedPage() {
         if (!r.ok) { router.push("/login"); return null; }
         return r.json();
       })
-      .then(setUser)
+      .then((u) => { setUser(u); })
       .catch(() => router.push("/login"));
+    fetchDistributions();
   }, [router]);
 
   useEffect(() => {
@@ -49,6 +60,16 @@ export default function FeedPage() {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [filter]);
+
+  const claimDistribution = async (id: number) => {
+    setClaiming(id);
+    const res = await fetch(`/api/distribution/${id}/claim`, { method: "POST" });
+    setClaiming(null);
+    if (res.ok) {
+      setDistributions((prev) => prev.filter((d) => d.id !== id));
+      fetch("/api/auth/me").then((r) => r.ok ? r.json() : null).then(setUser);
+    }
+  };
 
   if (!user) return null;
 
@@ -64,6 +85,32 @@ export default function FeedPage() {
       </header>
 
       <div className="max-w-lg mx-auto px-4 pt-4">
+        {/* Admin distributions */}
+        {distributions.length > 0 && (
+          <div className="space-y-2 mb-4">
+            {distributions.map((d) => (
+              <div key={d.id} className="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-xs text-amber-400 font-semibold uppercase tracking-wide mb-0.5">🎁 Gift from the admin</p>
+                  <p className="text-sm text-white leading-snug">{d.message}</p>
+                  <p className="text-xs text-amber-300/70 mt-1">
+                    {d.rewardType === "points"
+                      ? `+${d.rewardAmount.toLocaleString()} pts`
+                      : `${d.rewardItem} item (${d.rewardItemUses} use${d.rewardItemUses !== 1 ? "s" : ""})`}
+                  </p>
+                </div>
+                <button
+                  onClick={() => claimDistribution(d.id)}
+                  disabled={claiming === d.id}
+                  className="shrink-0 px-4 py-2 rounded-xl text-sm font-semibold bg-amber-500 text-black hover:bg-amber-400 disabled:opacity-50 transition-colors"
+                >
+                  {claiming === d.id ? "..." : "Claim"}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Filter tabs */}
         <div className="flex gap-2 mb-4 overflow-x-auto pb-1 no-scrollbar">
           {filters.map((f) => (
