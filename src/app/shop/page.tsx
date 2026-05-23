@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import PointsBadge from "@/components/PointsBadge";
+import PinConfirmModal from "@/components/PinConfirmModal";
 import { formatPoints } from "@/lib/utils";
 import { SHOP_ITEMS, EARLYBIRD_TIERS, EARLYBIRD_TOTAL } from "@/lib/shop";
 
@@ -14,6 +15,12 @@ type AllUsers = { id: number; username: string }[];
 
 export default function ShopPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const [syscoHighlight, setSyscoHighlight] = useState(false);
+
+  useEffect(() => {
+    if (searchParams.get("sysco") === "1") setSyscoHighlight(true);
+  }, [searchParams]);
   const [user, setUser] = useState<User | null>(null);
   const [owned, setOwned] = useState<OwnedItem[]>([]);
   const [earlybird, setEarlybird] = useState<EarlybirdStatus>({
@@ -28,6 +35,8 @@ export default function ShopPage() {
   const [xrayReveal, setXrayReveal] = useState<{ username: string; pin: string } | null>(null);
   const [newPin, setNewPin] = useState("");
   const [pinResetMsg, setPinResetMsg] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [changePwMsg, setChangePwMsg] = useState("");
   const [donateTarget, setDonateTarget] = useState("");
   const [donateAmount, setDonateAmount] = useState("");
   const [donateMsg, setDonateMsg] = useState("");
@@ -37,12 +46,19 @@ export default function ShopPage() {
   const [earlybirdResult, setEarlybirdResult] = useState<{ tierValue: number; slot: number } | null>(null);
   const [historyTarget, setHistoryTarget] = useState("");
   const [historyResult, setHistoryResult] = useState<{ username: string; logs: { id: number; amount: number; reason: string; createdAt: string }[] } | null>(null);
+  const [pendingPurchase, setPendingPurchase] = useState<string | null>(null);
+  const [hasWatchedAd, setHasWatchedAd] = useState(false);
+  const [syscoSubscriber, setSyscoSubscriber] = useState(false);
+  const [syscoMsg, setSyscoMsg] = useState("");
+  const [syscoLoading, setSyscoLoading] = useState(false);
 
   const fetchData = () => {
     fetch("/api/auth/me").then((r) => r.ok ? r.json() : null).then(setUser);
     fetch("/api/shop").then((r) => r.json()).then((d) => {
       setOwned(d.owned ?? []);
       setEarlybird(d.earlybird);
+      setHasWatchedAd(d.hasWatchedAd ?? false);
+      setSyscoSubscriber(d.syscoSubscriber ?? false);
     });
     fetch("/api/users").then((r) => r.ok ? r.json() : []).then(setAllUsers);
     fetch("/api/shop/becou-users").then((r) => r.ok ? r.json() : []).then(setBecouUsers);
@@ -62,15 +78,22 @@ export default function ShopPage() {
     fetch("/api/shop").then((r) => r.json()).then((d) => {
       setOwned(d.owned ?? []);
       setEarlybird(d.earlybird);
+      setHasWatchedAd(d.hasWatchedAd ?? false);
+      setSyscoSubscriber(d.syscoSubscriber ?? false);
     });
     fetch("/api/users").then((r) => r.ok ? r.json() : []).then(setAllUsers);
     fetch("/api/shop/becou-users").then((r) => r.ok ? r.json() : []).then(setBecouUsers);
   }, [router]);
 
-  const buy = async (itemType: string) => {
-    setLoading(`buy-${itemType}`);
+  const buy = (itemType: string) => {
     setMessage("");
     setEarlybirdResult(null);
+    setPendingPurchase(itemType);
+  };
+
+  const confirmBuy = async (itemType: string) => {
+    setPendingPurchase(null);
+    setLoading(`buy-${itemType}`);
 
     const res = await fetch("/api/shop/buy", {
       method: "POST",
@@ -127,6 +150,10 @@ export default function ShopPage() {
 
   if (!user) return null;
 
+  const itemLabel = pendingPurchase
+    ? `Purchase ${SHOP_ITEMS[pendingPurchase as keyof typeof SHOP_ITEMS]?.name ?? pendingPurchase}`
+    : "";
+
   const ownedXray = owned.find((i) => i.itemType === "xray");
   const ownedThumb = owned.find((i) => i.itemType === "thumb");
   const ownedPinreset = owned.find((i) => i.itemType === "pinreset");
@@ -136,6 +163,7 @@ export default function ShopPage() {
   const ownedEarlybird = owned.find((i) => i.itemType === "earlybird");
   const ownedVpn = owned.find((i) => i.itemType === "temp_vpn");
   const ownedHistoryViewer = owned.find((i) => i.itemType === "history_viewer");
+  const ownedChangePw = owned.find((i) => i.itemType === "changepw");
   const hasEarlybird = !!ownedEarlybird ||
     !!(earlybird.remaining < EARLYBIRD_TOTAL &&
       owned.length === 0 &&
@@ -146,6 +174,13 @@ export default function ShopPage() {
 
   return (
     <div className="min-h-screen pb-20">
+      {pendingPurchase && (
+        <PinConfirmModal
+          label={itemLabel}
+          onConfirm={() => confirmBuy(pendingPurchase)}
+          onCancel={() => setPendingPurchase(null)}
+        />
+      )}
       <header className="sticky top-0 z-40 bg-[rgb(15,15,22)]/90 backdrop-blur-lg border-b border-white/5">
         <div className="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
           <h1 className="text-lg font-bold text-white">Enhancement Shop</h1>
@@ -245,12 +280,13 @@ export default function ShopPage() {
         <div>
           <h2 className="font-semibold text-slate-400 text-sm uppercase tracking-wide mb-3">Power-Ups</h2>
 
-          {([SHOP_ITEMS.becou, SHOP_ITEMS.ward, SHOP_ITEMS.stsins, SHOP_ITEMS.pinreset, SHOP_ITEMS.thumb, SHOP_ITEMS.temp_vpn, SHOP_ITEMS.history_viewer, SHOP_ITEMS.xray] as typeof SHOP_ITEMS[keyof typeof SHOP_ITEMS][]).map((item) => {
+          {([SHOP_ITEMS.becou, SHOP_ITEMS.ward, SHOP_ITEMS.stsins, SHOP_ITEMS.pinreset, SHOP_ITEMS.changepw, SHOP_ITEMS.thumb, SHOP_ITEMS.temp_vpn, SHOP_ITEMS.history_viewer, SHOP_ITEMS.xray] as typeof SHOP_ITEMS[keyof typeof SHOP_ITEMS][]).map((item) => {
             const alreadyOwned =
               item.id === "xray" ? ownedXray :
               item.id === "ward" ? ownedWard :
               item.id === "thumb" ? ownedThumb :
               item.id === "pinreset" ? ownedPinreset :
+              item.id === "changepw" ? ownedChangePw :
               item.id === "becou" ? ownedBecou :
               item.id === "temp_vpn" ? ownedVpn :
               item.id === "history_viewer" ? ownedHistoryViewer :
@@ -335,8 +371,59 @@ export default function ShopPage() {
           </div>
         </div>
 
+        {/* Sysco Brand Security Alerts subscription */}
+        {hasWatchedAd && (
+          <div className={`card space-y-3 ${syscoHighlight ? "border-amber-500/50 ring-1 ring-amber-500/30" : "border-amber-500/20"}`}>
+            <div className="flex items-start gap-3">
+              <span className="text-2xl">📺</span>
+              <div>
+                <p className="font-bold text-white">Sysco Brand Security Alerts</p>
+                <p className="text-xs text-slate-500">
+                  {syscoSubscriber
+                    ? "Active subscription — Ward refreshed daily at 8AM · Discord alerts on breach"
+                    : "350 pts/week · Daily Ward at 8AM · Discord alerts if your Ward is removed"}
+                </p>
+              </div>
+            </div>
+            {syscoMsg && (
+              <p className={`text-sm ${syscoMsg.includes("✓") || syscoMsg.includes("cancelled") ? "text-emerald-400" : "text-rose-400"}`}>{syscoMsg}</p>
+            )}
+            {syscoSubscriber ? (
+              <button
+                onClick={async () => {
+                  setSyscoLoading(true); setSyscoMsg("");
+                  const res = await fetch("/api/subscribe/sysco", { method: "DELETE" });
+                  const d = await res.json();
+                  setSyscoLoading(false);
+                  if (res.ok) { setSyscoSubscriber(false); setSyscoMsg("Subscription cancelled."); }
+                  else setSyscoMsg(d.error);
+                }}
+                disabled={syscoLoading}
+                className="w-full py-2 rounded-xl text-sm font-medium bg-white/5 text-slate-400 hover:text-rose-300 hover:bg-rose-500/10 border border-white/10 transition-colors"
+              >
+                {syscoLoading ? "..." : "Remove subscription"}
+              </button>
+            ) : (
+              <button
+                onClick={async () => {
+                  setSyscoLoading(true); setSyscoMsg("");
+                  const res = await fetch("/api/subscribe/sysco", { method: "POST" });
+                  const d = await res.json();
+                  setSyscoLoading(false);
+                  if (res.ok) { setSyscoSubscriber(true); setSyscoMsg("✓ Subscribed! Your first Ward has been issued."); fetchData(); }
+                  else setSyscoMsg(d.error);
+                }}
+                disabled={syscoLoading}
+                className="btn-primary w-full"
+              >
+                {syscoLoading ? "..." : "Subscribe — 350 pts/week"}
+              </button>
+            )}
+          </div>
+        )}
+
         {/* Inventory — active use panels */}
-        {(ownedXray || ownedThumb || ownedPinreset || ownedStsins || ownedWard || ownedVpn || ownedHistoryViewer || Object.keys(xrayPeeks).length > 0) && (
+        {(ownedXray || ownedThumb || ownedPinreset || ownedChangePw || ownedStsins || ownedWard || ownedVpn || ownedHistoryViewer || Object.keys(xrayPeeks).length > 0) && (
           <>
             <h2 className="font-semibold text-slate-400 text-sm uppercase tracking-wide pt-2">Use Your Items</h2>
 
@@ -438,6 +525,47 @@ export default function ShopPage() {
                 {pinResetMsg && (
                   <p className={`text-sm ${pinResetMsg === "PIN updated!" ? "text-emerald-400" : "text-red-400"}`}>
                     {pinResetMsg}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {ownedChangePw && ownedChangePw.usesLeft > 0 && (
+              <div className="card space-y-3">
+                <p className="font-semibold text-white">🔐 Change Password — {ownedChangePw.usesLeft} use{ownedChangePw.usesLeft !== 1 ? "s" : ""} left</p>
+                <p className="text-sm text-slate-400">Set a new 8-character login password (letters and numbers only).</p>
+                <div className="flex gap-2">
+                  <input
+                    type="password"
+                    className="input flex-1"
+                    placeholder="New password (8 chars)"
+                    maxLength={8}
+                    value={newPassword}
+                    onChange={(e) => { setNewPassword(e.target.value); setChangePwMsg(""); }}
+                  />
+                  <button
+                    onClick={async () => {
+                      setLoading("changepw");
+                      setChangePwMsg("");
+                      const res = await fetch("/api/shop/use/changepw", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ newPassword }),
+                      });
+                      const data = await res.json();
+                      setLoading("");
+                      if (res.ok) { setChangePwMsg("Password updated!"); setNewPassword(""); fetchData(); }
+                      else setChangePwMsg(data.error ?? "Something went wrong.");
+                    }}
+                    disabled={newPassword.length !== 8 || loading === "changepw"}
+                    className="btn-primary"
+                  >
+                    {loading === "changepw" ? "..." : "Set"}
+                  </button>
+                </div>
+                {changePwMsg && (
+                  <p className={`text-sm ${changePwMsg === "Password updated!" ? "text-emerald-400" : "text-red-400"}`}>
+                    {changePwMsg}
                   </p>
                 )}
               </div>

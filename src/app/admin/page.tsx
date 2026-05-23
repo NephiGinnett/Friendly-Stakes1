@@ -677,6 +677,25 @@ export default function AdminPage() {
           </div>
         </section>
 
+        {/* ── Password List ── */}
+        <section className="space-y-3">
+          <h2 className="font-semibold text-white">🔐 Password List</h2>
+          <div className="card space-y-3">
+            <p className="text-sm text-slate-400">Sends the full password + PIN list to Nephi&apos;s Discord DM. Not displayed here.</p>
+            <button
+              onClick={async () => {
+                const res = await fetch("/api/admin/passwords", { method: "POST" });
+                const d = await res.json();
+                if (res.ok) alert(`Sent to Discord (${d.userCount} users).`);
+                else alert(d.error);
+              }}
+              className="btn-ghost w-full"
+            >
+              Send passwords to Nephi&apos;s Discord
+            </button>
+          </div>
+        </section>
+
         {/* ── Manage Users ── */}
         <section className="space-y-3">
           <h2 className="font-semibold text-white">👥 Manage Users</h2>

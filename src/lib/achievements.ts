@@ -187,6 +187,16 @@ export const ACHIEVEMENTS = {
     rewardTokens: 25,
     emoji: "🔖",
   },
+  spud_king: {
+    id: "spud_king",
+    name: "Spud King",
+    description: "You watched all 3 Sysco Brand Security Alerts ads in a single day. Kyle would be proud. Sysco would be proud. The House is indifferent.",
+    hint: "Watch 3 ads in one day",
+    reward: "Earn 400 pts",
+    rewardPoints: 400,
+    rewardType: "increment" as const,
+    emoji: "🥔",
+  },
 } as const;
 
 export type AchievementId = keyof typeof ACHIEVEMENTS;

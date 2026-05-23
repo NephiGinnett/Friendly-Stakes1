@@ -17,6 +17,16 @@ export function verifyPin(pin: string, storedHash: string, storedSalt: string): 
   return hash === storedHash;
 }
 
+export function hashPassword(password: string, salt?: string): { hash: string; salt: string } {
+  return hashPin(password, salt);
+}
+
+export function verifyPassword(password: string, storedHash: string, storedSalt: string): boolean {
+  if (!storedHash || !storedSalt) return false;
+  const { hash } = hashPassword(password, storedSalt);
+  return hash === storedHash;
+}
+
 export async function createSession(userId: number): Promise<string> {
   const token = crypto.randomBytes(32).toString("hex");
   await prisma.session.create({

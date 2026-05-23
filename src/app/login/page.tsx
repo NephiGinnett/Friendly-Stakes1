@@ -7,9 +7,13 @@ import Link from "next/link";
 export default function LoginPage() {
   const router = useRouter();
   const [username, setUsername] = useState("");
-  const [pin, setPin] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [pwAssistUsername, setPwAssistUsername] = useState("");
+  const [pwAssistMsg, setPwAssistMsg] = useState("");
+  const [pwAssistLoading, setPwAssistLoading] = useState(false);
+  const [showAssist, setShowAssist] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,7 +24,7 @@ export default function LoginPage() {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, pin }),
+        body: JSON.stringify({ username, password }),
       });
 
       if (!res.ok) {
@@ -34,6 +38,25 @@ export default function LoginPage() {
       setError("Something went wrong");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const requestPwAssist = async () => {
+    if (!pwAssistUsername.trim()) return;
+    setPwAssistLoading(true);
+    setPwAssistMsg("");
+    try {
+      const res = await fetch("/api/auth/request-pw", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: pwAssistUsername.trim() }),
+      });
+      const d = await res.json();
+      setPwAssistMsg(res.ok ? "Password sent to your Discord DM!" : d.error);
+    } catch {
+      setPwAssistMsg("Something went wrong.");
+    } finally {
+      setPwAssistLoading(false);
     }
   };
 
@@ -61,17 +84,14 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <label htmlFor="pin" className="label">PIN</label>
+            <label htmlFor="password" className="label">Password</label>
             <input
-              id="pin"
+              id="password"
               type="password"
-              className="input text-center tracking-[0.5em] text-lg"
-              placeholder="----"
-              maxLength={4}
-              inputMode="numeric"
-              pattern="\d{2,4}"
-              value={pin}
-              onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
+              className="input"
+              placeholder="Enter your password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               autoComplete="current-password"
               required
             />
@@ -83,12 +103,43 @@ export default function LoginPage() {
 
           <button
             type="submit"
-            disabled={loading || !username || pin.length < 2}
+            disabled={loading || !username || !password}
             className="btn-primary w-full"
           >
             {loading ? "Logging in..." : "Log In"}
           </button>
         </form>
+
+        <button
+          onClick={() => { setShowAssist(!showAssist); setPwAssistMsg(""); }}
+          className="w-full mt-3 text-sm text-slate-500 hover:text-violet-400 transition-colors"
+        >
+          Request password assistance
+        </button>
+
+        {showAssist && (
+          <div className="mt-3 space-y-2">
+            <input
+              type="text"
+              className="input w-full"
+              placeholder="Your username"
+              value={pwAssistUsername}
+              onChange={(e) => setPwAssistUsername(e.target.value)}
+            />
+            <button
+              onClick={requestPwAssist}
+              disabled={pwAssistLoading || !pwAssistUsername.trim()}
+              className="btn-ghost w-full text-sm"
+            >
+              {pwAssistLoading ? "Sending..." : "Send password to my Discord"}
+            </button>
+            {pwAssistMsg && (
+              <p className={`text-sm text-center ${pwAssistMsg.includes("sent") ? "text-emerald-400" : "text-rose-400"}`}>
+                {pwAssistMsg}
+              </p>
+            )}
+          </div>
+        )}
 
         <p className="text-center text-sm text-slate-500 mt-6">
           New here?{" "}

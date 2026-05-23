@@ -1,0 +1,12 @@
+AD IDEA: PetAI Donation Ad
+==========================
+
+Option to donate to PetAI after watching.
+
+Achievement: "I Donated" sticker
+- Makes the player less likely to be targeted during random attacks from THE House
+- Description remains ??? until the boss is revealed
+- Must donate 200 points
+- Only awarded once per player
+
+Details to be filled in by admin.

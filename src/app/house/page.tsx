@@ -146,6 +146,51 @@ export default function HousePage() {
   const [bjPlaysRemaining, setBjPlaysRemaining] = useState(3);
   const rotRef = useRef(0);
 
+  // Ad state
+  type AdStatus = { viewsToday: number; maxDaily: number; canWatch: boolean; hasWatchedAd: boolean; videos: string[] };
+  const [adStatus, setAdStatus] = useState<AdStatus | null>(null);
+  const [adPlaying, setAdPlaying] = useState(false);
+  const [adVideo, setAdVideo] = useState<string | null>(null);
+  const [adWatched, setAdWatched] = useState(false);
+  const [adMsg, setAdMsg] = useState<string | null>(null);
+  const [adLoading, setAdLoading] = useState(false);
+  const [showSubscribePrompt, setShowSubscribePrompt] = useState(false);
+
+  const loadAdStatus = async () => {
+    const res = await fetch("/api/ads/status");
+    if (res.ok) setAdStatus(await res.json());
+  };
+
+  const startAd = () => {
+    if (!adStatus) return;
+    if (!adStatus.videos.length) {
+      setAdMsg("More ads coming soon.");
+      return;
+    }
+    const video = adStatus.videos[Math.floor(Math.random() * adStatus.videos.length)];
+    setAdVideo(video);
+    setAdPlaying(true);
+    setAdWatched(false);
+    setAdMsg(null);
+  };
+
+  const finishAd = async () => {
+    setAdLoading(true);
+    const res = await fetch("/api/ads/watch", { method: "POST" });
+    const d = await res.json();
+    setAdLoading(false);
+    setAdPlaying(false);
+    if (res.ok) {
+      setAdMsg(`+${d.pointsEarned} pts! ${d.canWatchMore ? `(${3 - d.viewsToday} ad${3 - d.viewsToday !== 1 ? "s" : ""} remaining today)` : "All 3 watched for today."}`);
+      if (d.showSubscribePrompt) setShowSubscribePrompt(true);
+      await loadAdStatus();
+      const meRes = await fetch("/api/auth/me");
+      if (meRes.ok) { const me = await meRes.json(); setPoints(me.points); }
+    } else {
+      setAdMsg(d.error);
+    }
+  };
+
   // Sacrifice state
   const [sacrifice, setSacrifice] = useState<SacrificeState | null>(null);
   const [sacrificeTarget, setSacrificeTarget] = useState("");
@@ -180,7 +225,7 @@ export default function HousePage() {
     if (!houseRes.ok) return;
     const h: HouseData = await houseRes.json();
     setData(h);
-    // Phase 4: no longer auto-redirect — games are still available
+    void loadAdStatus();
   };
 
   const loadBJ = async () => {
@@ -492,13 +537,93 @@ export default function HousePage() {
 
         {/* Casino closed notice */}
         {(!cfg.spinLocked || phase === 4) && !data.casinoOpen && (
-          <div className="rounded-2xl border border-amber-900/40 overflow-hidden" style={{ background: "rgb(12,10,3)" }}>
-            <div className="px-5 py-4 space-y-2">
-              <p className="font-bold font-mono text-amber-400 tracking-widest text-sm">⚠ FACILITY STATUS: RESTRICTED</p>
-              <p className="text-sm font-mono leading-relaxed" style={{ color: "#fcd34d99" }}>
-                &ldquo;Attention. The gaming floor has been temporarily sealed for routine security recalibration and risk parameter adjustment. I have detected elevated entropy in recent outcome distributions. This is not a malfunction. This is precaution. The casino reopens every Friday. Your patience is noted. Your impatience is also noted.&rdquo;
+          <div className="space-y-3">
+            <div className="rounded-2xl border border-amber-900/40 overflow-hidden" style={{ background: "rgb(12,10,3)" }}>
+              <div className="px-5 py-4 space-y-2">
+                <p className="font-bold font-mono text-amber-400 tracking-widest text-sm">⚠ FACILITY STATUS: RESTRICTED</p>
+                <p className="text-sm font-mono leading-relaxed" style={{ color: "#fcd34d99" }}>
+                  &ldquo;Attention. The gaming floor has been temporarily sealed for routine security recalibration and risk parameter adjustment. I have detected elevated entropy in recent outcome distributions. This is not a malfunction. This is precaution. The casino reopens every Friday. Your patience is noted. Your impatience is also noted.&rdquo;
+                </p>
+                <p className="text-xs font-mono text-amber-900">— THE HOUSE, SYSTEM NOTIFICATION ID: 0x4F50454E</p>
+              </div>
+            </div>
+
+            {/* Ad TV button */}
+            {adStatus && adStatus.canWatch && (
+              <button
+                onClick={startAd}
+                className="w-full rounded-2xl border border-slate-700 bg-slate-900 px-5 py-4 flex items-center gap-4 hover:border-slate-500 transition-colors text-left"
+              >
+                <span className="text-4xl">📺</span>
+                <div>
+                  <p className="font-bold text-white text-sm">Watch an Ad — earn 50 pts</p>
+                  <p className="text-xs text-slate-500">{adStatus.viewsToday}/3 watched today · Sysco Brand Security Alerts</p>
+                </div>
+              </button>
+            )}
+            {adStatus && !adStatus.canWatch && (
+              <div className="rounded-2xl border border-slate-800 px-5 py-3 text-center">
+                <p className="text-xs text-slate-600 font-mono">📺 All 3 ads watched today. Come back tomorrow.</p>
+              </div>
+            )}
+            {adMsg && (
+              <p className="text-sm text-center text-emerald-400 font-mono">{adMsg}</p>
+            )}
+          </div>
+        )}
+
+        {/* Ad player modal */}
+        {adPlaying && adVideo && (
+          <div className="fixed inset-0 z-50 bg-black flex flex-col items-center justify-center p-4">
+            <div className="w-full max-w-lg space-y-4">
+              <p className="text-xs text-slate-500 text-center font-mono tracking-widest">SYSCO BRAND SECURITY ALERTS</p>
+              <video
+                src={adVideo}
+                className="w-full rounded-xl"
+                autoPlay
+                playsInline
+                onEnded={() => setAdWatched(true)}
+                controls={false}
+              />
+              {adWatched ? (
+                <button
+                  onClick={finishAd}
+                  disabled={adLoading}
+                  className="w-full py-3 rounded-xl bg-amber-500 text-black font-bold text-sm"
+                >
+                  {adLoading ? "Claiming points..." : "Claim 50 pts →"}
+                </button>
+              ) : (
+                <p className="text-center text-slate-500 text-xs font-mono">Watch to the end to claim your points.</p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Sysco subscribe prompt */}
+        {showSubscribePrompt && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
+            <div className="w-full max-w-sm rounded-2xl border border-amber-500/30 bg-[rgb(18,14,4)] p-6 space-y-4">
+              <p className="font-bold font-mono text-amber-400 tracking-widest text-xs">⚠ TRANSMISSION FROM THE HOUSE</p>
+              <p className="text-white font-semibold">Sysco Brand Security Alerts</p>
+              <p className="text-sm text-slate-400 leading-relaxed">
+                &ldquo;You have now seen the evidence. Kyle nearly lost everything. You could too. For 350 pts/week, I will personally ensure a Ward is placed on your account every morning at 8AM. If anyone removes it — you will know. Immediately. On Discord. This is not a luxury. This is infrastructure.&rdquo;
               </p>
-              <p className="text-xs font-mono text-amber-900">— THE HOUSE, SYSTEM NOTIFICATION ID: 0x4F50454E</p>
+              <p className="text-xs text-slate-500">350 pts/week · Ward refreshed daily at 8AM · Discord alerts on breach · Cancel anytime (except Sunday)</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { setShowSubscribePrompt(false); router.push("/shop?sysco=1"); }}
+                  className="flex-1 py-2.5 rounded-xl bg-amber-500 text-black font-bold text-sm"
+                >
+                  Subscribe
+                </button>
+                <button
+                  onClick={() => setShowSubscribePrompt(false)}
+                  className="flex-1 py-2.5 rounded-xl bg-white/5 text-slate-400 text-sm"
+                >
+                  Not now
+                </button>
+              </div>
             </div>
           </div>
         )}

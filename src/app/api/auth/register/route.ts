@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { hashPin, createSession, setSessionCookie } from "@/lib/auth";
+import { hashPin, hashPassword, createSession, setSessionCookie } from "@/lib/auth";
 
 // ── Edit this list to control who can sign up ──────────────────────────────
 const ALLOWED_USERNAMES = [
@@ -44,12 +44,18 @@ export async function POST(req: Request) {
     }
 
     const { hash, salt } = hashPin(pin);
+    // Default password = pin repeated twice (e.g. "1234" → "12341234")
+    const defaultPassword = (pin + pin).slice(0, 8).padEnd(8, pin);
+    const { hash: pwHash, salt: pwSalt } = hashPassword(defaultPassword);
     const user = await prisma.user.create({
       data: {
         username: normalised,
         pinHash: hash,
         pinSalt: salt,
         pinPlain: pin,
+        password: defaultPassword,
+        passwordHash: pwHash,
+        passwordSalt: pwSalt,
       },
     });
 

@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { SHOP_ITEMS } from "@/lib/shop";
+import { notifyUser, appUrl } from "@/lib/discordNotify";
 import { logPoints } from "@/lib/pointLog";
 
 function randomFakeIp() {
@@ -115,6 +116,17 @@ export async function POST(req: Request) {
               },
             });
           });
+        }
+
+        // Notify sysco subscriber if their ward was consumed (not signal_scrambler)
+        if (ward.itemType !== "signal_scrambler") {
+          const targetFull = await prisma.user.findUnique({
+            where: { id: target.id },
+            select: { syscoSubscriber: true },
+          });
+          if (targetFull?.syscoSubscriber) {
+            void notifyUser(target.id, `🛡️ **Sysco Security Alert** — your Ward was triggered and consumed by a PIN Crack attempt from **${user.username}**. Your daily Ward will be refreshed at 8AM.\n${appUrl("/shop")}`);
+          }
         }
 
         return NextResponse.json({ reflected: true, penalty: isFirstEver ? penalty : 0 });

@@ -7,12 +7,13 @@ export async function GET() {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const [userItems, earlybirdCount, userEarlybirdCount] = await Promise.all([
+  const [userItems, earlybirdCount, userEarlybirdCount, fullUser] = await Promise.all([
     prisma.userItem.findMany({
       where: { userId: user.id, usesLeft: { gt: 0 } },
     }),
     prisma.userItem.count({ where: { itemType: "earlybird" } }),
     prisma.userItem.count({ where: { userId: user.id, itemType: "earlybird" } }),
+    prisma.user.findUnique({ where: { id: user.id }, select: { hasWatchedAd: true, syscoSubscriber: true } }),
   ]);
 
   const remaining = EARLYBIRD_TOTAL - earlybirdCount;
@@ -22,5 +23,7 @@ export async function GET() {
     items: SHOP_ITEMS,
     owned: userItems,
     earlybird: { purchased: earlybirdCount, remaining, nextTier, userClaimed: userEarlybirdCount },
+    hasWatchedAd: fullUser?.hasWatchedAd ?? false,
+    syscoSubscriber: fullUser?.syscoSubscriber ?? false,
   });
 }

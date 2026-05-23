@@ -37,6 +37,18 @@ model User {
   houseAttackLogs    HouseAttackLog[]
   houseBanDate       String            @default("")
   discordUserId      String?
+
+  password      String  @default("")
+  passwordHash  String  @default("")
+  passwordSalt  String  @default("")
+
+  adViewDate    String  @default("")
+  adViewCount   Int     @default(0)
+  hasWatchedAd  Boolean @default(false)
+  syscoSubscriber Boolean @default(false)
+
+  pwAssistHour  String  @default("")
+  pwAssistCount Int     @default(0)
   sacrificeVotesCast SacrificeVote[]
   sacrificeVotesReceived SacrificeVote[] @relation("SacrificeTarget")
 

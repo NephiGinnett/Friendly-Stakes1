@@ -1,21 +1,21 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { verifyPin, createSession, setSessionCookie } from "@/lib/auth";
+import { verifyPassword, createSession, setSessionCookie } from "@/lib/auth";
 
 export async function POST(req: Request) {
   try {
-    const { username, pin } = await req.json();
+    const { username, password } = await req.json();
 
-    if (!username || !pin) {
-      return NextResponse.json({ error: "Username and PIN required" }, { status: 400 });
+    if (!username || !password) {
+      return NextResponse.json({ error: "Username and password required" }, { status: 400 });
     }
 
     const user = await prisma.user.findUnique({
       where: { username: username.toLowerCase() },
     });
 
-    if (!user || !verifyPin(pin, user.pinHash, user.pinSalt)) {
-      return NextResponse.json({ error: "Invalid username or PIN" }, { status: 401 });
+    if (!user || !verifyPassword(password, user.passwordHash, user.passwordSalt)) {
+      return NextResponse.json({ error: "Invalid username or password" }, { status: 401 });
     }
 
     const token = await createSession(user.id);
