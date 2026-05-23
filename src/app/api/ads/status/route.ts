@@ -16,14 +16,18 @@ export async function GET() {
 
   const viewsToday = fullUser?.adViewDate === today ? (fullUser?.adViewCount ?? 0) : 0;
 
-  // List available video files from public/ads/
-  const adsDir = path.join(process.cwd(), "public", "ads");
+  // Prefer ADS_VIDEO_URLS env var (comma-separated URLs) over filesystem scan
   let videos: string[] = [];
-  try {
-    videos = fs.readdirSync(adsDir)
-      .filter((f) => /\.(mp4|webm|mov)$/i.test(f))
-      .map((f) => `/ads/${f}`);
-  } catch { /* directory may not have videos yet */ }
+  if (process.env.ADS_VIDEO_URLS) {
+    videos = process.env.ADS_VIDEO_URLS.split(",").map((u) => u.trim()).filter(Boolean);
+  } else {
+    const adsDir = path.join(process.cwd(), "public", "ads");
+    try {
+      videos = fs.readdirSync(adsDir)
+        .filter((f) => /\.(mp4|webm|mov)$/i.test(f))
+        .map((f) => `/ads/${f}`);
+    } catch { /* directory may not have videos yet */ }
+  }
 
   return NextResponse.json({
     viewsToday,
