@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import PointsBadge from "@/components/PointsBadge";
@@ -14,6 +14,14 @@ type EarlybirdStatus = { purchased: number; remaining: number; nextTier: number 
 type AllUsers = { id: number; username: string }[];
 
 export default function ShopPage() {
+  return (
+    <Suspense>
+      <ShopPageContent />
+    </Suspense>
+  );
+}
+
+function ShopPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [syscoHighlight, setSyscoHighlight] = useState(false);
