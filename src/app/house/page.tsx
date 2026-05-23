@@ -154,6 +154,7 @@ export default function HousePage() {
   const [adWatched, setAdWatched] = useState(false);
   const [adMsg, setAdMsg] = useState<string | null>(null);
   const [adLoading, setAdLoading] = useState(false);
+  const [adError, setAdError] = useState(false);
   const [showSubscribePrompt, setShowSubscribePrompt] = useState(false);
 
   const loadAdStatus = async () => {
@@ -171,6 +172,7 @@ export default function HousePage() {
     setAdVideo(video);
     setAdPlaying(true);
     setAdWatched(false);
+    setAdError(false);
     setAdMsg(null);
   };
 
@@ -577,15 +579,24 @@ export default function HousePage() {
           <div className="fixed inset-0 z-50 bg-black flex flex-col items-center justify-center p-4">
             <div className="w-full max-w-lg space-y-4">
               <p className="text-xs text-slate-500 text-center font-mono tracking-widest">SYSCO BRAND SECURITY ALERTS</p>
-              <video
-                src={adVideo}
-                className="w-full rounded-xl"
-                autoPlay
-                playsInline
-                onEnded={() => setAdWatched(true)}
-                controls={false}
-              />
-              {adWatched ? (
+              {adError ? (
+                <div className="w-full rounded-xl bg-slate-800 border border-slate-700 py-12 text-center space-y-2">
+                  <p className="text-slate-400 text-sm">⚠ Video failed to load.</p>
+                  <p className="text-slate-600 text-xs font-mono">{adVideo}</p>
+                  <button onClick={() => { setAdPlaying(false); setAdError(false); }} className="text-xs text-slate-500 underline mt-2">Close</button>
+                </div>
+              ) : (
+                <video
+                  src={adVideo}
+                  className="w-full rounded-xl"
+                  autoPlay
+                  playsInline
+                  onEnded={() => setAdWatched(true)}
+                  onError={() => setAdError(true)}
+                  controls={false}
+                />
+              )}
+              {!adError && (adWatched ? (
                 <button
                   onClick={finishAd}
                   disabled={adLoading}
@@ -595,7 +606,7 @@ export default function HousePage() {
                 </button>
               ) : (
                 <p className="text-center text-slate-500 text-xs font-mono">Watch to the end to claim your points.</p>
-              )}
+              ))}
             </div>
           </div>
         )}
