@@ -312,18 +312,51 @@ export default function ChallengeDetailPage() {
           </div>
         )}
 
-        {/* Admin force-settle */}
-        {user.isAdmin && challenge.status === "voting" && (
-          <div className="card space-y-3">
-            <h3 className="font-semibold text-amber-400">Admin: Force Settle</h3>
+        {/* Admin tools */}
+        {user.isAdmin && !["settled", "cancelled"].includes(challenge.status) && (
+          <div className="card space-y-3 border-amber-500/30 bg-amber-500/5">
+            <h3 className="font-semibold text-amber-400 text-sm uppercase tracking-wide">Admin Controls</h3>
             <div className="grid grid-cols-2 gap-3">
-              <button onClick={() => vote("completed")} disabled={loading.startsWith("vote")} className="btn-primary text-sm">
-                Mark Completed
+              <button
+                onClick={async () => {
+                  setLoading("admin-complete");
+                  const res = await fetch(`/api/challenges/${params.id}/admin-settle`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ outcome: "completed" }),
+                  });
+                  const d = await res.json();
+                  setLoading("");
+                  if (!res.ok) alert(d.error);
+                  else fetchData();
+                }}
+                disabled={!challenge.acceptedById || loading === "admin-complete"}
+                className="btn-primary text-sm disabled:opacity-40"
+              >
+                {loading === "admin-complete" ? "..." : "✓ Mark Completed"}
               </button>
-              <button onClick={() => vote("incomplete")} disabled={loading.startsWith("vote")} className="btn-danger text-sm">
-                Mark Incomplete
+              <button
+                onClick={async () => {
+                  setLoading("admin-refund");
+                  const res = await fetch(`/api/challenges/${params.id}/admin-settle`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ outcome: "refund" }),
+                  });
+                  const d = await res.json();
+                  setLoading("");
+                  if (!res.ok) alert(d.error);
+                  else fetchData();
+                }}
+                disabled={loading === "admin-refund"}
+                className="bg-rose-600 hover:bg-rose-500 text-white font-semibold rounded-xl px-4 py-2 text-sm transition-colors"
+              >
+                {loading === "admin-refund" ? "..." : "↩ Refund & Cancel"}
               </button>
             </div>
+            {!challenge.acceptedById && (
+              <p className="text-xs text-slate-500">Mark Completed is disabled — no one has accepted yet.</p>
+            )}
           </div>
         )}
 
