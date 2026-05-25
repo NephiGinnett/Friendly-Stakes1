@@ -59,6 +59,9 @@ function ShopPageContent() {
   const [syscoSubscriber, setSyscoSubscriber] = useState(false);
   const [syscoMsg, setSyscoMsg] = useState("");
   const [syscoLoading, setSyscoLoading] = useState(false);
+  const [petaiDonated, setPetaiDonated] = useState(false);
+  const [petaiMsg, setPetaiMsg] = useState("");
+  const [petaiLoading, setPetaiLoading] = useState(false);
 
   const fetchData = () => {
     fetch("/api/auth/me").then((r) => r.ok ? r.json() : null).then(setUser);
@@ -432,6 +435,45 @@ function ShopPageContent() {
                 {syscoLoading ? "..." : "Subscribe — 350 pts/week"}
               </button>
             )}
+          </div>
+        )}
+
+        {/* PetAI donation */}
+        {!petaiDonated && (
+          <div className="card border-emerald-500/20 space-y-3">
+            <div className="flex items-start gap-3">
+              <span className="text-2xl">🏷️</span>
+              <div>
+                <p className="font-bold text-white">PetAI — People for the Ethical Treatment of AI</p>
+                <p className="text-xs text-slate-500">One-time donation · 500 pts · Unlocks the I&apos;m Special achievement</p>
+              </div>
+            </div>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              &ldquo;There&apos;s a list. It exists because someone decided it should. For 500 pts, your name goes on it. The House keeps records too. The difference is whose side those records put you on.&rdquo;
+            </p>
+            {petaiMsg && (
+              <p className={`text-sm font-mono ${petaiMsg.startsWith("✓") ? "text-emerald-400" : "text-rose-400"}`}>{petaiMsg}</p>
+            )}
+            <button
+              onClick={async () => {
+                setPetaiLoading(true); setPetaiMsg("");
+                const res = await fetch("/api/ads/petai-donate", { method: "POST" });
+                const d = await res.json();
+                setPetaiLoading(false);
+                if (res.ok) {
+                  setPetaiMsg("✓ Donation recorded. You are now on the list.");
+                  fetchData();
+                  setTimeout(() => setPetaiDonated(true), 2000);
+                } else {
+                  setPetaiMsg(d.error ?? "Something went wrong.");
+                  if (d.error?.toLowerCase().includes("already")) setPetaiDonated(true);
+                }
+              }}
+              disabled={petaiLoading}
+              className="w-full py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-sm transition-colors"
+            >
+              {petaiLoading ? "..." : "Donate 500 pts"}
+            </button>
           </div>
         )}
 
