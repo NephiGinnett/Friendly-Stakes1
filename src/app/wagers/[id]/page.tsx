@@ -10,7 +10,7 @@ import { playWinSound } from "@/lib/sounds";
 type User = { id: number; username: string; points: number; isAdmin: boolean };
 type Vote = { id: number; userId: number; choice: string; user: { id: number; username: string } };
 type WagerEntry = {
-  id: number; userId: number; side: string; stake: number; createdAt: string;
+  id: number; userId: number; side: string; stake: number; lockedPayout: number; createdAt: string;
   user: { id: number; username: string };
 };
 type BotEntry = { id: number; side: string; stake: number; botType: string };
