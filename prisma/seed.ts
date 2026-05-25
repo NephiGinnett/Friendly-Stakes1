@@ -50,6 +50,23 @@ async function main() {
     console.log(`Backfilled passwords for ${usersWithoutPassword.length} users.`);
   }
 
+  // Seed bot personalities
+  await prisma.botPersonality.upsert({
+    where: { id: 1 },
+    create: { id: 1, name: "The Shark" },
+    update: {},
+  });
+  await prisma.botPersonality.upsert({
+    where: { id: 2 },
+    create: { id: 2, name: "The Momentum Player" },
+    update: {},
+  });
+  await prisma.botPersonality.upsert({
+    where: { id: 3 },
+    create: { id: 3, name: "The House" },
+    update: {},
+  });
+
   console.log("Seed complete! Admin user: nephi | PIN: 0000 | Password: 00000000");
 }
 

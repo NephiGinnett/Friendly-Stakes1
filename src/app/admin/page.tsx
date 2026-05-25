@@ -41,6 +41,13 @@ export default function AdminPage() {
   const [casinoMsg, setCasinoMsg] = useState<string | null>(null);
   const [casinoLoading, setCasinoLoading] = useState(false);
 
+  // Bots state
+  const [botsEnabled, setBotsEnabled] = useState(true);
+  const [botsLoading, setBotsLoading] = useState(false);
+  const [botsMsg, setBotsMsg] = useState<string | null>(null);
+  type BotStat = { id: number; name: string; wins: number; losses: number; lossStreak: number };
+  const [botStats, setBotStats] = useState<BotStat[]>([]);
+
   // Boss HP controls
   const [bossHpMultiplier, setBossHpMultiplier] = useState(3000);
   const [multiplierInput, setMultiplierInput] = useState("3000");
@@ -103,10 +110,12 @@ export default function AdminPage() {
     fetch("/api/admin/users").then((r) => r.ok ? r.json() : []).then(setUsers);
     fetch("/api/admin/bingo/claims").then((r) => r.ok ? r.json() : []).then(setClaims);
     fetch("/api/admin/bingo/items").then((r) => r.ok ? r.json() : []).then(setBingoItems);
+    fetch("/api/admin/bots/stats").then((r) => r.ok ? r.json() : []).then(setBotStats);
     fetch("/api/house").then((r) => r.ok ? r.json() : null).then((d) => {
       if (d) {
         setHouseStatus({ phase: d.phase, bossActive: d.bossActive, bossHp: d.bossHp, bossMaxHp: d.bossMaxHp });
         setCasinoOpen(d.casinoOpen ?? true);
+        setBotsEnabled(d.botsEnabled ?? true);
         const mult = d.bossHpMultiplier ?? 3000;
         setBossHpMultiplier(mult);
         setMultiplierInput(String(mult));
@@ -781,6 +790,84 @@ export default function AdminPage() {
             </div>
             {casinoMsg && <p className={`text-xs font-mono ${casinoMsg === "Casino opened." ? "text-emerald-400" : casinoMsg === "Casino closed." ? "text-amber-400" : "text-red-400"}`}>{casinoMsg}</p>}
           </div>
+
+          {/* Public wager bots toggle */}
+          <div className="card space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium text-white">Public Wager Bots</p>
+              <span className={`text-xs font-mono font-bold px-2 py-0.5 rounded-full ${botsEnabled ? "text-emerald-400 bg-emerald-500/15" : "text-slate-400 bg-slate-500/15"}`}>
+                {botsEnabled ? "ON" : "OFF"}
+              </span>
+            </div>
+            <p className="text-xs text-slate-500">Controls whether anonymous bots and opinion bots (The Shark, Momentum Player, The House) join public wagers. Disable if the pool is feeling too inflated.</p>
+            <div className="flex gap-2">
+              <button
+                onClick={async () => {
+                  setBotsLoading(true); setBotsMsg(null);
+                  const res = await fetch("/api/admin/house/bots", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ enabled: true }) });
+                  const d = await res.json();
+                  setBotsLoading(false);
+                  if (res.ok) { setBotsEnabled(true); setBotsMsg("Bots enabled."); }
+                  else setBotsMsg(d.error);
+                }}
+                disabled={botsLoading || botsEnabled}
+                className="flex-1 py-2 rounded-xl text-sm font-bold transition-colors bg-emerald-900/30 border border-emerald-800/40 text-emerald-400 hover:bg-emerald-900/50 disabled:opacity-40"
+              >
+                Enable Bots
+              </button>
+              <button
+                onClick={async () => {
+                  setBotsLoading(true); setBotsMsg(null);
+                  const res = await fetch("/api/admin/house/bots", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ enabled: false }) });
+                  const d = await res.json();
+                  setBotsLoading(false);
+                  if (res.ok) { setBotsEnabled(false); setBotsMsg("Bots disabled."); }
+                  else setBotsMsg(d.error);
+                }}
+                disabled={botsLoading || !botsEnabled}
+                className="flex-1 py-2 rounded-xl text-sm font-bold transition-colors bg-slate-900/30 border border-slate-700/40 text-slate-400 hover:bg-slate-800/50 disabled:opacity-40"
+              >
+                Disable Bots
+              </button>
+            </div>
+            {botsMsg && <p className="text-xs font-mono text-slate-400">{botsMsg}</p>}
+          </div>
+
+          {/* Bot win/loss stats */}
+          {botStats.length > 0 && (
+            <div className="card space-y-3">
+              <p className="text-sm font-medium text-white">Bot Performance</p>
+              <div className="space-y-2">
+                {botStats.map((b) => {
+                  const total = b.wins + b.losses;
+                  const rate = total > 0 ? Math.round((b.wins / total) * 100) : 0;
+                  const emoji = b.name === "The Shark" ? "🦈" : b.name === "The Momentum Player" ? "📊" : "👁️";
+                  return (
+                    <div key={b.id} className="flex items-center justify-between text-sm py-1.5 border-b border-white/5 last:border-0">
+                      <div>
+                        <span className="mr-1.5">{emoji}</span>
+                        <span className="text-slate-300 font-medium">{b.name}</span>
+                        {b.lossStreak >= 2 && <span className="ml-2 text-xs text-amber-400 font-mono">⚠ {b.lossStreak} loss streak</span>}
+                      </div>
+                      <div className="text-right font-mono text-xs space-y-0.5">
+                        <div>
+                          <span className="text-emerald-400">{b.wins}W</span>
+                          <span className="text-slate-600 mx-1">/</span>
+                          <span className="text-rose-400">{b.losses}L</span>
+                          <span className="text-slate-500 ml-2">({rate}%)</span>
+                        </div>
+                        <div className="text-slate-500">
+                          <span className="text-emerald-500/70">+{b.pointsWon ?? 0}pts</span>
+                          <span className="mx-1 text-slate-700">/</span>
+                          <span className="text-rose-500/70">-{b.pointsLost ?? 0}pts</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Phase selector */}
           <div className="card space-y-3">

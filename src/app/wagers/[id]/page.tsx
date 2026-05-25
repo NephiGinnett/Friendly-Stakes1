@@ -13,14 +13,19 @@ type WagerEntry = {
   id: number; userId: number; side: string; stake: number; createdAt: string;
   user: { id: number; username: string };
 };
+type BotEntry = { id: number; side: string; stake: number; botType: string };
 type Wager = {
   id: number; title: string; description: string | null; creatorPosition: string;
-  creatorStake: number; deadline: string; status: string;
+  creatorStake: number; creatorLockedPayout: number; deadline: string; status: string;
   winnerSide: string | null; settledBy: string | null; settledAt: string | null;
   vpnActive: boolean; vpnMasked: boolean;
+  isPublic: boolean;
+  publicFavorForVotes: number; publicFavorForPts: number;
+  publicFavorAgainstVotes: number; publicFavorAgainstPts: number;
   creator: { id: number; username: string };
   entries: WagerEntry[];
   votes: Vote[];
+  botEntries: BotEntry[];
 };
 
 export default function WagerDetailPage() {
@@ -88,10 +93,33 @@ export default function WagerDetailPage() {
   const forEntries = wager.entries.filter((e) => e.side === "for");
   const againstEntries = wager.entries.filter((e) => e.side === "against");
   const masked = wager.vpnMasked;
-  const forTotal = wager.creatorStake + forEntries.reduce((sum, e) => sum + e.stake, 0);
-  const againstTotal = againstEntries.reduce((sum, e) => sum + e.stake, 0);
+  const unnamedForBots = wager.botEntries.filter((b) => b.side === "for" && b.botType === "unnamed");
+  const unnamedAgainstBots = wager.botEntries.filter((b) => b.side === "against" && b.botType === "unnamed");
+  const namedForBots = wager.botEntries.filter((b) => b.side === "for" && b.botType !== "unnamed");
+  const namedAgainstBots = wager.botEntries.filter((b) => b.side === "against" && b.botType !== "unnamed");
+  const botForTotal = wager.botEntries.filter((b) => b.side === "for").reduce((s, b) => s + b.stake, 0);
+  const botAgainstTotal = wager.botEntries.filter((b) => b.side === "against").reduce((s, b) => s + b.stake, 0);
+  const forTotal = wager.creatorStake + forEntries.reduce((sum, e) => sum + e.stake, 0) + botForTotal;
+  const againstTotal = againstEntries.reduce((sum, e) => sum + e.stake, 0) + botAgainstTotal;
   const totalPool = forTotal + againstTotal;
   const pts = (n: number) => masked ? "???" : formatPoints(n);
+
+  // Odds helpers (public wagers)
+  function simplifyOdds(a: number, b: number): string {
+    if (a === 0 && b === 0) return "1:1";
+    if (b === 0) return "—:1";
+    if (a === 0) return "1:—";
+    const gcd = (x: number, y: number): number => y === 0 ? x : gcd(y, x % y);
+    const g = gcd(a, b);
+    return `${a / g}:${b / g}`;
+  }
+  function lockedReturn(stake: number, ownPool: number, opposingPool: number): number {
+    if (opposingPool === 0) return stake;
+    return stake + Math.floor((stake / ownPool) * opposingPool);
+  }
+  const stakeNum = parseInt(joinStake) || 0;
+  const previewForReturn = stakeNum > 0 ? lockedReturn(stakeNum, forTotal + stakeNum, againstTotal) : 0;
+  const previewAgainstReturn = stakeNum > 0 ? lockedReturn(stakeNum, againstTotal + stakeNum, forTotal) : 0;
 
   const forVotes = wager.votes.filter((v) => v.choice === "for").length;
   const againstVotes = wager.votes.filter((v) => v.choice === "against").length;
@@ -180,6 +208,32 @@ export default function WagerDetailPage() {
           </p>
         </div>
 
+        {/* Public wager odds bar */}
+        {wager.isPublic && (
+          <div className="card bg-emerald-500/5 border-emerald-500/20 space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-mono text-emerald-400 uppercase tracking-widest">📈 Public Market</p>
+              <p className="text-xs text-slate-500 font-mono">{1 + forEntries.length + againstEntries.length} bettors</p>
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-center">
+              <div className="rounded-xl bg-violet-500/10 py-2 px-3">
+                <p className="text-xs text-slate-500">FOR odds</p>
+                <p className="text-lg font-bold font-mono text-violet-300">{simplifyOdds(forTotal, againstTotal)}</p>
+              </div>
+              <div className="rounded-xl bg-rose-500/10 py-2 px-3">
+                <p className="text-xs text-slate-500">AGAINST odds</p>
+                <p className="text-lg font-bold font-mono text-rose-300">{simplifyOdds(againstTotal, forTotal)}</p>
+              </div>
+            </div>
+            {stakeNum > 0 && (
+              <div className="grid grid-cols-2 gap-2 text-center text-xs text-slate-400">
+                <p>Bet {stakeNum} FOR → <span className="text-violet-300 font-semibold">lock {formatPoints(previewForReturn)} pts</span></p>
+                <p>Bet {stakeNum} AGAINST → <span className="text-rose-300 font-semibold">lock {formatPoints(previewAgainstReturn)} pts</span></p>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Sides breakdown */}
         <div className="grid grid-cols-2 gap-3">
           {/* For side */}
@@ -196,6 +250,18 @@ export default function WagerDetailPage() {
                   <span className="text-slate-400">{pts(e.stake)}</span>
                 </div>
               ))}
+              {wager.isPublic && wager.publicFavorForVotes > 0 && (
+                <div className="flex items-center justify-between text-xs text-slate-600 italic">
+                  <span>Public Favor: {wager.publicFavorForVotes.toLocaleString()} vote{wager.publicFavorForVotes !== 1 ? "s" : ""}</span>
+                  <span>{wager.publicFavorForPts.toLocaleString()} pts</span>
+                </div>
+              )}
+              {wager.isPublic && namedForBots.map((b) => (
+                <div key={b.id} className="flex items-center justify-between text-xs text-slate-600">
+                  <span>XX-Gambler</span>
+                  <span>{pts(b.stake)}</span>
+                </div>
+              ))}
             </div>
             <p className="text-xs text-violet-400 font-medium pt-1 border-t border-white/5">
               Total: {pts(forTotal)} pts
@@ -205,7 +271,7 @@ export default function WagerDetailPage() {
           {/* Against side */}
           <div className="card space-y-2">
             <p className="text-xs font-semibold text-rose-400 uppercase tracking-wide">Against</p>
-            {againstEntries.length === 0 ? (
+            {againstEntries.length === 0 && botAgainstTotal === 0 ? (
               <p className="text-xs text-slate-500 py-2">Nobody yet</p>
             ) : (
               <div className="space-y-1.5">
@@ -213,6 +279,18 @@ export default function WagerDetailPage() {
                   <div key={e.id} className="flex items-center justify-between text-sm">
                     <span className="text-slate-300">{e.user.username}</span>
                     <span className="text-slate-400">{pts(e.stake)}</span>
+                  </div>
+                ))}
+                {wager.isPublic && wager.publicFavorAgainstVotes > 0 && (
+                  <div className="flex items-center justify-between text-xs text-slate-600 italic">
+                    <span>Public Favor: {wager.publicFavorAgainstVotes.toLocaleString()} vote{wager.publicFavorAgainstVotes !== 1 ? "s" : ""}</span>
+                    <span>{wager.publicFavorAgainstPts.toLocaleString()} pts</span>
+                  </div>
+                )}
+                {wager.isPublic && namedAgainstBots.map((b) => (
+                  <div key={b.id} className="flex items-center justify-between text-xs text-slate-600">
+                    <span>XX-Gambler</span>
+                    <span>{pts(b.stake)}</span>
                   </div>
                 ))}
               </div>
@@ -224,7 +302,7 @@ export default function WagerDetailPage() {
         </div>
 
         <p className="text-center text-xs text-slate-500 -mt-2">
-          Total pool: {pts(totalPool)} pts
+          {wager.isPublic ? "" : `Total pool: ${pts(totalPool)} pts`}
           {masked && <span className="ml-1 text-violet-500">(🕵️ VPN active)</span>}
         </p>
 
@@ -278,6 +356,26 @@ export default function WagerDetailPage() {
                   {loading === "join" ? "..." : "Join"}
                 </button>
               </div>
+              {wager.isPublic && stakeNum > 0 && (
+                <div className="mt-2 px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-xs font-mono space-y-0.5">
+                  <div className="flex justify-between text-slate-400">
+                    <span>Current odds</span>
+                    <span className="text-white">{simplifyOdds(forTotal, againstTotal)}</span>
+                  </div>
+                  <div className="flex justify-between text-slate-400">
+                    <span>If you win</span>
+                    <span className={joinSide === "for" ? "text-violet-300 font-bold" : "text-rose-300 font-bold"}>
+                      {formatPoints(joinSide === "for" ? previewForReturn : previewAgainstReturn)} pts
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-slate-500">
+                    <span>Net profit</span>
+                    <span>
+                      +{formatPoints((joinSide === "for" ? previewForReturn : previewAgainstReturn) - stakeNum)} pts
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
 
             {hasVpn && !wager.vpnActive && (
@@ -310,7 +408,34 @@ export default function WagerDetailPage() {
             <p className={`font-medium ${myEntry.side === "for" ? "text-violet-300" : "text-rose-300"}`}>
               You&apos;re in! ({myEntry.side === "for" ? "For" : "Against"} · {formatPoints(myEntry.stake)} pts)
             </p>
+            {wager.isPublic && myEntry.lockedPayout > 0 && (
+              <p className="text-xs text-emerald-400 mt-1">
+                Locked return if you win: <span className="font-bold">{formatPoints(myEntry.lockedPayout)} pts</span>
+              </p>
+            )}
             <p className="text-xs text-slate-500 mt-1">Waiting for the creator to start the wager.</p>
+          </div>
+        )}
+
+        {/* Creator live odds — public wagers only */}
+        {wager.isPublic && isCreator && wager.status === "open" && (
+          <div className="card border-violet-500/20 space-y-1.5">
+            <p className="text-xs font-mono text-violet-400 uppercase tracking-widest">Your position (FOR · {formatPoints(wager.creatorStake)} pts)</p>
+            <div className="grid grid-cols-3 gap-2 text-center text-xs font-mono mt-1">
+              <div className="bg-white/5 rounded-lg py-2">
+                <p className="text-slate-500 mb-0.5">Odds</p>
+                <p className="text-white font-bold">{simplifyOdds(forTotal, againstTotal)}</p>
+              </div>
+              <div className="bg-white/5 rounded-lg py-2">
+                <p className="text-slate-500 mb-0.5">If you win now</p>
+                <p className="text-violet-300 font-bold">{formatPoints(lockedReturn(wager.creatorStake, forTotal, againstTotal))} pts</p>
+              </div>
+              <div className="bg-white/5 rounded-lg py-2">
+                <p className="text-slate-500 mb-0.5">Net profit</p>
+                <p className="text-emerald-400 font-bold">+{formatPoints(lockedReturn(wager.creatorStake, forTotal, againstTotal) - wager.creatorStake)} pts</p>
+              </div>
+            </div>
+            <p className="text-xs text-slate-600 text-center">Your payout recalculates at close — this updates live as bettors join.</p>
           </div>
         )}
 
@@ -323,7 +448,7 @@ export default function WagerDetailPage() {
             ) : (
               <>
                 <p className="text-sm text-slate-400">
-                  {1 + forEntries.length} for · {againstEntries.length} against · {pts(totalPool)} pts in the pool
+                  {1 + forEntries.length} for · {againstEntries.length} against
                 </p>
                 <button
                   onClick={handleStart}
@@ -454,8 +579,7 @@ export default function WagerDetailPage() {
               {wager.winnerSide === "for" ? "For" : "Against"} side won!
             </p>
             <p className="text-sm text-slate-400">
-              Total pool of {pts(totalPool)} pts distributed to winners
-              {" "}(settled by {wager.settledBy})
+              Settled by {wager.settledBy}
             </p>
             <p className="text-xs text-slate-500">
               Votes: <span className="text-violet-400">{forVotes} for</span>

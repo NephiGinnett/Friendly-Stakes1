@@ -20,6 +20,7 @@ export default function NewWagerPage() {
   const [loading, setLoading] = useState(false);
   const [useVpn, setUseVpn] = useState(false);
   const [hasVpn, setHasVpn] = useState(false);
+  const [isPublic, setIsPublic] = useState(false);
 
   useEffect(() => {
     fetch("/api/auth/me")
@@ -55,6 +56,7 @@ export default function NewWagerPage() {
           creatorStake: stakeNum,
           deadline: deadline.toISOString(),
           useVpn: useVpn || undefined,
+          isPublic: isPublic || undefined,
         }),
       });
 
@@ -161,6 +163,24 @@ export default function NewWagerPage() {
               />
             </div>
           </div>
+
+          {/* Public wager toggle */}
+          <button
+            type="button"
+            onClick={() => setIsPublic((v) => !v)}
+            className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all text-sm font-medium ${
+              isPublic
+                ? "bg-emerald-500/20 border-emerald-500/50 text-emerald-300"
+                : "bg-white/5 border-white/10 text-slate-400 hover:text-white"
+            }`}
+          >
+            <span className="text-xl">📈</span>
+            <div className="text-left">
+              <p>{isPublic ? "Public Wager — ACTIVE" : "Make this a Public Wager?"}</p>
+              <p className="text-xs opacity-70">Shows live odds · bots join the pool to simulate a real market</p>
+            </div>
+            <span className="ml-auto">{isPublic ? "✓" : "○"}</span>
+          </button>
 
           {hasVpn && (
             <button

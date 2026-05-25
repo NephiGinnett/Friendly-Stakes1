@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import { fireBots, computeLockedPayout } from "@/lib/publicWagerBots";
 
 export async function POST(
   req: Request,
@@ -25,7 +26,7 @@ export async function POST(
 
     const wager = await prisma.wager.findUnique({
       where: { id: wagerId },
-      include: { entries: true },
+      include: { entries: true, botEntries: true },
     });
 
     if (!wager) return NextResponse.json({ error: "Wager not found" }, { status: 404 });
@@ -46,9 +47,22 @@ export async function POST(
       await prisma.userItem.update({ where: { id: vpnItem.id }, data: { usesLeft: { decrement: 1 } } });
     }
 
+    // For public wagers: calculate locked payout at current pool snapshot (before new bots)
+    let lockedPayout = 0;
+    if (wager.isPublic) {
+      const allEntries = [...wager.entries, ...wager.botEntries];
+      const curForPool = wager.creatorStake + allEntries.filter((e) => e.side === "for").reduce((s, e) => s + e.stake, 0);
+      const curAgainstPool = allEntries.filter((e) => e.side === "against").reduce((s, e) => s + e.stake, 0);
+      if (side === "for") {
+        lockedPayout = computeLockedPayout(stake, curForPool + stake, curAgainstPool);
+      } else {
+        lockedPayout = computeLockedPayout(stake, curAgainstPool + stake, curForPool);
+      }
+    }
+
     await prisma.$transaction([
       prisma.wagerEntry.create({
-        data: { wagerId, userId: user.id, side, stake },
+        data: { wagerId, userId: user.id, side, stake, lockedPayout },
       }),
       prisma.user.update({
         where: { id: user.id },
@@ -58,6 +72,12 @@ export async function POST(
         ? [prisma.wager.update({ where: { id: wagerId }, data: vpnUpdates })]
         : []),
     ]);
+
+    // Fire bots for public wagers (real player count = creator + entries so far including this one)
+    if (wager.isPublic) {
+      const realPlayerCount = 1 + wager.entries.length + 1; // creator + prior entries + this new entry
+      await fireBots(wagerId, stake, side, realPlayerCount);
+    }
 
     return NextResponse.json({ ok: true });
   } catch {

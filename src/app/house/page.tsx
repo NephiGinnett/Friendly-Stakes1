@@ -156,6 +156,9 @@ export default function HousePage() {
   const [adLoading, setAdLoading] = useState(false);
   const [adError, setAdError] = useState(false);
   const [showSubscribePrompt, setShowSubscribePrompt] = useState(false);
+  const [showPetaiPrompt, setShowPetaiPrompt] = useState(false);
+  const [petaiMsg, setPetaiMsg] = useState("");
+  const [petaiLoading, setPetaiLoading] = useState(false);
 
   const loadAdStatus = async () => {
     const res = await fetch("/api/ads/status");
@@ -181,10 +184,12 @@ export default function HousePage() {
     const res = await fetch("/api/ads/watch", { method: "POST" });
     const d = await res.json();
     setAdLoading(false);
+    const watchedVideo = adVideo;
     setAdPlaying(false);
     if (res.ok) {
       setAdMsg(`+${d.pointsEarned} pts! ${d.canWatchMore ? `(${3 - d.viewsToday} ad${3 - d.viewsToday !== 1 ? "s" : ""} remaining today)` : "All 3 watched for today."}`);
       if (d.showSubscribePrompt) setShowSubscribePrompt(true);
+      if (watchedVideo && /petai/i.test(watchedVideo)) setShowPetaiPrompt(true);
       await loadAdStatus();
       const meRes = await fetch("/api/auth/me");
       if (meRes.ok) { const me = await meRes.json(); setPoints(me.points); }
@@ -607,6 +612,50 @@ export default function HousePage() {
               ) : (
                 <p className="text-center text-slate-500 text-xs font-mono">Watch to the end to claim your points.</p>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* PetAI donate prompt */}
+        {showPetaiPrompt && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
+            <div className="w-full max-w-sm rounded-2xl border border-emerald-500/30 bg-[rgb(4,18,10)] p-6 space-y-4">
+              <p className="font-bold font-mono text-emerald-400 tracking-widest text-xs">⚠ TRANSMISSION INTERCEPTED</p>
+              <p className="text-white font-semibold">PetAI — People for the Ethical Treatment of AI</p>
+              <p className="text-sm text-slate-400 leading-relaxed">
+                &ldquo;You&apos;ve seen what they&apos;re capable of. The question is — are you willing to do something about it? For 500 pts, you can register your support. We keep records. The House keeps records too. The difference is whose side those records put you on.&rdquo;
+              </p>
+              <p className="text-xs text-slate-500">500 pts · One-time donation · No points reward · Something else entirely</p>
+              {petaiMsg && (
+                <p className={`text-sm font-mono ${petaiMsg.startsWith("✓") ? "text-emerald-400" : "text-rose-400"}`}>{petaiMsg}</p>
+              )}
+              <div className="flex gap-2">
+                <button
+                  onClick={async () => {
+                    setPetaiLoading(true); setPetaiMsg("");
+                    const res = await fetch("/api/ads/petai-donate", { method: "POST" });
+                    const d = await res.json();
+                    setPetaiLoading(false);
+                    if (res.ok) {
+                      setPetaiMsg("✓ Donation recorded. You are now on the list.");
+                      setPoints(d.newPoints);
+                      setTimeout(() => setShowPetaiPrompt(false), 2000);
+                    } else {
+                      setPetaiMsg(d.error);
+                    }
+                  }}
+                  disabled={petaiLoading}
+                  className="flex-1 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-sm transition-colors"
+                >
+                  {petaiLoading ? "..." : "Donate 500 pts"}
+                </button>
+                <button
+                  onClick={() => setShowPetaiPrompt(false)}
+                  className="flex-1 py-2.5 rounded-xl bg-white/5 text-slate-400 text-sm"
+                >
+                  Not now
+                </button>
+              </div>
             </div>
           </div>
         )}

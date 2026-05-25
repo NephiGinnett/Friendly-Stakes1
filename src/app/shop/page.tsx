@@ -127,24 +127,29 @@ function ShopPageContent() {
     if (!xrayTarget) return;
     setLoading("xray");
     setMessage("");
-    const res = await fetch("/api/shop/use/xray", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ targetUsername: xrayTarget }),
-    });
-    const data = await res.json();
-    setLoading("");
-    if (res.ok) {
-      if (data.reflected) {
-        setMessage(data.penalty > 0
-          ? `🪃 Reflected! ${xrayTarget} was warded. You lost an extra ${data.penalty} pts as a penalty. Check your achievements.`
-          : `🪃 Reflected! ${xrayTarget} was warded. Your PIN Crack was consumed. Check your achievements.`);
+    try {
+      const res = await fetch("/api/shop/use/xray", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targetUsername: xrayTarget }),
+      });
+      const data = await res.json();
+      setLoading("");
+      if (res.ok) {
+        if (data.reflected) {
+          setMessage(data.penalty > 0
+            ? `🪃 Reflected! ${xrayTarget} was warded. You lost an extra ${data.penalty} pts as a penalty. Check your achievements.`
+            : `🪃 Reflected! ${xrayTarget} was warded. Your PIN Crack was consumed. Check your achievements.`);
+        } else {
+          setXrayReveal({ username: xrayTarget, pin: data.pin });
+        }
+        fetchData();
       } else {
-        setXrayReveal({ username: xrayTarget, pin: data.pin });
+        setMessage(data.error ?? "Something went wrong. Try again.");
       }
-      fetchData();
-    } else {
-      setMessage(data.error);
+    } catch {
+      setLoading("");
+      setMessage("Network error — the request didn't go through. Try again.");
     }
   };
 
@@ -435,49 +440,47 @@ function ShopPageContent() {
           <>
             <h2 className="font-semibold text-slate-400 text-sm uppercase tracking-wide pt-2">Use Your Items</h2>
 
-            {ownedXray && (
+            {/* Peeked PINs — persists independently of item ownership */}
+            {Object.keys(xrayPeeks).length > 0 && (
+              <div className="card space-y-2">
+                <p className="font-semibold text-white">💀 PIN Crack</p>
+                <p className="text-xs text-slate-500 uppercase tracking-wide">Peeked PINs</p>
+                {Object.entries(xrayPeeks).map(([username, pin]) => (
+                  <div key={username} className="bg-violet-500/10 border border-violet-500/20 rounded-xl px-4 py-3 flex items-center justify-between">
+                    <p className="text-sm text-slate-400">{username}</p>
+                    <p className="text-2xl font-bold tracking-[0.25em] text-violet-300">{pin}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {ownedXray && ownedXray.usesLeft > 0 && (
               <div className="card space-y-3">
                 <p className="font-semibold text-white">💀 PIN Crack</p>
-
-                {/* Saved peeks — always visible */}
-                {Object.keys(xrayPeeks).length > 0 && (
-                  <div className="space-y-2">
-                    <p className="text-xs text-slate-500 uppercase tracking-wide">Peeked PINs</p>
-                    {Object.entries(xrayPeeks).map(([username, pin]) => (
-                      <div key={username} className="bg-violet-500/10 border border-violet-500/20 rounded-xl px-4 py-3 flex items-center justify-between">
-                        <p className="text-sm text-slate-400">{username}</p>
-                        <p className="text-2xl font-bold tracking-[0.25em] text-violet-300">{pin}</p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Use panel — only when charge remains */}
-                {ownedXray.usesLeft > 0 && (
-                  <>
-                    <p className="text-sm text-slate-400">Pick a player to peek at their PIN. Uses your one charge.</p>
-                    <div className="flex gap-2">
-                      <select
-                        className="input flex-1"
-                        value={xrayTarget}
-                        onChange={(e) => setXrayTarget(e.target.value)}
-                      >
-                        <option value="">Select a player...</option>
-                        {allUsers
-                          .filter((u) => u.username !== user.username)
-                          .map((u) => (
-                            <option key={u.id} value={u.username}>{u.username}</option>
-                          ))}
-                      </select>
-                      <button
-                        onClick={useXray}
-                        disabled={!xrayTarget || loading === "xray"}
-                        className="btn-primary"
-                      >
-                        {loading === "xray" ? "..." : "Peek"}
-                      </button>
-                    </div>
-                  </>
+                <p className="text-sm text-slate-400">Pick a player to peek at their PIN. Uses your one charge.</p>
+                <div className="flex gap-2">
+                  <select
+                    className="input flex-1"
+                    value={xrayTarget}
+                    onChange={(e) => setXrayTarget(e.target.value)}
+                  >
+                    <option value="">Select a player...</option>
+                    {allUsers
+                      .filter((u) => u.username !== user.username)
+                      .map((u) => (
+                        <option key={u.id} value={u.username}>{u.username}</option>
+                      ))}
+                  </select>
+                  <button
+                    onClick={useXray}
+                    disabled={!xrayTarget || loading === "xray"}
+                    className="btn-primary"
+                  >
+                    {loading === "xray" ? "..." : "Peek"}
+                  </button>
+                </div>
+                {loading !== "xray" && message && message.includes("Reflected") && (
+                  <p className="text-xs text-amber-400">{message}</p>
                 )}
               </div>
             )}

@@ -54,6 +54,9 @@ model User {
 
   distributionClaims AdminDistributionClaim[]
 
+  publicWagerWins    Int               @default(0)
+  publicWagerCount   Int               @default(0)
+
   bookmarkTokens     Int               @default(0)
   arGachaPulls       Int               @default(0)
   gachaPityCounter   Int               @default(0)
@@ -88,9 +91,18 @@ model Wager {
   vpnActive  Boolean  @default(false)
   vpnSeed    Int      @default(0)
 
+  isPublic            Boolean @default(false)
+  creatorLockedPayout Int     @default(0)
+
+  publicFavorForVotes      Int @default(0)
+  publicFavorForPts        Int @default(0)
+  publicFavorAgainstVotes  Int @default(0)
+  publicFavorAgainstPts    Int @default(0)
+
   createdAt DateTime     @default(now())
   entries   WagerEntry[]
   votes     Vote[]
+  botEntries BotEntry[]
 }
 
 model WagerEntry {
@@ -101,6 +113,7 @@ model WagerEntry {
   user      User     @relation(fields: [userId], references: [id])
   side      String   // "for" or "against"
   stake     Int
+  lockedPayout Int   @default(0) // locked return if they win (public wagers only)
   createdAt DateTime @default(now())
 
   @@unique([wagerId, userId])
@@ -211,6 +224,7 @@ model HouseConfig {
   sacrificeBonusHp  Int      @default(0)
   casinoOpen        Boolean  @default(true)
   bossHpMultiplier  Int      @default(3000)
+  botsEnabled       Boolean  @default(true)
   updatedAt         DateTime @updatedAt
 }
 
@@ -367,6 +381,28 @@ model AdminDistributionClaim {
   claimedAt      DateTime             @default(now())
 
   @@unique([distributionId, userId])
+}
+
+// Bot bets on public wagers
+model BotEntry {
+  id        Int      @id @default(autoincrement())
+  wagerId   Int
+  wager     Wager    @relation(fields: [wagerId], references: [id])
+  side      String   // "for" or "against"
+  stake     Int
+  botType   String   // "unnamed" | "shark" | "momentum" | "house"
+  createdAt DateTime @default(now())
+}
+
+// Persistent state for named bot personalities
+model BotPersonality {
+  id          Int    @id   // 1 = The Shark, 2 = The Momentum Player
+  name        String
+  wins        Int    @default(0)
+  losses      Int    @default(0)
+  lossStreak  Int    @default(0)
+  pointsWon   Int    @default(0)
+  pointsLost  Int    @default(0)
 }
 
 // Each player's bingo card (25 squares, positions 0–24)

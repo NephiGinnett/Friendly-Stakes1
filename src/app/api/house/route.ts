@@ -38,5 +38,6 @@ export async function GET() {
     hasActiveBlackjack: bj?.status === "active",
     casinoOpen: config.casinoOpen,
     bossHpMultiplier: config.bossHpMultiplier,
+    botsEnabled: config.botsEnabled,
   });
 }

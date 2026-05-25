@@ -122,7 +122,7 @@ export async function executeTargetedStrike(userId: number) {
 
 /**
  * Executes one House strike against a random non-admin player.
- * Erases their most recent positive PointLog entry, or levies a silence tax.
+ * Players with the im_special achievement have 1/3 the targeting weight.
  */
 export async function executeHouseStrike() {
   const players = await prisma.user.findMany({
@@ -131,8 +131,26 @@ export async function executeHouseStrike() {
   });
   if (players.length === 0) return null;
 
-  const shuffled = players.sort(() => Math.random() - 0.5);
-  for (const { id } of shuffled) {
+  const imSpecialHolders = new Set(
+    (await prisma.userAchievement.findMany({
+      where: { achievementId: "im_special" },
+      select: { userId: true },
+    })).map((r) => r.userId)
+  );
+
+  // Build weighted pool: regular players appear 3×, im_special holders appear 1×
+  const pool: number[] = [];
+  for (const { id } of players) {
+    const weight = imSpecialHolders.has(id) ? 1 : 3;
+    for (let i = 0; i < weight; i++) pool.push(id);
+  }
+
+  // Shuffle and try each unique candidate in order
+  const shuffled = pool.sort(() => Math.random() - 0.5);
+  const tried = new Set<number>();
+  for (const id of shuffled) {
+    if (tried.has(id)) continue;
+    tried.add(id);
     const result = await executeTargetedStrike(id);
     if (result) return result;
   }

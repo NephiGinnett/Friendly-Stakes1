@@ -21,6 +21,7 @@ export async function GET(
       votes: {
         include: { user: { select: { id: true, username: true } } },
       },
+      botEntries: { orderBy: { createdAt: "asc" } },
     },
   });
 

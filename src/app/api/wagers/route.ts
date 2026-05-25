@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { maskWager } from "@/lib/vpn";
+import { fireBots, computeLockedPayout } from "@/lib/publicWagerBots";
 
 export async function GET(req: Request) {
   const user = await getCurrentUser();
@@ -32,7 +33,7 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
-    const { title, description, creatorPosition, creatorStake, deadline, useVpn } = await req.json();
+    const { title, description, creatorPosition, creatorStake, deadline, useVpn, isPublic } = await req.json();
 
     if (!title || !creatorPosition || !creatorStake || !deadline) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -72,6 +73,7 @@ export async function POST(req: Request) {
           deadline: deadlineDate,
           vpnActive,
           vpnSeed,
+          isPublic: !!isPublic,
         },
       }),
       prisma.user.update({
@@ -79,6 +81,19 @@ export async function POST(req: Request) {
         data: { points: { decrement: creatorStake } },
       }),
     ]);
+
+    // For public wagers: fire bots, then lock in creator's payout
+    if (isPublic) {
+      await fireBots(wager.id, creatorStake, "for", 1);
+      // Calculate creator's locked payout using pool after bots fired
+      const botEntries = await prisma.botEntry.findMany({ where: { wagerId: wager.id }, select: { side: true, stake: true } });
+      const botFor = botEntries.filter((b) => b.side === "for").reduce((s, b) => s + b.stake, 0);
+      const botAgainst = botEntries.filter((b) => b.side === "against").reduce((s, b) => s + b.stake, 0);
+      const forPool = creatorStake + botFor;
+      const againstPool = botAgainst;
+      const lockedPayout = computeLockedPayout(creatorStake, forPool, againstPool);
+      await prisma.wager.update({ where: { id: wager.id }, data: { creatorLockedPayout: lockedPayout } });
+    }
 
     return NextResponse.json(wager, { status: 201 });
   } catch {

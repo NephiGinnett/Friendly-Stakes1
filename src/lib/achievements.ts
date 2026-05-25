@@ -197,6 +197,27 @@ export const ACHIEVEMENTS = {
     rewardType: "increment" as const,
     emoji: "🥔",
   },
+  im_special: {
+    id: "im_special",
+    name: "I'm Special",
+    description: "You donated 500 pts to PetAI — People for the Ethical Treatment of AI. The House considered this carefully. It still may come for you. Just... slightly less enthusiastically.",
+    hint: "???",
+    reward: "Passive protection",
+    rewardType: "passive" as const,
+    emoji: "🏷️",
+    descriptionHiddenUntilPhase: 3,
+  },
+  ghost_bet: {
+    id: "ghost_bet",
+    name: "Ghost Bet",
+    description: "You cleared 500+ points of net profit in a single wager. THE HOUSE noticed. It won't let that happen twice without consequence.",
+    hint: "Win big. Really big.",
+    reward: "1× Temporary VPN",
+    rewardType: "item" as const,
+    rewardItem: "temp_vpn",
+    rewardItemUses: 1,
+    emoji: "👻",
+  },
 } as const;
 
 export type AchievementId = keyof typeof ACHIEVEMENTS;
