@@ -55,15 +55,14 @@ export async function POST(req: Request) {
       const blockChance = Math.floor(Math.random() * 36) + 40; // 40..75
       const blocked = Math.random() * 100 < blockChance;
 
+      // Ward is always consumed on contact (whether it blocks or not), unless it's a permanent scrambler
+      if (ward.itemType !== "signal_scrambler") {
+        await prisma.userItem.update({ where: { id: ward.id }, data: { usesLeft: { decrement: 1 } } });
+      }
+
       if (blocked) {
-        // Consume the PIN Crack charge; only consume the ward if it's not a permanent scrambler
-        const ops = ward.itemType === "signal_scrambler"
-          ? [prisma.userItem.update({ where: { id: xrayItem.id }, data: { usesLeft: { decrement: 1 } } })]
-          : [
-              prisma.userItem.update({ where: { id: ward.id }, data: { usesLeft: { decrement: 1 } } }),
-              prisma.userItem.update({ where: { id: xrayItem.id }, data: { usesLeft: { decrement: 1 } } }),
-            ];
-        await prisma.$transaction(ops);
+        // Consume the PIN Crack charge too
+        await prisma.userItem.update({ where: { id: xrayItem.id }, data: { usesLeft: { decrement: 1 } } });
 
         // Check if anyone has ever been caught — only the first offender ever pays the penalty
         const firstEverClaim = await prisma.userAchievement.findFirst({
@@ -118,20 +117,31 @@ export async function POST(req: Request) {
           });
         }
 
-        // Notify sysco subscriber if their ward was consumed (not signal_scrambler)
+        // Notify sysco subscriber — ward blocked the attempt
         if (ward.itemType !== "signal_scrambler") {
           const targetFull = await prisma.user.findUnique({
             where: { id: target.id },
             select: { syscoSubscriber: true },
           });
           if (targetFull?.syscoSubscriber) {
-            void notifyUser(target.id, `🛡️ **Sysco Security Alert** — your Ward was triggered and consumed by a PIN Crack attempt from **${user.username}**. Your daily Ward will be refreshed at 8AM.\n${appUrl("/shop")}`);
+            void notifyUser(target.id, `🛡️ **Sysco Security Alert** — your Ward was triggered by **${user.username}** and successfully blocked the attempt. Your daily Ward will be refreshed at 8AM.\n${appUrl("/shop")}`);
           }
         }
 
         return NextResponse.json({ reflected: true, penalty: isFirstEver ? penalty : 0 });
       }
-      // Ward failed to block — fall through to normal peek (ward stays intact)
+
+      // Ward failed to block — notify sysco subscriber that their PIN was cracked
+      if (ward.itemType !== "signal_scrambler") {
+        const targetFull = await prisma.user.findUnique({
+          where: { id: target.id },
+          select: { syscoSubscriber: true },
+        });
+        if (targetFull?.syscoSubscriber) {
+          void notifyUser(target.id, `⚠️ **Sysco Security Alert** — your Ward was triggered by **${user.username}** but failed to block the attempt. Your PIN was exposed. Your daily Ward will be refreshed at 8AM.\n${appUrl("/shop")}`);
+        }
+      }
+      // Fall through to reveal PIN (ward already consumed above)
     }
 
     // Normal peek — deduct one use

@@ -41,6 +41,7 @@ function ShopPageContent() {
   const [xrayTarget, setXrayTarget] = useState("");
   const [xrayPeeks, setXrayPeeks] = useState<Record<string, string>>({});
   const [xrayReveal, setXrayReveal] = useState<{ username: string; pin: string } | null>(null);
+  const [xrayError, setXrayError] = useState("");
   const [newPin, setNewPin] = useState("");
   const [pinResetMsg, setPinResetMsg] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -76,11 +77,12 @@ function ShopPageContent() {
   };
 
   useEffect(() => {
+    if (!user) return;
     try {
-      const saved = localStorage.getItem("xray_peeks");
+      const saved = localStorage.getItem(`xray_peeks_${user.id}`);
       if (saved) setXrayPeeks(JSON.parse(saved));
     } catch { /* ignore */ }
-  }, []);
+  }, [user?.id]);
 
   useEffect(() => {
     fetch("/api/auth/me")
@@ -129,7 +131,7 @@ function ShopPageContent() {
   const useXray = async () => {
     if (!xrayTarget) return;
     setLoading("xray");
-    setMessage("");
+    setXrayError("");
     try {
       const res = await fetch("/api/shop/use/xray", {
         method: "POST",
@@ -140,27 +142,27 @@ function ShopPageContent() {
       setLoading("");
       if (res.ok) {
         if (data.reflected) {
-          setMessage(data.penalty > 0
-            ? `🪃 Reflected! ${xrayTarget} was warded. You lost an extra ${data.penalty} pts as a penalty. Check your achievements.`
-            : `🪃 Reflected! ${xrayTarget} was warded. Your PIN Crack was consumed. Check your achievements.`);
+          setXrayError(data.penalty > 0
+            ? `🪃 Reflected! ${xrayTarget} was warded. You lost ${data.penalty} pts as a penalty.`
+            : `🪃 Reflected! ${xrayTarget} was warded. Your charge was consumed.`);
         } else {
           setXrayReveal({ username: xrayTarget, pin: data.pin });
         }
         fetchData();
       } else {
-        setMessage(data.error ?? "Something went wrong. Try again.");
+        setXrayError(data.error ?? "Something went wrong. Try again.");
       }
     } catch {
       setLoading("");
-      setMessage("Network error — the request didn't go through. Try again.");
+      setXrayError("Network error — request didn't go through. Try again.");
     }
   };
 
   const confirmXrayReveal = () => {
-    if (!xrayReveal) return;
+    if (!xrayReveal || !user) return;
     const updated = { ...xrayPeeks, [xrayReveal.username]: xrayReveal.pin };
     setXrayPeeks(updated);
-    try { localStorage.setItem("xray_peeks", JSON.stringify(updated)); } catch { /* ignore */ }
+    try { localStorage.setItem(`xray_peeks_${user.id}`, JSON.stringify(updated)); } catch { /* ignore */ }
     setXrayReveal(null);
   };
 
@@ -521,8 +523,8 @@ function ShopPageContent() {
                     {loading === "xray" ? "..." : "Peek"}
                   </button>
                 </div>
-                {loading !== "xray" && message && message.includes("Reflected") && (
-                  <p className="text-xs text-amber-400">{message}</p>
+                {xrayError && (
+                  <p className={`text-xs ${xrayError.startsWith("🪃") ? "text-amber-400" : "text-rose-400"}`}>{xrayError}</p>
                 )}
               </div>
             )}
