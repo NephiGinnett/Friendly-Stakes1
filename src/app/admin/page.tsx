@@ -45,7 +45,7 @@ export default function AdminPage() {
   const [botsEnabled, setBotsEnabled] = useState(true);
   const [botsLoading, setBotsLoading] = useState(false);
   const [botsMsg, setBotsMsg] = useState<string | null>(null);
-  type BotStat = { id: number; name: string; wins: number; losses: number; lossStreak: number };
+  type BotStat = { id: number; name: string; wins: number; losses: number; lossStreak: number; pointsWon: number; pointsLost: number };
   const [botStats, setBotStats] = useState<BotStat[]>([]);
 
   // Boss HP controls
