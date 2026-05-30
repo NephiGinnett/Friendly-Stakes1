@@ -31,8 +31,8 @@ export async function GET() {
 
   return NextResponse.json({
     viewsToday,
-    maxDaily: 3,
-    canWatch: viewsToday < 3,
+    maxDaily: 5,
+    canWatch: viewsToday < 5,
     hasWatchedAd: fullUser?.hasWatchedAd ?? false,
     videos,
   });

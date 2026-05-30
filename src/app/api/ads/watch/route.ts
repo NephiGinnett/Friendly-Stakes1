@@ -4,7 +4,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { logPoints } from "@/lib/pointLog";
 
 const AD_POINTS = 50;
-const MAX_DAILY = 3;
+const MAX_DAILY = 5;
 
 export async function POST() {
   const user = await getCurrentUser();
@@ -19,7 +19,7 @@ export async function POST() {
 
   const viewsToday = fullUser.adViewDate === today ? fullUser.adViewCount : 0;
   if (viewsToday >= MAX_DAILY) {
-    return NextResponse.json({ error: "You've already watched all 3 ads today. Come back tomorrow." }, { status: 400 });
+    return NextResponse.json({ error: "You've already watched all 5 ads today. Come back tomorrow." }, { status: 400 });
   }
 
   const newCount = viewsToday + 1;

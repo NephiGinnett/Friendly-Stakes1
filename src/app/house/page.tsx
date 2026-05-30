@@ -187,7 +187,7 @@ export default function HousePage() {
     const watchedVideo = adVideo;
     setAdPlaying(false);
     if (res.ok) {
-      setAdMsg(`+${d.pointsEarned} pts! ${d.canWatchMore ? `(${3 - d.viewsToday} ad${3 - d.viewsToday !== 1 ? "s" : ""} remaining today)` : "All 3 watched for today."}`);
+      setAdMsg(`+${d.pointsEarned} pts! ${d.canWatchMore ? `(${5 - d.viewsToday} ad${5 - d.viewsToday !== 1 ? "s" : ""} remaining today)` : "All 5 watched for today."}`);
       if (d.showSubscribePrompt) setShowSubscribePrompt(true);
       if (watchedVideo && /petai/i.test(watchedVideo)) setShowPetaiPrompt(true);
       await loadAdStatus();
@@ -564,13 +564,13 @@ export default function HousePage() {
                 <span className="text-4xl">📺</span>
                 <div>
                   <p className="font-bold text-white text-sm">Watch an Ad — earn 50 pts</p>
-                  <p className="text-xs text-slate-500">{adStatus.viewsToday}/3 watched today · Sysco Brand Security Alerts</p>
+                  <p className="text-xs text-slate-500">{adStatus.viewsToday}/5 watched today · Sysco Brand Security Alerts</p>
                 </div>
               </button>
             )}
             {adStatus && !adStatus.canWatch && (
               <div className="rounded-2xl border border-slate-800 px-5 py-3 text-center">
-                <p className="text-xs text-slate-600 font-mono">📺 All 3 ads watched today. Come back tomorrow.</p>
+                <p className="text-xs text-slate-600 font-mono">📺 All 5 ads watched today. Come back tomorrow.</p>
               </div>
             )}
             {adMsg && (
@@ -610,7 +610,20 @@ export default function HousePage() {
                   {adLoading ? "Claiming points..." : "Claim 50 pts →"}
                 </button>
               ) : (
-                <p className="text-center text-slate-500 text-xs font-mono">Watch to the end to claim your points.</p>
+                <div className="text-center space-y-2">
+                  <p className="text-slate-500 text-xs font-mono">Watch to the end to claim your points.</p>
+                  {adStatus?.hasWatchedAd && (
+                    <>
+                      <p className="text-slate-600 text-xs">if you&apos;ve already viewed this ad, you can skip it.</p>
+                      <button
+                        onClick={() => setAdWatched(true)}
+                        className="text-xs text-slate-400 underline"
+                      >
+                        Skip
+                      </button>
+                    </>
+                  )}
+                </div>
               ))}
             </div>
           </div>
