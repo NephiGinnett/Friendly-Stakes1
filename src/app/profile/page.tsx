@@ -67,9 +67,9 @@ export default function ProfilePage() {
       fetch("/api/point-log").then((r) => r.json()).then(setPointLogs);
       fetch("/api/achievements")
         .then((r) => r.ok ? r.json() : [])
-        .then((data: { id: string; name: string; emoji: string; unlockedAt: string | null; unlocked: boolean }[]) =>
+        .then((data: { id: string; name: string; emoji: string; imageUrl: string | null; unlockedAt: string | null; unlocked: boolean }[]) =>
           setAchievements(data.filter(a => a.unlocked && a.unlockedAt).map(a => ({
-            id: a.id, name: a.name, emoji: a.emoji, unlockedAt: a.unlockedAt!,
+            id: a.id, name: a.name, emoji: a.emoji, imageUrl: a.imageUrl ?? null, unlockedAt: a.unlockedAt!,
           })))
         );
     } else {
