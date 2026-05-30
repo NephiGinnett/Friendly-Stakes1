@@ -869,6 +869,34 @@ export default function AdminPage() {
             </div>
           )}
 
+          {/* World Cup 2026 */}
+          <div className="card space-y-3">
+            <p className="text-sm font-medium text-white">⚽ World Cup 2026</p>
+            <p className="text-xs text-slate-500">Admin preview: June 10 12:00 UTC · Players live: June 11 00:00 UTC</p>
+            <div className="flex gap-2">
+              <button
+                onClick={async () => {
+                  const res = await fetch("/api/admin/world-cup", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "launch" }) });
+                  const d = await res.json();
+                  if (res.ok) alert(`Launched! Admin live: ${d.adminLiveAt} · Players: ${d.playerLiveAt}`);
+                  else alert(d.error);
+                }}
+                className="btn-primary flex-1"
+              >
+                Schedule Launch
+              </button>
+              <button
+                onClick={async () => {
+                  const res = await fetch("/api/admin/world-cup", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "close" }) });
+                  if (res.ok) alert("World Cup event closed.");
+                }}
+                className="flex-1 py-2 rounded-xl text-sm font-medium bg-white/5 text-slate-400 hover:text-rose-300 border border-white/10"
+              >
+                Close Event
+              </button>
+            </div>
+          </div>
+
           {/* Phase selector */}
           <div className="card space-y-3">
             <p className="text-sm font-medium text-white">Set Phase (0–4)</p>

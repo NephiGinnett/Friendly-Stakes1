@@ -111,7 +111,14 @@ export default function WagerDetailPage() {
     if (a === 0) return "1:—";
     const gcd = (x: number, y: number): number => y === 0 ? x : gcd(y, x % y);
     const g = gcd(a, b);
-    return `${a / g}:${b / g}`;
+    let ra = a / g, rb = b / g;
+    const max = Math.max(ra, rb);
+    if (max > 20) {
+      const scale = max / 10;
+      ra = Math.max(1, Math.round(ra / scale));
+      rb = Math.max(1, Math.round(rb / scale));
+    }
+    return `${ra}:${rb}`;
   }
   function lockedReturn(stake: number, ownPool: number, opposingPool: number): number {
     if (opposingPool === 0) return stake;

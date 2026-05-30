@@ -64,6 +64,13 @@ model User {
   arQuizAttempts     ArQuizAttempt[]
   arQuizCompletions  ArQuizCompletion[]
   userBookmarks      UserBookmark[]
+  avatarAchievementId     String?
+  worldCupEntry           WorldCupEntry?
+  confidenceWagersWon     ConfidenceWager[] @relation("CWWinner")
+  confidenceWagersLost    ConfidenceWager[] @relation("CWLoser")
+  parlaysProposed         Parlay[]          @relation("ParlayProposer")
+  parlaysOpposed          Parlay[]          @relation("ParlayOpponent")
+  parlayVoteLogs          ParlayVoteLog[]
 }
 
 model Session {
@@ -225,6 +232,13 @@ model HouseConfig {
   casinoOpen        Boolean  @default(true)
   bossHpMultiplier  Int      @default(3000)
   botsEnabled       Boolean  @default(true)
+  arFaireActive        Boolean  @default(true)
+  leakAchievementId    String?  // currently displayed achievement
+  leakRefreshedAt      DateTime?
+  strikesSinceLeak     Int      @default(0) // resets to 0 after every-other-strike refresh
+  worldCupAdminAt      DateTime? // admins can see 12h early
+  worldCupPlayerAt  DateTime? // players see at this time
+  worldCupEventEndAt DateTime?
   updatedAt         DateTime @updatedAt
 }
 
@@ -419,4 +433,117 @@ model BingoSquare {
   createdAt   DateTime  @default(now())
 
   @@unique([userId, position])
+}
+
+// ── World Cup 2026 ────────────────────────────────────────────────────────────
+
+model WorldCupTeam {
+  id            Int              @id @default(autoincrement())
+  name          String           @unique
+  code          String           @unique // e.g. "BRA", "USA"
+  flag          String           // flag emoji
+  confederation String           // UEFA, CONMEBOL, CONCACAF, CAF, AFC, OFC
+  group         String?          // set once group draw happens
+  entries       WorldCupEntry[]
+  homeMatches   WorldCupMatch[]  @relation("HomeTeam")
+  awayMatches   WorldCupMatch[]  @relation("AwayTeam")
+}
+
+model WorldCupEntry {
+  id               Int          @id @default(autoincrement())
+  userId           Int          @unique
+  user             User         @relation(fields: [userId], references: [id])
+  teamId           Int          @unique  // one player per team
+  team             WorldCupTeam @relation(fields: [teamId], references: [id])
+  paid             Int          @default(500)
+  confidenceStake  Int          @default(100)
+  monitorCans      Int          @default(0) // 🥤 MONITOR event currency
+  createdAt        DateTime     @default(now())
+}
+
+model WorldCupMatch {
+  id           Int              @id @default(autoincrement())
+  fdMatchId    Int              @unique // football-data.org match id
+  homeTeamId   Int?
+  homeTeam     WorldCupTeam?    @relation("HomeTeam", fields: [homeTeamId], references: [id])
+  awayTeamId   Int?
+  awayTeam     WorldCupTeam?    @relation("AwayTeam", fields: [awayTeamId], references: [id])
+  homeTeamName String
+  awayTeamName String
+  kickoff      DateTime
+  stage        String           // "Group Stage", "Round of 32", etc.
+  group        String?
+  homeScore    Int?
+  awayScore    Int?
+  status       String           @default("SCHEDULED") // SCHEDULED, IN_PLAY, FINISHED, POSTPONED
+  winner       String?          // "HOME_TEAM", "AWAY_TEAM", "DRAW"
+  settled      Boolean          @default(false)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  confidenceWagers ConfidenceWager[]
+  parlays          Parlay[]
+}
+
+// Settlement receipt created automatically by cron when a match finishes.
+// One record per pair of players whose teams faced each other.
+model ConfidenceWager {
+  id            Int           @id @default(autoincrement())
+  matchId       Int
+  match         WorldCupMatch @relation(fields: [matchId], references: [id])
+  winnerId      Int
+  winner        User          @relation("CWWinner", fields: [winnerId], references: [id])
+  loserId       Int
+  loser         User          @relation("CWLoser", fields: [loserId], references: [id])
+  winnerStake   Int
+  loserStake    Int
+  winnerPayout  Int           // total received including any bonus
+  bonusApplied  Boolean       @default(false)
+  bonusAmount   Int           @default(0)
+  settledAt     DateTime      @default(now())
+}
+
+// Parlay — proposed by higher-confidence player 2h before kickoff
+// Multipliers: 1 active leg=×2, 2=×3, 3=×5, 4=×8, 5=×13
+model Parlay {
+  id              Int         @id @default(autoincrement())
+  matchId         Int
+  match           WorldCupMatch @relation(fields: [matchId], references: [id])
+  proposerId      Int
+  proposer        User        @relation("ParlayProposer", fields: [proposerId], references: [id])
+  opponentId      Int
+  opponent        User        @relation("ParlayOpponent", fields: [opponentId], references: [id])
+  costPerLeg      Int         // 100 | 200 | 300
+  status          String      @default("pending")
+  // pending = awaiting opponent response (open until 1h before kickoff)
+  // active   = match in progress / awaiting result
+  // voting   = match finished, awaiting votes
+  // settled  = paid out
+  // cancelled
+  proposerWon     Boolean?
+  totalEscrowed   Int         @default(0)
+  payout          Int         @default(0)
+  createdAt       DateTime    @default(now())
+  settledAt       DateTime?
+  legs            ParlayLeg[]
+}
+
+model ParlayLeg {
+  id              Int       @id @default(autoincrement())
+  parlayId        Int
+  parlay          Parlay    @relation(fields: [parlayId], references: [id])
+  order           Int       // 1–5
+  description     String
+  accepted        Boolean?  // null=pending, true=accepted, false=rejected
+  proposerVote    Boolean?  // true=success, false=fail
+  opponentVote    Boolean?
+  result          Boolean?  // final resolved result once both votes in
+}
+
+model ParlayVoteLog {
+  id        Int      @id @default(autoincrement())
+  parlayId  Int
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  @@unique([parlayId, userId])
 }

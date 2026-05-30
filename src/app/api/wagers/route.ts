@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { maskWager } from "@/lib/vpn";
 import { fireBots, computeLockedPayout } from "@/lib/publicWagerBots";
+import { notifyUser, appUrl } from "@/lib/discordNotify";
 
 export async function GET(req: Request) {
   const user = await getCurrentUser();
@@ -93,6 +94,16 @@ export async function POST(req: Request) {
       const againstPool = botAgainst;
       const lockedPayout = computeLockedPayout(creatorStake, forPool, againstPool);
       await prisma.wager.update({ where: { id: wager.id }, data: { creatorLockedPayout: lockedPayout } });
+    }
+
+    // Notify all Discord-linked players about the new wager
+    const label = isPublic ? "📈 **New public wager**" : "🎲 **New wager posted**";
+    const allPlayers = await prisma.user.findMany({
+      where: { isAdmin: false, id: { not: user.id } },
+      select: { id: true },
+    });
+    for (const p of allPlayers) {
+      void notifyUser(p.id, `${label} by **${user.username}**\n> "${title}"\n${appUrl("/feed")}`);
     }
 
     return NextResponse.json(wager, { status: 201 });

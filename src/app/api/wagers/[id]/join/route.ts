@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { fireBots, computeLockedPayout } from "@/lib/publicWagerBots";
+import { notifyUser, appUrl } from "@/lib/discordNotify";
 
 export async function POST(
   req: Request,
@@ -78,6 +79,12 @@ export async function POST(
       const realPlayerCount = 1 + wager.entries.length + 1; // creator + prior entries + this new entry
       await fireBots(wagerId, stake, side, realPlayerCount);
     }
+
+    // Notify wager creator that someone joined
+    void notifyUser(
+      wager.creatorId,
+      `🎲 **${user.username}** joined your wager (${side === "for" ? "FOR" : "AGAINST"} · ${stake} pts)\n> "${wager.title}"\n${appUrl(`/wagers/${wagerId}`)}`
+    );
 
     return NextResponse.json({ ok: true });
   } catch {

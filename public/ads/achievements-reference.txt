@@ -1,0 +1,184 @@
+FRIENDLY STAKES — ACHIEVEMENT REFERENCE
+========================================
+Last updated: May 2026
+Use this file to track all achievements, how they're earned, and what they pay out.
+Add new achievements here when they're built.
+
+────────────────────────────────────────
+WAGERS
+────────────────────────────────────────
+
+🐺  Lone Wolf — 400 pts
+    Win a wager where every other participant was betting against you.
+    Must be the sole winner against at least 2 opponents.
+    Triggered automatically at wager settlement.
+
+👻  Ghost Bet — 1× Temporary VPN
+    Clear 500+ points of net profit in a single wager.
+    Triggered automatically at wager settlement.
+
+────────────────────────────────────────
+SHOP & ITEMS
+────────────────────────────────────────
+
+🎒  Bindle — swaps balance to 1,500 pts
+    Claim 3 or more Early Adopter slots from the shop.
+    Triggered automatically when third slot is claimed.
+
+🪃  Fuck You. — 250 pts
+    Attempt a PIN Crack on a player who has a Ward active.
+    Triggered automatically when a Ward reflects your attack.
+
+👍  Little Jack Horner — 500 pts
+    Use the Thumb on the Scale item a total of 4 times across all purchases.
+    Triggered automatically when the 4th thumb use is consumed.
+
+🛡️  NOTE: Ward reflections also have a chance to trigger Fuck You. on the attacker.
+
+────────────────────────────────────────
+CHALLENGES
+────────────────────────────────────────
+
+🫵  Inspiring Friend — passive (next challenge pays 2x or 3x)
+    Have 10 of your created challenges accepted by other players.
+    Triggered automatically when the 10th acceptance is recorded.
+    On unlock: if you already have a pending challenge out, it immediately
+    becomes 3x. If not, your next created challenge gets 2x automatically.
+    The multiplier is consumed when the challenge is posted — then resets to 1x.
+
+👑  Baron — passive (collect 15% tax on all future challenge payouts)
+    Have 20 of your created challenges accepted by other players.
+    Triggered automatically when the 20th acceptance is recorded.
+    On unlock: every time any challenge in the game settles as "completed",
+    15% of the payout is taken from the winner and split equally among all
+    active Baron holders (excluding the winner themselves).
+    Multiple Barons split the pool. The tax scales with the payout size.
+
+────────────────────────────────────────
+BINGO
+────────────────────────────────────────
+
+🎱  BINGO! — 250 pts
+    Be the first player to complete any line on your bingo card
+    (row, column, or diagonal). Admin must approve the claims first.
+    One-time unlock — only one player can earn this.
+
+⬛  Blackout! — 750 pts
+    Be the first player to complete every square on your bingo card.
+    Admin must approve all 25 claims.
+    One-time unlock — only one player can earn this.
+
+────────────────────────────────────────
+GENEROSITY
+────────────────────────────────────────
+
+🫀  Noble Sacrifice — 1× Thumb on the Scale
+    Donate a cumulative total of 1,000+ points to Be Cou players
+    using the St Sins item. Triggered automatically when total hits 1,000.
+
+────────────────────────────────────────
+THE HOUSE — BOSS PHASE
+────────────────────────────────────────
+
+⚡  Last Stand — 500 pts
+    Deal the killing blow to THE HOUSE in the boss phase.
+    One-time unlock — only one player can earn this.
+
+🗡️  Resistance Fighter — 300 pts
+    Deal 200 or more total HP of damage to THE HOUSE during the boss battle.
+    Triggered automatically when cumulative damage hits 200.
+
+🎯  Public Enemy #1 — 400 pts
+    Deal the most total HP damage to THE HOUSE across the entire boss battle.
+    One-time unlock — awarded to top damage dealer at boss defeat.
+
+💊  Unwitting Accomplice — 300 pts
+    Lose more points at the casino (wheel + blackjack) than anyone else
+    during the boss phase, healing THE HOUSE the most.
+    One-time unlock — awarded at boss defeat.
+
+🩸  War Criminal — 200 pts
+    Be targeted by THE HOUSE 3 or more times during the boss phase.
+    Triggered automatically when the 3rd strike lands on you.
+
+🐂  Kill the Fatted Calf — 500 pts
+    Be chosen as the sacrifice AND hold the most points of anyone
+    in the game at the time of sacrifice.
+    Triggered automatically at sacrifice resolution.
+
+🐑  Suffer the Meek — 300 pts
+    Be chosen as the sacrifice AND hold the least points of anyone
+    in the game at the time of sacrifice.
+    Triggered automatically at sacrifice resolution.
+
+────────────────────────────────────────
+AR FAIRE EVENT
+────────────────────────────────────────
+
+📚  Avid Reader — badge only (no points)
+    Spend 45 Bookmark Tokens at the AR Faire Event Shop.
+    Triggered at purchase. One per player.
+
+🌟  Between the Lines — 1,000 pts
+    Pull a Legendary-tier bookmark from the AR Faire Gacha.
+    Triggered automatically on pull. 5% base rate with pity system.
+
+🔖  Dog-Eared — 25 Bookmark Tokens
+    Pull 25 or more bookmarks from the AR Faire Gacha total.
+    Triggered automatically when cumulative pulls hit 25.
+
+────────────────────────────────────────
+ADS
+────────────────────────────────────────
+
+🥔  Spud King — 400 pts
+    Watch all 3 Sysco Brand Security Alerts ads in a single day.
+    Resets at midnight UTC. Triggered automatically on the 3rd ad watched.
+
+────────────────────────────────────────
+MISCELLANEOUS
+────────────────────────────────────────
+
+🏷️  I'm Special — passive protection (Phase 3 details)
+    Donate 500 pts to PetAI from the shop.
+    Triggered automatically on donation. Details revealed at Phase 3.
+
+────────────────────────────────────────
+WORLD CUP 2026 EVENT
+────────────────────────────────────────
+
+🔮  Group Stage Prophet — 500 pts + 3 Monitor Cans
+    Back a team at the start of the tournament and have them win
+    the entire World Cup. Admin triggers this manually after the final
+    using the declareChampion action in the admin panel.
+
+🏆  Five-Match Dynasty — 500 pts
+    Your chosen team wins 5 or more matches across the tournament.
+    Triggered automatically by the match sync cron when the 5th win is recorded.
+
+⚙️  Three-Leg Machine — 400 pts + 4 Monitor Cans
+    Build a parlay where at least 3 legs hit.
+    Triggered automatically at parlay settlement. Proposer only.
+
+🧹  Clean Sweep — 300 pts + 10 Monitor Cans + 1× Temporary VPN
+    Build a 5-leg parlay and have all 5 legs hit.
+    Triggered automatically at parlay settlement. Proposer only.
+    VPN and cans granted immediately — points claimed via profile.
+
+────────────────────────────────────────
+MONITOR CANS — EVENT CURRENCY REFERENCE
+────────────────────────────────────────
+
+Cans are earned during the World Cup event and stored on each player's
+WorldCupEntry record. They are not yet spendable — event shop TBD.
+
+Ways to earn cans:
+  · Your team wins a match            → +3 cans (automatic, every win)
+  · Opponent accepts a parlay leg     → cans per leg based on cost tier
+      100 pt/leg = 1 can per accepted leg
+      200 pt/leg = 2 cans per accepted leg
+      300 pt/leg = 3 cans per accepted leg
+  · Proposer: successful leg at vote  → same rate as above, per hit leg
+  · Three-Leg Machine achievement     → +4 bonus cans (one-time)
+  · Clean Sweep achievement           → +10 bonus cans (one-time)
+  · Group Stage Prophet achievement   → +3 bonus cans (one-time)

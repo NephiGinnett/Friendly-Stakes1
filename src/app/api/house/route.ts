@@ -39,5 +39,9 @@ export async function GET() {
     casinoOpen: config.casinoOpen,
     bossHpMultiplier: config.bossHpMultiplier,
     botsEnabled: config.botsEnabled,
+    arFaireActive: config.arFaireActive,
+    worldCupAdminAt: config.worldCupAdminAt,
+    worldCupPlayerAt: config.worldCupPlayerAt,
+    worldCupEventEndAt: config.worldCupEventEndAt,
   });
 }

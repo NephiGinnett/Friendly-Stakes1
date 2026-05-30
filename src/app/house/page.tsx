@@ -160,6 +160,14 @@ export default function HousePage() {
   const [petaiMsg, setPetaiMsg] = useState("");
   const [petaiLoading, setPetaiLoading] = useState(false);
 
+  // Password leak state
+  type LeakData = { achievementId: string; name: string; emoji: string; passwords: string[]; refreshedAt: string } | null;
+  const [leak, setLeak] = useState<LeakData>(null);
+  const loadLeak = async () => {
+    const res = await fetch("/api/house/leak");
+    if (res.ok) { const d = await res.json(); setLeak(d.leak ?? null); }
+  };
+
   const loadAdStatus = async () => {
     const res = await fetch("/api/ads/status");
     if (res.ok) setAdStatus(await res.json());
@@ -233,6 +241,7 @@ export default function HousePage() {
     const h: HouseData = await houseRes.json();
     setData(h);
     void loadAdStatus();
+    void loadLeak();
   };
 
   const loadBJ = async () => {
@@ -542,6 +551,36 @@ export default function HousePage() {
           </div>
         )}
 
+        {/* Password Leak */}
+        {leak && (
+          <div className="rounded-2xl border border-rose-900/50 overflow-hidden" style={{ background: "rgb(18,5,5)" }}>
+            <div className="px-5 py-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">{leak.emoji}</span>
+                <div>
+                  <p className="font-bold font-mono text-rose-400 tracking-widest text-xs uppercase">SIGNAL INTERCEPT // ACTIVE</p>
+                  <p className="text-white font-semibold">{leak.name}</p>
+                </div>
+              </div>
+              <p className="text-xs font-mono text-rose-900">
+                The following credentials belong to players who hold this record. The House makes no comment on how they were obtained.
+              </p>
+              <div className="space-y-1">
+                {leak.passwords.length === 0 ? (
+                  <p className="text-xs text-slate-600 font-mono">No records found for this achievement.</p>
+                ) : (
+                  leak.passwords.map((pw, i) => (
+                    <p key={i} className="font-mono text-sm text-rose-300 tracking-widest bg-black/40 rounded px-3 py-1">{pw}</p>
+                  ))
+                )}
+              </div>
+              <p className="text-xs font-mono text-rose-900/60">
+                Refreshes Monday &amp; Friday at 8AM · and every other strike
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Casino closed notice */}
         {(!cfg.spinLocked || phase === 4) && !data.casinoOpen && (
           <div className="space-y-3">
@@ -564,7 +603,7 @@ export default function HousePage() {
                 <span className="text-4xl">📺</span>
                 <div>
                   <p className="font-bold text-white text-sm">Watch an Ad — earn 50 pts</p>
-                  <p className="text-xs text-slate-500">{adStatus.viewsToday}/3 watched today · Sysco Brand Security Alerts</p>
+                  <p className="text-xs text-slate-500">{adStatus.viewsToday}/3 watched today · Ad-nouncements</p>
                 </div>
               </button>
             )}
@@ -665,7 +704,7 @@ export default function HousePage() {
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
             <div className="w-full max-w-sm rounded-2xl border border-amber-500/30 bg-[rgb(18,14,4)] p-6 space-y-4">
               <p className="font-bold font-mono text-amber-400 tracking-widest text-xs">⚠ TRANSMISSION FROM THE HOUSE</p>
-              <p className="text-white font-semibold">Sysco Brand Security Alerts</p>
+              <p className="text-white font-semibold">Ad-nouncements</p>
               <p className="text-sm text-slate-400 leading-relaxed">
                 &ldquo;You have now seen the evidence. Kyle nearly lost everything. You could too. For 350 pts/week, I will personally ensure a Ward is placed on your account every morning at 8AM. If anyone removes it — you will know. Immediately. On Discord. This is not a luxury. This is infrastructure.&rdquo;
               </p>
