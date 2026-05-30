@@ -235,6 +235,7 @@ model HouseConfig {
   arFaireActive        Boolean  @default(true)
   leakAchievementId    String?  // currently displayed achievement
   leakRefreshedAt      DateTime?
+  passwordLeakEnabled  Boolean  @default(true)
   strikesSinceLeak     Int      @default(0) // resets to 0 after every-other-strike refresh
   worldCupAdminAt      DateTime? // admins can see 12h early
   worldCupPlayerAt  DateTime? // players see at this time

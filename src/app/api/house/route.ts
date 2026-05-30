@@ -40,6 +40,7 @@ export async function GET() {
     bossHpMultiplier: config.bossHpMultiplier,
     botsEnabled: config.botsEnabled,
     arFaireActive: config.arFaireActive,
+    passwordLeakEnabled: config.passwordLeakEnabled,
     worldCupAdminAt: config.worldCupAdminAt,
     worldCupPlayerAt: config.worldCupPlayerAt,
     worldCupEventEndAt: config.worldCupEventEndAt,

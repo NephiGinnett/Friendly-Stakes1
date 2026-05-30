@@ -8,7 +8,7 @@ export async function GET() {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const config = await prisma.houseConfig.findUnique({ where: { id: 1 } });
-  if (!config?.leakAchievementId) return NextResponse.json({ leak: null });
+  if (!config?.leakAchievementId || config.passwordLeakEnabled === false) return NextResponse.json({ leak: null });
 
   const achievementId = config.leakAchievementId as keyof typeof ACHIEVEMENTS;
   const achievement = ACHIEVEMENTS[achievementId];

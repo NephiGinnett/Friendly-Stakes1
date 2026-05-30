@@ -45,6 +45,11 @@ export default function AdminPage() {
   const [botsEnabled, setBotsEnabled] = useState(true);
   const [botsLoading, setBotsLoading] = useState(false);
   const [botsMsg, setBotsMsg] = useState<string | null>(null);
+
+  // Password leak state
+  const [leakEnabled, setLeakEnabled] = useState(true);
+  const [leakLoading, setLeakLoading] = useState(false);
+  const [leakMsg, setLeakMsg] = useState<string | null>(null);
   type BotStat = { id: number; name: string; wins: number; losses: number; lossStreak: number; pointsWon: number; pointsLost: number };
   const [botStats, setBotStats] = useState<BotStat[]>([]);
 
@@ -116,6 +121,7 @@ export default function AdminPage() {
         setHouseStatus({ phase: d.phase, bossActive: d.bossActive, bossHp: d.bossHp, bossMaxHp: d.bossMaxHp });
         setCasinoOpen(d.casinoOpen ?? true);
         setBotsEnabled(d.botsEnabled ?? true);
+        setLeakEnabled(d.passwordLeakEnabled ?? true);
         const mult = d.bossHpMultiplier ?? 3000;
         setBossHpMultiplier(mult);
         setMultiplierInput(String(mult));
@@ -831,6 +837,48 @@ export default function AdminPage() {
               </button>
             </div>
             {botsMsg && <p className="text-xs font-mono text-slate-400">{botsMsg}</p>}
+          </div>
+
+          {/* Password leak toggle */}
+          <div className="card space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium text-white">Password Leak</p>
+              <span className={`text-xs font-mono font-bold px-2 py-0.5 rounded-full ${leakEnabled ? "text-emerald-400 bg-emerald-500/15" : "text-slate-400 bg-slate-500/15"}`}>
+                {leakEnabled ? "ON" : "OFF"}
+              </span>
+            </div>
+            <p className="text-xs text-slate-500">Controls whether The House leaks player passwords via achievement holders. Disable to give players a break from account shenanigans.</p>
+            <div className="flex gap-2">
+              <button
+                onClick={async () => {
+                  setLeakLoading(true); setLeakMsg(null);
+                  const res = await fetch("/api/admin/house/leak", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ enabled: true }) });
+                  const d = await res.json();
+                  setLeakLoading(false);
+                  if (res.ok) { setLeakEnabled(true); setLeakMsg("Password leak enabled."); }
+                  else setLeakMsg(d.error);
+                }}
+                disabled={leakLoading || leakEnabled}
+                className="flex-1 py-2 rounded-xl text-sm font-bold transition-colors bg-emerald-900/30 border border-emerald-800/40 text-emerald-400 hover:bg-emerald-900/50 disabled:opacity-40"
+              >
+                Enable Leak
+              </button>
+              <button
+                onClick={async () => {
+                  setLeakLoading(true); setLeakMsg(null);
+                  const res = await fetch("/api/admin/house/leak", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ enabled: false }) });
+                  const d = await res.json();
+                  setLeakLoading(false);
+                  if (res.ok) { setLeakEnabled(false); setLeakMsg("Password leak disabled."); }
+                  else setLeakMsg(d.error);
+                }}
+                disabled={leakLoading || !leakEnabled}
+                className="flex-1 py-2 rounded-xl text-sm font-bold transition-colors bg-slate-900/30 border border-slate-700/40 text-slate-400 hover:bg-slate-800/50 disabled:opacity-40"
+              >
+                Disable Leak
+              </button>
+            </div>
+            {leakMsg && <p className="text-xs font-mono text-slate-400">{leakMsg}</p>}
           </div>
 
           {/* Bot win/loss stats */}
