@@ -34,6 +34,34 @@ type BJGame = {
   status: string;
 };
 
+// ── Password Leak Terminal ───────────────────────────────────────────────────
+
+const NOISE_CHARS = '!@#$%^&*-+=|;:<>?/~{}[]';
+
+function randNoise(len: number): string {
+  return Array.from({ length: len }, () =>
+    NOISE_CHARS[Math.floor(Math.random() * NOISE_CHARS.length)]
+  ).join('');
+}
+
+function randDecoy(len: number): string {
+  const pool = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  return Array.from({ length: len }, () =>
+    pool[Math.floor(Math.random() * pool.length)]
+  ).join('');
+}
+
+function shuffleArr<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+type LeakRow = { addr: string; prefix: string; word: string; suffix: string };
+
 // ── Spin Wheel ──────────────────────────────────────────────────────────────
 
 const SEG = 360 / SPIN_OUTCOMES.length;
@@ -163,10 +191,28 @@ export default function HousePage() {
   // Password leak state
   type LeakData = { achievementId: string; name: string; emoji: string; passwords: string[]; refreshedAt: string } | null;
   const [leak, setLeak] = useState<LeakData>(null);
+  const [leakRows, setLeakRows] = useState<LeakRow[]>([]);
   const loadLeak = async () => {
     const res = await fetch("/api/house/leak");
     if (res.ok) { const d = await res.json(); setLeak(d.leak ?? null); }
   };
+
+  useEffect(() => {
+    if (!leak || !leak.passwords.length) { setLeakRows([]); return; }
+    const len = leak.passwords[0].length;
+    const TOTAL = 32;
+    const decoys = Array.from(
+      { length: Math.max(0, TOTAL - leak.passwords.length) },
+      () => randDecoy(len)
+    );
+    const words = shuffleArr([...leak.passwords, ...decoys]);
+    setLeakRows(words.map((word, i) => ({
+      addr: `0x${(0xF400 + i * (len + 8)).toString(16).toUpperCase().padStart(4, '0')}`,
+      prefix: randNoise(Math.floor(Math.random() * 5) + 2),
+      word,
+      suffix: randNoise(Math.floor(Math.random() * 10) + 4),
+    })));
+  }, [leak]);
 
   const loadAdStatus = async () => {
     const res = await fetch("/api/ads/status");
@@ -551,30 +597,42 @@ export default function HousePage() {
           </div>
         )}
 
-        {/* Password Leak */}
-        {leak && (
-          <div className="rounded-2xl border border-rose-900/50 overflow-hidden" style={{ background: "rgb(18,5,5)" }}>
-            <div className="px-5 py-4 space-y-3">
-              <div className="flex items-center gap-2">
-                <span className="text-xl">{leak.emoji}</span>
-                <div>
-                  <p className="font-bold font-mono text-rose-400 tracking-widest text-xs uppercase">SIGNAL INTERCEPT // ACTIVE</p>
-                  <p className="text-white font-semibold">{leak.name}</p>
-                </div>
-              </div>
-              <p className="text-xs font-mono text-rose-900">
-                The following credentials belong to players who hold this record. The House makes no comment on how they were obtained.
+        {/* Password Leak — Fallout-style terminal */}
+        {leak && leakRows.length > 0 && (
+          <div className="rounded-2xl border border-green-900/60 overflow-hidden" style={{ background: "rgb(2,8,2)" }}>
+            {/* Header */}
+            <div className="px-4 py-3 border-b border-green-900/40 space-y-1">
+              <p className="font-bold font-mono text-green-500 tracking-widest text-xs uppercase">
+                ▌ SIGNAL INTERCEPT // ACTIVE ▐
               </p>
-              <div className="space-y-1">
-                {leak.passwords.length === 0 ? (
-                  <p className="text-xs text-slate-600 font-mono">No records found for this achievement.</p>
-                ) : (
-                  leak.passwords.map((pw, i) => (
-                    <p key={i} className="font-mono text-sm text-rose-300 tracking-widest bg-black/40 rounded px-3 py-1">{pw}</p>
-                  ))
-                )}
+              <div className="flex items-center gap-2">
+                <span>{leak.emoji}</span>
+                <p className="text-green-300 font-mono text-sm font-semibold">{leak.name}</p>
               </div>
-              <p className="text-xs font-mono text-rose-900/60">
+              <p className="text-xs font-mono text-green-900">
+                ACCESS CREDENTIALS DETECTED · {leakRows.length} ENTRIES · LOCATION UNKNOWN
+              </p>
+            </div>
+
+            {/* Terminal grid */}
+            <div className="px-3 py-3 overflow-x-auto">
+              <div className="font-mono text-xs leading-[1.35rem] space-y-0">
+                {leakRows.map((row, i) => (
+                  <div key={i} className="flex items-baseline gap-2 whitespace-nowrap">
+                    <span className="text-green-900 shrink-0 select-none">{row.addr}</span>
+                    <span>
+                      <span className="text-green-800">{row.prefix}</span>
+                      <span className="text-green-400">{row.word}</span>
+                      <span className="text-green-800">{row.suffix}</span>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="px-4 py-2 border-t border-green-900/30">
+              <p className="text-xs font-mono text-green-900/50">
                 Refreshes Monday &amp; Friday at 8AM · and every other strike
               </p>
             </div>
