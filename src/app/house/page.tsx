@@ -241,7 +241,7 @@ export default function HousePage() {
     const watchedVideo = adVideo;
     setAdPlaying(false);
     if (res.ok) {
-      setAdMsg(`+${d.pointsEarned} pts! ${d.canWatchMore ? `(${3 - d.viewsToday} ad${3 - d.viewsToday !== 1 ? "s" : ""} remaining today)` : "All 3 watched for today."}`);
+      setAdMsg(`+${d.pointsEarned} pts! ${d.canWatchMore ? `(${5 - d.viewsToday} ad${5 - d.viewsToday !== 1 ? "s" : ""} remaining today)` : "All 5 watched for today."}`);
       if (d.showSubscribePrompt) setShowSubscribePrompt(true);
       if (watchedVideo && /petai/i.test(watchedVideo)) setShowPetaiPrompt(true);
       await loadAdStatus();
@@ -661,13 +661,13 @@ export default function HousePage() {
                 <span className="text-4xl">📺</span>
                 <div>
                   <p className="font-bold text-white text-sm">Watch an Ad — earn 50 pts</p>
-                  <p className="text-xs text-slate-500">{adStatus.viewsToday}/3 watched today · Ad-nouncements</p>
+                  <p className="text-xs text-slate-500">{adStatus.viewsToday}/3 watched today · Friendly Stakes Ad-nouncements</p>
                 </div>
               </button>
             )}
             {adStatus && !adStatus.canWatch && (
               <div className="rounded-2xl border border-slate-800 px-5 py-3 text-center">
-                <p className="text-xs text-slate-600 font-mono">📺 All 3 ads watched today. Come back tomorrow.</p>
+                <p className="text-xs text-slate-600 font-mono">📺 All 5 ads watched today. Come back tomorrow.</p>
               </div>
             )}
             {adMsg && (
@@ -680,7 +680,7 @@ export default function HousePage() {
         {adPlaying && adVideo && (
           <div className="fixed inset-0 z-50 bg-black flex flex-col items-center justify-center p-4">
             <div className="w-full max-w-lg space-y-4">
-              <p className="text-xs text-slate-500 text-center font-mono tracking-widest">SYSCO BRAND SECURITY ALERTS</p>
+              <p className="text-xs text-slate-500 text-center font-mono tracking-widest">FRIENDLY STAKES AD-NOUNCEMENTS</p>
               {adError ? (
                 <div className="w-full rounded-xl bg-slate-800 border border-slate-700 py-12 text-center space-y-2">
                   <p className="text-slate-400 text-sm">⚠ Video failed to load.</p>
@@ -707,7 +707,20 @@ export default function HousePage() {
                   {adLoading ? "Claiming points..." : "Claim 50 pts →"}
                 </button>
               ) : (
-                <p className="text-center text-slate-500 text-xs font-mono">Watch to the end to claim your points.</p>
+                <div className="text-center space-y-2">
+                  <p className="text-slate-500 text-xs font-mono">Watch to the end to claim your points.</p>
+                  {adStatus?.hasWatchedAd && (
+                    <>
+                      <p className="text-slate-600 text-xs">if you&apos;ve already viewed this ad, you can skip it.</p>
+                      <button
+                        onClick={() => setAdWatched(true)}
+                        className="text-xs text-slate-400 underline"
+                      >
+                        Skip
+                      </button>
+                    </>
+                  )}
+                </div>
               ))}
             </div>
           </div>
@@ -762,7 +775,7 @@ export default function HousePage() {
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
             <div className="w-full max-w-sm rounded-2xl border border-amber-500/30 bg-[rgb(18,14,4)] p-6 space-y-4">
               <p className="font-bold font-mono text-amber-400 tracking-widest text-xs">⚠ TRANSMISSION FROM THE HOUSE</p>
-              <p className="text-white font-semibold">Ad-nouncements</p>
+              <p className="text-white font-semibold">Sysco Brand Security Alerts</p>
               <p className="text-sm text-slate-400 leading-relaxed">
                 &ldquo;You have now seen the evidence. Kyle nearly lost everything. You could too. For 350 pts/week, I will personally ensure a Ward is placed on your account every morning at 8AM. If anyone removes it — you will know. Immediately. On Discord. This is not a luxury. This is infrastructure.&rdquo;
               </p>
