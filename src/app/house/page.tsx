@@ -775,7 +775,7 @@ export default function HousePage() {
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
             <div className="w-full max-w-sm rounded-2xl border border-amber-500/30 bg-[rgb(18,14,4)] p-6 space-y-4">
               <p className="font-bold font-mono text-amber-400 tracking-widest text-xs">⚠ TRANSMISSION FROM THE HOUSE</p>
-              <p className="text-white font-semibold">Friendly Stakes Ad-nouncements</p>
+              <p className="text-white font-semibold">Sysco Brand Security Alerts</p>
               <p className="text-sm text-slate-400 leading-relaxed">
                 &ldquo;You have now seen the evidence. Kyle nearly lost everything. You could too. For 350 pts/week, I will personally ensure a Ward is placed on your account every morning at 8AM. If anyone removes it — you will know. Immediately. On Discord. This is not a luxury. This is infrastructure.&rdquo;
               </p>
