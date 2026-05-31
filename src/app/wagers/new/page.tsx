@@ -1,21 +1,22 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import PointsBadge from "@/components/PointsBadge";
 
 type User = { id: number; username: string; points: number; isAdmin: boolean };
 
-export default function NewWagerPage() {
+function NewWagerForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [user, setUser] = useState<User | null>(null);
-  const [title, setTitle] = useState("");
+  const [title, setTitle] = useState(searchParams.get("title") ?? "");
   const [description, setDescription] = useState("");
-  const [position, setPosition] = useState("");
+  const [position, setPosition] = useState(searchParams.get("position") ?? "");
   const [stake, setStake] = useState("");
-  const [deadlineDate, setDeadlineDate] = useState("");
-  const [deadlineTime, setDeadlineTime] = useState("");
+  const [deadlineDate, setDeadlineDate] = useState(searchParams.get("deadlineDate") ?? "");
+  const [deadlineTime, setDeadlineTime] = useState(searchParams.get("deadlineTime") ?? "");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [useVpn, setUseVpn] = useState(false);
@@ -215,5 +216,13 @@ export default function NewWagerPage() {
 
       <Navbar />
     </div>
+  );
+}
+
+export default function NewWagerPage() {
+  return (
+    <Suspense>
+      <NewWagerForm />
+    </Suspense>
   );
 }
