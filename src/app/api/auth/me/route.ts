@@ -12,5 +12,6 @@ export async function GET() {
     username: user.username,
     points: user.points,
     isAdmin: user.isAdmin,
+    avatarAchievementId: user.avatarAchievementId ?? null,
   });
 }

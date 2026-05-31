@@ -6,8 +6,9 @@ import Navbar from "@/components/Navbar";
 import PointsBadge from "@/components/PointsBadge";
 import { formatPoints, formatDate } from "@/lib/utils";
 import { getDisplayVersion } from "@/lib/version";
+import { ACHIEVEMENTS } from "@/lib/achievements";
 
-type User = { id: number; username: string; points: number; isAdmin: boolean };
+type User = { id: number; username: string; points: number; isAdmin: boolean; avatarAchievementId: string | null };
 type WagerEntry = { userId: number; side: string; stake: number };
 type Wager = {
   id: number; title: string; creatorStake: number; status: string;
@@ -16,8 +17,8 @@ type Wager = {
   entries: WagerEntry[];
 };
 type PointLog = { id: number; amount: number; reason: string; createdAt: string };
-type PlayerInfo = { id: number; username: string; points: number; isAdmin: boolean };
-type AchievementBadge = { id: string; name: string; emoji: string; unlockedAt: string };
+type PlayerInfo = { id: number; username: string; points: number; isAdmin: boolean; avatarAchievementId?: string | null };
+type AchievementBadge = { id: string; name: string; emoji: string; imageUrl: string | null; unlockedAt: string };
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -66,9 +67,9 @@ export default function ProfilePage() {
       fetch("/api/point-log").then((r) => r.json()).then(setPointLogs);
       fetch("/api/achievements")
         .then((r) => r.ok ? r.json() : [])
-        .then((data: { id: string; name: string; emoji: string; unlockedAt: string | null; unlocked: boolean }[]) =>
+        .then((data: { id: string; name: string; emoji: string; imageUrl: string | null; unlockedAt: string | null; unlocked: boolean }[]) =>
           setAchievements(data.filter(a => a.unlocked && a.unlockedAt).map(a => ({
-            id: a.id, name: a.name, emoji: a.emoji, unlockedAt: a.unlockedAt!,
+            id: a.id, name: a.name, emoji: a.emoji, imageUrl: a.imageUrl ?? null, unlockedAt: a.unlockedAt!,
           })))
         );
     } else {
@@ -156,9 +157,19 @@ export default function ProfilePage() {
 
       <div className="max-w-lg mx-auto px-4 pt-5 space-y-5">
         <div className="card text-center space-y-3">
-          <div className="w-16 h-16 rounded-full bg-violet-600/30 flex items-center justify-center text-2xl font-bold text-violet-300 mx-auto">
-            {profilePlayer.username[0].toUpperCase()}
-          </div>
+          {(() => {
+            const avatarId = profilePlayer.avatarAchievementId;
+            const avatarDef = avatarId ? ACHIEVEMENTS[avatarId as keyof typeof ACHIEVEMENTS] : null;
+            const avatarImg = avatarDef ? (avatarDef as { imageUrl?: string }).imageUrl : null;
+            return avatarImg ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={avatarImg} alt={avatarDef?.name ?? "avatar"} className="w-16 h-16 rounded-full object-cover mx-auto ring-2 ring-violet-500/40" />
+            ) : (
+              <div className="w-16 h-16 rounded-full bg-violet-600/30 flex items-center justify-center text-2xl font-bold text-violet-300 mx-auto">
+                {profilePlayer.username[0].toUpperCase()}
+              </div>
+            );
+          })()}
           <h2 className="text-xl font-bold text-white">{profilePlayer.username}</h2>
           <PointsBadge points={profilePlayer.points} />
           {profilePlayer.isAdmin && (
@@ -172,10 +183,15 @@ export default function ProfilePage() {
                 <div key={a.id} className="relative">
                   <button
                     onClick={() => setTooltipId(tooltipId === a.id ? null : a.id)}
-                    className="text-xl leading-none hover:scale-125 transition-transform"
+                    className="hover:scale-125 transition-transform block"
                     title={a.name}
                   >
-                    {a.emoji}
+                    {a.imageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={a.imageUrl} alt={a.name} className="w-8 h-8 rounded-lg object-cover" />
+                    ) : (
+                      <span className="text-xl leading-none">{a.emoji}</span>
+                    )}
                   </button>
                   {tooltipId === a.id && (
                     <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-20 w-44 rounded-xl bg-slate-900 border border-white/10 p-3 text-left shadow-xl">

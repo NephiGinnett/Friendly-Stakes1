@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { notifyDiscord } from "@/lib/discordNotify";
+import { notifyDiscord, notifyUser } from "@/lib/discordNotify";
 
 export async function POST(req: Request) {
   try {
@@ -37,6 +37,12 @@ export async function POST(req: Request) {
       user.discordUserId,
       `🔐 **Password reminder for ${user.username}**\nYour current password is: \`${user.password}\`\n\nIf you didn't request this, change your password in the Shop.`
     );
+
+    // Also notify Nephi as admin awareness
+    const nephi = await prisma.user.findUnique({ where: { username: "nephi" }, select: { id: true } });
+    if (nephi) {
+      void notifyUser(nephi.id, `🔐 **Password recovery requested** for **${user.username}**`);
+    }
 
     return NextResponse.json({ ok: true });
   } catch {

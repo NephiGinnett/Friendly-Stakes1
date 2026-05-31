@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { getDisplayVersion } from "@/lib/version";
 
 type User = { id: number; username: string; points: number; isAdmin: boolean };
+type HouseStatus = { worldCupAdminAt: string | null; worldCupPlayerAt: string | null };
 type Notifs = {
   challenges: number;
   wagers: number;
@@ -20,6 +21,7 @@ export default function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
   const [user, setUser] = useState<User | null>(null);
+  const [houseStatus, setHouseStatus] = useState<HouseStatus | null>(null);
   const [notifs, setNotifs] = useState<Notifs>({ challenges: 0, wagers: 0, achievements: 0, adminBingo: 0, bingo: null, boss: false, distributions: 0 });
   const [notifsEnabled, setNotifsEnabled] = useState(true);
 
@@ -41,6 +43,10 @@ export default function Navbar() {
       .then((r) => (r.ok ? r.json() : null))
       .then(setUser)
       .catch(() => setUser(null));
+    fetch("/api/house")
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => d && setHouseStatus(d))
+      .catch(() => {});
 
     if (!notifsEnabled) return;
 
@@ -74,6 +80,14 @@ export default function Navbar() {
 
   const showDot = (key: keyof typeof dotMap) => notifsEnabled && dotMap[key];
 
+  // World Cup visibility check
+  const now = new Date();
+  const wcAdminAt = houseStatus?.worldCupAdminAt ? new Date(houseStatus.worldCupAdminAt) : null;
+  const wcPlayerAt = houseStatus?.worldCupPlayerAt ? new Date(houseStatus.worldCupPlayerAt) : null;
+  const showWorldCup = wcAdminAt && wcPlayerAt && (
+    (user.isAdmin && now >= wcAdminAt) || now >= wcPlayerAt
+  );
+
   const navItems: { href: string; label: string; dotKey?: keyof typeof dotMap }[] = [
     { href: "/feed", label: "Feed", dotKey: "feed" },
     { href: "/wagers/new", label: "+" },
@@ -82,6 +96,7 @@ export default function Navbar() {
     { href: "/challenges", label: "⚔️", dotKey: "challenges" },
     { href: "/bingo", label: "🎱", dotKey: "bingo" },
     { href: "/house", label: "🎰", dotKey: "house" },
+    ...(showWorldCup ? [{ href: "/world-cup", label: "⚽" }] : []),
     { href: "/profile", label: user.username },
   ];
 

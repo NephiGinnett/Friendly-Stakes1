@@ -9,7 +9,7 @@ export async function GET(_req: Request, { params }: { params: { username: strin
 
   const player = await prisma.user.findUnique({
     where: { username: params.username.toLowerCase() },
-    select: { id: true, username: true, points: true, isAdmin: true },
+    select: { id: true, username: true, points: true, isAdmin: true, avatarAchievementId: true },
   });
   if (!player) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
@@ -34,7 +34,7 @@ export async function GET(_req: Request, { params }: { params: { username: strin
     .filter(r => ACHIEVEMENTS[r.achievementId as keyof typeof ACHIEVEMENTS])
     .map(r => {
       const def = ACHIEVEMENTS[r.achievementId as keyof typeof ACHIEVEMENTS];
-      return { id: r.achievementId, name: def.name, emoji: def.emoji, unlockedAt: r.unlockedAt };
+      return { id: r.achievementId, name: def.name, emoji: def.emoji, imageUrl: (def as { imageUrl?: string }).imageUrl ?? null, unlockedAt: r.unlockedAt };
     });
 
   return NextResponse.json({ player, wagers, achievements });

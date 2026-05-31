@@ -6,7 +6,7 @@ import Navbar from "@/components/Navbar";
 import PointsBadge from "@/components/PointsBadge";
 import { formatPoints } from "@/lib/utils";
 
-type User = { id: number; username: string; points: number; isAdmin: boolean };
+type User = { id: number; username: string; points: number; isAdmin: boolean; avatarAchievementId: string | null };
 type AchievementEntry = {
   id: string;
   unlocked: boolean;
@@ -16,6 +16,7 @@ type AchievementEntry = {
   description: string | null;
   reward: string | null;
   emoji: string;
+  imageUrl: string | null;
   frozenData: string | null;
 };
 
@@ -24,6 +25,7 @@ export default function AchievementsPage() {
   const [user, setUser] = useState<User | null>(null);
   const [achievements, setAchievements] = useState<AchievementEntry[]>([]);
   const [loading, setLoading] = useState("");
+  const [avatarLoading, setAvatarLoading] = useState(false);
   const [claimResult, setClaimResult] = useState<{
     name: string;
     newPoints: number;
@@ -35,6 +37,17 @@ export default function AchievementsPage() {
   const fetchData = () => {
     fetch("/api/auth/me").then((r) => r.ok ? r.json() : null).then(setUser);
     fetch("/api/achievements").then((r) => r.json()).then(setAchievements);
+  };
+
+  const setAvatar = async (achievementId: string | null) => {
+    setAvatarLoading(true);
+    await fetch("/api/achievements/avatar", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ achievementId }),
+    });
+    setAvatarLoading(false);
+    fetchData();
   };
 
   useEffect(() => {
@@ -124,8 +137,13 @@ export default function AchievementsPage() {
           >
             <div className="flex items-start gap-4">
               {/* Icon */}
-              <div className={`text-4xl shrink-0 ${!a.unlocked ? "grayscale" : ""}`}>
-                {a.emoji}
+              <div className={`shrink-0 w-16 h-16 rounded-xl overflow-hidden flex items-center justify-center ${!a.unlocked ? "grayscale opacity-40" : ""}`}>
+                {a.imageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={a.imageUrl} alt={a.name} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-4xl">{a.emoji}</span>
+                )}
               </div>
 
               {/* Content */}
@@ -180,7 +198,7 @@ export default function AchievementsPage() {
               </div>
             </div>
 
-            {/* Claim button — only for unlocked, unclaimed achievements */}
+            {/* Claim button */}
             {a.unlocked && !a.claimed && a.reward && (
               <button
                 onClick={() => claim(a.id, a.name)}
@@ -188,6 +206,21 @@ export default function AchievementsPage() {
                 className="btn-primary w-full"
               >
                 {loading === a.id ? "Claiming..." : `Claim reward — ${a.reward}`}
+              </button>
+            )}
+
+            {/* Set avatar button — only for claimed achievements with an image */}
+            {a.claimed && a.imageUrl && (
+              <button
+                onClick={() => setAvatar(user?.avatarAchievementId === a.id ? null : a.id)}
+                disabled={avatarLoading}
+                className={`w-full py-2 rounded-xl text-xs font-medium transition-colors border ${
+                  user?.avatarAchievementId === a.id
+                    ? "bg-violet-500/20 border-violet-500/50 text-violet-300"
+                    : "bg-white/5 border-white/10 text-slate-400 hover:text-white"
+                }`}
+              >
+                {user?.avatarAchievementId === a.id ? "✓ Profile avatar — click to remove" : "Set as profile avatar"}
               </button>
             )}
           </div>

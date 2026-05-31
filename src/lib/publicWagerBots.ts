@@ -11,7 +11,16 @@ export function simplifyOdds(forPool: number, againstPool: number): string {
   if (againstPool === 0) return `${forPool}:0`;
   if (forPool === 0) return `0:${againstPool}`;
   const g = gcd(forPool, againstPool);
-  return `${forPool / g}:${againstPool / g}`;
+  let a = forPool / g;
+  let b = againstPool / g;
+  // If either side is still a large number, scale both down and round
+  const max = Math.max(a, b);
+  if (max > 20) {
+    const scale = max / 10;
+    a = Math.max(1, Math.round(a / scale));
+    b = Math.max(1, Math.round(b / scale));
+  }
+  return `${a}:${b}`;
 }
 
 /** Locked return if this player wins. ownPool includes the player's own stake. */

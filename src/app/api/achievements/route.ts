@@ -32,6 +32,7 @@ export async function GET() {
       description: record && !phaseHidden ? a.description : phaseHidden && record ? "???" : null,
       reward: record && !phaseHidden ? (a.reward ?? null) : null,
       emoji: record ? a.emoji : "🔒",
+      imageUrl: record ? ((a as { imageUrl?: string }).imageUrl ?? null) : null,
       frozenData: null as string | null,
     };
 

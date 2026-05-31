@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { executeHouseStrike, nextStrikeTime, isStrikeWindow, nightDamageDealt, wakeChance } from "@/lib/houseStrike";
+import { refreshPasswordLeak } from "@/lib/passwordLeak";
 
 export async function GET() {
   const user = await getCurrentUser();
@@ -19,6 +20,14 @@ export async function GET() {
     });
     if (claimed.count > 0) {
       await executeHouseStrike();
+      // Count toward every-other-strike leak refresh
+      const fresh = await prisma.houseConfig.findUnique({ where: { id: 1 } });
+      const newCount = (fresh?.strikesSinceLeak ?? 0) + 1;
+      if (newCount >= 2) {
+        await refreshPasswordLeak();
+      } else {
+        await prisma.houseConfig.update({ where: { id: 1 }, data: { strikesSinceLeak: newCount } });
+      }
       config = await prisma.houseConfig.findUnique({ where: { id: 1 } }) ?? config;
     }
   }

@@ -8,6 +8,7 @@ export const ACHIEVEMENTS = {
     rewardPoints: 1500,
     rewardType: "swap" as const,
     emoji: "🎒",
+    imageUrl: "/achievements/bindle.png",
   },
   lone_wolf: {
     id: "lone_wolf",
@@ -18,6 +19,7 @@ export const ACHIEVEMENTS = {
     rewardPoints: 400,
     rewardType: "increment" as const,
     emoji: "🐺",
+    imageUrl: "/achievements/lone-wolf.png",
   },
   bingo: {
     id: "bingo",
@@ -28,6 +30,7 @@ export const ACHIEVEMENTS = {
     rewardPoints: 250,
     rewardType: "increment" as const,
     emoji: "🎱",
+    imageUrl: "/achievements/bingo.png",
   },
   blackout: {
     id: "blackout",
@@ -38,6 +41,7 @@ export const ACHIEVEMENTS = {
     rewardPoints: 750,
     rewardType: "increment" as const,
     emoji: "⬛",
+    imageUrl: "/achievements/blackout.png",
   },
   noble_sacrifice: {
     id: "noble_sacrifice",
@@ -49,6 +53,7 @@ export const ACHIEVEMENTS = {
     rewardItem: "thumb",
     rewardItemUses: 1,
     emoji: "🫀",
+    imageUrl: "/achievements/noble-sacrifice.png",
   },
   fuck_you: {
     id: "fuck_you",
@@ -59,6 +64,7 @@ export const ACHIEVEMENTS = {
     rewardPoints: 250,
     rewardType: "increment" as const,
     emoji: "🪃",
+    imageUrl: "/achievements/fuck-you.png",
   },
   little_jack_horner: {
     id: "little_jack_horner",
@@ -69,6 +75,7 @@ export const ACHIEVEMENTS = {
     rewardPoints: 500,
     rewardType: "increment" as const,
     emoji: "👍",
+    imageUrl: "/achievements/little-jack-horner.png",
   },
   inspiring_friend: {
     id: "inspiring_friend",
@@ -78,6 +85,7 @@ export const ACHIEVEMENTS = {
     reward: "Your next challenge pays out 2x (or 3x if one is already active)",
     rewardType: "passive" as const,
     emoji: "🫵",
+    imageUrl: "/achievements/inspiring-friend.png",
   },
   baron: {
     id: "baron",
@@ -87,6 +95,7 @@ export const ACHIEVEMENTS = {
     reward: "Collect 15% tax on all future challenge payouts",
     rewardType: "passive" as const,
     emoji: "👑",
+    imageUrl: "/achievements/baron.png",
   },
   last_stand: {
     id: "last_stand",
@@ -97,6 +106,7 @@ export const ACHIEVEMENTS = {
     rewardPoints: 500,
     rewardType: "increment" as const,
     emoji: "⚡",
+    imageUrl: "/achievements/last-stand.png",
   },
   resistance_fighter: {
     id: "resistance_fighter",
@@ -107,6 +117,7 @@ export const ACHIEVEMENTS = {
     rewardPoints: 300,
     rewardType: "increment" as const,
     emoji: "🗡️",
+    imageUrl: "/achievements/resistance-fighter.png",
   },
   war_criminal: {
     id: "war_criminal",
@@ -117,6 +128,7 @@ export const ACHIEVEMENTS = {
     rewardPoints: 200,
     rewardType: "increment" as const,
     emoji: "🩸",
+    imageUrl: "/achievements/war-criminal.png",
   },
   top_damage: {
     id: "top_damage",
@@ -127,6 +139,7 @@ export const ACHIEVEMENTS = {
     rewardPoints: 400,
     rewardType: "increment" as const,
     emoji: "🎯",
+    imageUrl: "/achievements/public-enemy.png",
   },
   top_healer: {
     id: "top_healer",
@@ -137,6 +150,7 @@ export const ACHIEVEMENTS = {
     rewardPoints: 300,
     rewardType: "increment" as const,
     emoji: "💊",
+    imageUrl: "/achievements/unwitting-accomplice.png",
   },
   fatted_calf: {
     id: "fatted_calf",
@@ -147,6 +161,7 @@ export const ACHIEVEMENTS = {
     rewardPoints: 500,
     rewardType: "increment" as const,
     emoji: "🐂",
+    imageUrl: "/achievements/fatted-calf.png",
   },
   suffer_meek: {
     id: "suffer_meek",
@@ -157,6 +172,7 @@ export const ACHIEVEMENTS = {
     rewardPoints: 300,
     rewardType: "increment" as const,
     emoji: "🐑",
+    imageUrl: "/achievements/suffer-meek.png",
   },
   avid_reader: {
     id: "avid_reader",
@@ -166,6 +182,7 @@ export const ACHIEVEMENTS = {
     reward: "Badge of distinction",
     rewardType: "none" as const,
     emoji: "📚",
+    imageUrl: "/achievements/avid-reader.png",
   },
   legendary_pull: {
     id: "legendary_pull",
@@ -176,6 +193,7 @@ export const ACHIEVEMENTS = {
     rewardPoints: 1000,
     rewardType: "increment" as const,
     emoji: "🌟",
+    imageUrl: "/achievements/between-the-lines.png",
   },
   bookmark_collector: {
     id: "bookmark_collector",
@@ -186,6 +204,7 @@ export const ACHIEVEMENTS = {
     rewardType: "tokens" as const,
     rewardTokens: 25,
     emoji: "🔖",
+    imageUrl: "/achievements/dog-eared.png",
   },
   spud_king: {
     id: "spud_king",
@@ -196,6 +215,7 @@ export const ACHIEVEMENTS = {
     rewardPoints: 400,
     rewardType: "increment" as const,
     emoji: "🥔",
+    imageUrl: "/achievements/spud-king.png",
   },
   im_special: {
     id: "im_special",
@@ -206,6 +226,7 @@ export const ACHIEVEMENTS = {
     rewardType: "passive" as const,
     emoji: "🏷️",
     descriptionHiddenUntilPhase: 3,
+    imageUrl: "/achievements/im-special.png",
   },
   ghost_bet: {
     id: "ghost_bet",
@@ -217,6 +238,57 @@ export const ACHIEVEMENTS = {
     rewardItem: "temp_vpn",
     rewardItemUses: 1,
     emoji: "👻",
+    imageUrl: "/achievements/ghost-bet.png",
+  },
+
+  // ── World Cup 2026 ──────────────────────────────────────────────────────────
+
+  group_stage_prophet: {
+    id: "group_stage_prophet",
+    name: "Group Stage Prophet",
+    description: "You picked the winning team before the tournament began — and they went all the way. The House considered several outcomes. This was one of them.",
+    hint: "Back a team from the start.",
+    reward: "Earn 500 pts + 3 Monitor Cans",
+    rewardPoints: 500,
+    rewardType: "increment" as const,
+    emoji: "🔮",
+    imageUrl: "/achievements/group-stage-prophet.png",
+  },
+
+  five_match_dynasty: {
+    id: "five_match_dynasty",
+    name: "Five-Match Dynasty",
+    description: "Your team won five or more matches in the tournament. You committed early. The bracket rewarded you. The House is not surprised — it saw this coming. It simply didn't tell you.",
+    hint: "Stay loyal. Stay winning.",
+    reward: "Earn 500 pts",
+    rewardPoints: 500,
+    rewardType: "increment" as const,
+    emoji: "🏆",
+    imageUrl: "/achievements/five-match-dynasty.png",
+  },
+
+  three_leg_machine: {
+    id: "three_leg_machine",
+    name: "Three-Leg Machine",
+    description: "You built a parlay and at least three legs hit. Most people can call one thing. You called three. The House has a complicated relationship with consistency. It finds yours notable.",
+    hint: "Land 3+ legs on a single parlay.",
+    reward: "Earn 400 pts + 4 Monitor Cans",
+    rewardPoints: 400,
+    rewardType: "increment" as const,
+    emoji: "⚙️",
+    imageUrl: "/achievements/three-leg-machine.png",
+  },
+
+  clean_sweep: {
+    id: "clean_sweep",
+    name: "Clean Sweep",
+    description: "All five legs of your parlay hit. Every single one. This is either expertise or luck so profound it deserves a name. The House is choosing to believe it was expertise. It finds that more interesting.",
+    hint: "Win a 5-leg parlay.",
+    reward: "Earn 300 pts + 10 Monitor Cans + 1× Temporary VPN",
+    rewardPoints: 300,
+    rewardType: "increment" as const,
+    emoji: "🧹",
+    imageUrl: "/achievements/clean-sweep.png",
   },
 } as const;
 

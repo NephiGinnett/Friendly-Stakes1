@@ -15,22 +15,28 @@ function defaultPassword(pin: string): string {
 
 async function main() {
   const adminPin = hashPin("0000");
-  const adminPw = defaultPassword("0000");
+  const adminPw = "admin123";
   const { hash: adminPwHash, salt: adminPwSalt } = hashPin(adminPw);
   await prisma.user.upsert({
-    where: { username: "nephi" },
+    where: { username: "admin" },
     update: { isAdmin: true },
     create: {
-      username: "nephi",
+      username: "admin",
       pinHash: adminPin.hash,
       pinSalt: adminPin.salt,
       pinPlain: "0000",
       password: adminPw,
       passwordHash: adminPwHash,
       passwordSalt: adminPwSalt,
-      points: 1000,
+      points: 0,
       isAdmin: true,
     },
+  });
+
+  // Ensure nephi is a regular player
+  await prisma.user.updateMany({
+    where: { username: "nephi" },
+    data: { isAdmin: false },
   });
 
   // Backfill passwords for any existing users who don't have one yet
@@ -67,7 +73,7 @@ async function main() {
     update: {},
   });
 
-  console.log("Seed complete! Admin user: nephi | PIN: 0000 | Password: 00000000");
+  console.log("Seed complete! Admin user: admin | PIN: 0000 | Password: admin123");
 }
 
 main()
