@@ -661,7 +661,7 @@ export default function HousePage() {
                 <span className="text-4xl">📺</span>
                 <div>
                   <p className="font-bold text-white text-sm">Watch an Ad — earn 50 pts</p>
-                  <p className="text-xs text-slate-500">{adStatus.viewsToday}/3 watched today · Ad-nouncements</p>
+                  <p className="text-xs text-slate-500">{adStatus.viewsToday}/3 watched today · Friendly Stakes Ad-nouncements</p>
                 </div>
               </button>
             )}
@@ -680,7 +680,7 @@ export default function HousePage() {
         {adPlaying && adVideo && (
           <div className="fixed inset-0 z-50 bg-black flex flex-col items-center justify-center p-4">
             <div className="w-full max-w-lg space-y-4">
-              <p className="text-xs text-slate-500 text-center font-mono tracking-widest">SYSCO BRAND SECURITY ALERTS</p>
+              <p className="text-xs text-slate-500 text-center font-mono tracking-widest">FRIENDLY STAKES AD-NOUNCEMENTS</p>
               {adError ? (
                 <div className="w-full rounded-xl bg-slate-800 border border-slate-700 py-12 text-center space-y-2">
                   <p className="text-slate-400 text-sm">⚠ Video failed to load.</p>
@@ -775,7 +775,7 @@ export default function HousePage() {
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
             <div className="w-full max-w-sm rounded-2xl border border-amber-500/30 bg-[rgb(18,14,4)] p-6 space-y-4">
               <p className="font-bold font-mono text-amber-400 tracking-widest text-xs">⚠ TRANSMISSION FROM THE HOUSE</p>
-              <p className="text-white font-semibold">Ad-nouncements</p>
+              <p className="text-white font-semibold">Friendly Stakes Ad-nouncements</p>
               <p className="text-sm text-slate-400 leading-relaxed">
                 &ldquo;You have now seen the evidence. Kyle nearly lost everything. You could too. For 350 pts/week, I will personally ensure a Ward is placed on your account every morning at 8AM. If anyone removes it — you will know. Immediately. On Discord. This is not a luxury. This is infrastructure.&rdquo;
               </p>
