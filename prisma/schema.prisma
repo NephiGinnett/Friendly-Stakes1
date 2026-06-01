@@ -66,6 +66,7 @@ model User {
   userBookmarks      UserBookmark[]
   avatarAchievementId     String?
   worldCupEntry           WorldCupEntry?
+  worldCupGameLogs        WorldCupGameLog[]
   confidenceWagersWon     ConfidenceWager[] @relation("CWWinner")
   confidenceWagersLost    ConfidenceWager[] @relation("CWLoser")
   parlaysProposed         Parlay[]          @relation("ParlayProposer")
@@ -456,10 +457,11 @@ model WorldCupEntry {
   user             User         @relation(fields: [userId], references: [id])
   teamId           Int          @unique  // one player per team
   team             WorldCupTeam @relation(fields: [teamId], references: [id])
-  paid             Int          @default(500)
-  confidenceStake  Int          @default(100)
-  monitorCans      Int          @default(0) // 🥤 MONITOR event currency
-  createdAt        DateTime     @default(now())
+  paid              Int          @default(500)
+  confidenceStake   Int          @default(100)
+  monitorCans       Int          @default(0) // 🥤 MONITOR event currency
+  lastShootoutPicks String       @default("") // JSON: Zone[5] — saved after each shootout
+  createdAt         DateTime     @default(now())
 }
 
 model WorldCupMatch {
@@ -547,4 +549,14 @@ model ParlayVoteLog {
   user      User     @relation(fields: [userId], references: [id])
   createdAt DateTime @default(now())
   @@unique([parlayId, userId])
+}
+
+model WorldCupGameLog {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  user       User     @relation(fields: [userId], references: [id])
+  gameType   String   // "shootout" | "reflex"
+  result     String   // JSON blob — see worldCupMiniGames.ts for structure
+  cansEarned Int      @default(0)
+  createdAt  DateTime @default(now())
 }

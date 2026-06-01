@@ -154,6 +154,36 @@ export default function WorldCupPage() {
             <span className="ml-auto text-slate-600">›</span>
           </Link>
 
+          {/* Mini Games */}
+          <p className="text-xs font-mono text-slate-500 uppercase tracking-widest pt-1">Mini Games · earn Monitor Cans daily</p>
+
+          <Link href="/world-cup/shootout" className="card flex items-center gap-4 hover:border-violet-500/40 transition-colors">
+            <span className="text-3xl">⚽</span>
+            <div>
+              <p className="font-semibold text-white">Penalty Shootout</p>
+              <p className="text-xs text-slate-500">Pick 5 zones · beat The House · earn up to 3 🥤</p>
+            </div>
+            <span className="ml-auto text-slate-600">›</span>
+          </Link>
+
+          <Link href="/world-cup/reflex" className="card flex items-center gap-4 hover:border-violet-500/40 transition-colors">
+            <span className="text-3xl">🧤</span>
+            <div>
+              <p className="font-semibold text-white">Keeper&apos;s Reflex</p>
+              <p className="text-xs text-slate-500">Face a real player&apos;s kicks · earn up to 3 🥤</p>
+            </div>
+            <span className="ml-auto text-slate-600">›</span>
+          </Link>
+
+          <Link href="/world-cup/standings" className="card flex items-center gap-4 hover:border-slate-500/40 transition-colors">
+            <span className="text-3xl">📊</span>
+            <div>
+              <p className="font-semibold text-white">Mini Game Standings</p>
+              <p className="text-xs text-slate-500">Shootout scores · Keeper save rates</p>
+            </div>
+            <span className="ml-auto text-slate-600">›</span>
+          </Link>
+
           {status.visibility === "preview" && user.isAdmin && (
             <div className="rounded-xl bg-amber-500/10 border border-amber-500/30 px-4 py-2 text-xs text-amber-400 text-center">
               ⚙️ Admin preview — players can&apos;t see this yet
