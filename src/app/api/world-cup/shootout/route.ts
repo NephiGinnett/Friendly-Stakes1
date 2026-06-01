@@ -97,6 +97,7 @@ export async function POST(req: Request) {
   const cansEarned = cansForScore(score);
 
   const result = { picks, keeperZones, score };
+  let achievementUnlocked = false;
 
   await prisma.$transaction(async (tx) => {
     if (cansEarned > 0) {
@@ -121,7 +122,22 @@ export async function POST(req: Request) {
     if (cansEarned > 0) {
       await logPoints(tx, user.id, 0, `World Cup Shootout — scored ${score}/5, earned ${cansEarned} 🥤`);
     }
+    // "Off Script" achievement — perfect shootout
+    if (score === 5) {
+      const already = await tx.userAchievement.findUnique({
+        where: { userId_achievementId: { userId: user.id, achievementId: "off_script" } },
+      });
+      if (!already) {
+        await tx.userAchievement.create({ data: { userId: user.id, achievementId: "off_script" } });
+        // Cans awarded immediately (points come from /achievements/claim later)
+        await tx.worldCupEntry.update({
+          where: { userId: user.id },
+          data: { monitorCans: { increment: 3 } },
+        });
+        achievementUnlocked = true;
+      }
+    }
   });
 
-  return NextResponse.json({ kicks, score, cansEarned });
+  return NextResponse.json({ kicks, score, cansEarned, achievementUnlocked });
 }

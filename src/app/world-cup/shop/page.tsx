@@ -8,11 +8,21 @@ import PointsBadge from "@/components/PointsBadge";
 
 type User = { id: number; username: string; points: number; isAdmin: boolean };
 type ShopData = { monitorCans: number; tradeRate: { cans: number; points: number } };
+type AchievementData = { id: string; unlocked: boolean; name: string; emoji: string; imageUrl: string | null };
+
+const WC_ACHIEVEMENT_IDS = [
+  "group_stage_prophet",
+  "five_match_dynasty",
+  "three_leg_machine",
+  "clean_sweep",
+  "off_script",
+];
 
 export default function WorldCupShopPage() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [shop, setShop] = useState<ShopData | null>(null);
+  const [achievements, setAchievements] = useState<AchievementData[]>([]);
   const [batches, setBatches] = useState("1");
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const [loading, setLoading] = useState(false);
@@ -27,6 +37,11 @@ export default function WorldCupShopPage() {
       .then((r) => { if (!r.ok) { router.push("/login"); return null; } return r.json(); })
       .then((d) => { if (d) setUser(d); });
     loadShop();
+    fetch("/api/achievements")
+      .then((r) => r.ok ? r.json() : [])
+      .then((all: AchievementData[]) =>
+        setAchievements(all.filter((a) => WC_ACHIEVEMENT_IDS.includes(a.id)))
+      );
   }, [router]);
 
   const trade = async () => {
@@ -129,7 +144,43 @@ export default function WorldCupShopPage() {
             <li>⚽ Your team wins a match → earn 🥤 cans</li>
             <li>🎰 Win a Parlay → bonus cans based on legs completed</li>
             <li>🏆 Your team wins the tournament → +3 bonus cans</li>
+            <li>⚽ Penalty Shootout (daily) → up to 3 🥤</li>
+            <li>🧤 Keeper&apos;s Reflex (daily) → up to 3 🥤</li>
           </ul>
+        </div>
+
+        {/* World Cup Achievement Avatars */}
+        <div className="card space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">World Cup Achievements</p>
+            <Link href="/achievements" className="text-xs text-violet-400 hover:text-violet-300 transition-colors">Claim →</Link>
+          </div>
+          <div className="grid grid-cols-5 gap-2">
+            {WC_ACHIEVEMENT_IDS.map((id) => {
+              const a = achievements.find((x) => x.id === id);
+              const unlocked = a?.unlocked ?? false;
+              return (
+                <div key={id} className="flex flex-col items-center gap-1.5 text-center">
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center border transition-colors ${
+                    unlocked ? "border-amber-500/40 bg-amber-500/10" : "border-white/5 bg-white/5"
+                  }`}>
+                    {unlocked && a?.imageUrl
+                      ? <img src={a.imageUrl} alt={a.name} className="w-10 h-10 rounded-lg object-cover" />
+                      : unlocked
+                      ? <span className="text-xl">{a?.emoji ?? "🏅"}</span>
+                      : <span className="text-slate-700 text-lg">🔒</span>
+                    }
+                  </div>
+                  <p className="text-[9px] text-slate-600 leading-tight font-mono w-full truncate">
+                    {unlocked ? (a?.name ?? id) : "???"}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+          <p className="text-[10px] text-slate-600 text-center">
+            Unlock achievements to use their image as your profile avatar
+          </p>
         </div>
 
       </div>

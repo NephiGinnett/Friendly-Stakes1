@@ -290,6 +290,18 @@ export const ACHIEVEMENTS = {
     emoji: "🧹",
     imageUrl: "/achievements/clean-sweep.png",
   },
+
+  off_script: {
+    id: "off_script",
+    name: "Off Script",
+    description: "Five goals in the Penalty Shootout. The House had tendencies on you. You went somewhere it wasn't. It is reconsidering.",
+    hint: "Score 5/5 in the Penalty Shootout.",
+    reward: "Earn 300 pts + 3 Monitor Cans",
+    rewardPoints: 300,
+    rewardType: "increment" as const,
+    emoji: "🥅",
+    imageUrl: "/achievements/off-script.png",
+  },
 } as const;
 
 export type AchievementId = keyof typeof ACHIEVEMENTS;

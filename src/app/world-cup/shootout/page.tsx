@@ -14,7 +14,7 @@ type PageState =
   | { phase: "selecting" }
   | { phase: "submitting" }
   | { phase: "revealing"; kicks: KickResult[]; score: number; cansEarned: number; revealed: number }
-  | { phase: "done"; kicks: KickResult[]; score: number; cansEarned: number }
+  | { phase: "done"; kicks: KickResult[]; score: number; cansEarned: number; achievementUnlocked: boolean }
   | { phase: "error"; message: string };
 
 export default function ShootoutPage() {
@@ -64,7 +64,7 @@ export default function ShootoutPage() {
         );
       }
       await new Promise<void>((r) => setTimeout(r, 400));
-      setState({ phase: "done", kicks: d.kicks, score: d.score, cansEarned: d.cansEarned });
+      setState({ phase: "done", kicks: d.kicks, score: d.score, cansEarned: d.cansEarned, achievementUnlocked: d.achievementUnlocked ?? false });
     } catch {
       setState({ phase: "error", message: "Something went wrong" });
     }
@@ -289,6 +289,15 @@ export default function ShootoutPage() {
               </div>
             ))}
           </div>
+
+          {state.phase === "done" && state.achievementUnlocked && (
+            <div className="card bg-amber-500/10 border-amber-500/30 text-center space-y-1 py-4">
+              <p className="text-2xl">🥅</p>
+              <p className="font-bold text-white">Achievement Unlocked — Off Script</p>
+              <p className="text-xs text-amber-300">+3 🥤 added · Claim 300 pts on the Achievements page</p>
+              <Link href="/achievements" className="text-xs text-violet-400 underline">Go to Achievements →</Link>
+            </div>
+          )}
 
           {state.phase === "done" && (
             <div className="space-y-2">

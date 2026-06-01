@@ -1,7 +1,7 @@
 # MONITOR Energy Drink
 ### World Cup 2026 Sponsorship Ad
 ### Starring: Marcel
-### Runtime: ~25 seconds
+### Runtime: ~35 seconds
 
 ---
 
@@ -85,7 +85,18 @@ Five legs —
 
 `[CLIP — 2–3 seconds: goal celebration or player reaction]`
 
-*(he picks up the Monitor can)*
+*(sets the can down for a sec)*
+
+Oh — and there's new stuff now.
+Penalty Shootout. Keeper's Reflex.
+Daily mini games, you pick zones, beat The House.
+
+*(small pause — lowered voice, conspiratorial)*
+
+The House plays back, by the way.
+It learns. So... mix it up.
+
+*(picks the can back up)*
 
 MONITOR.
 
@@ -137,5 +148,11 @@ Not mentioned in the script by name. If Marcel naturally asks about them or brin
 **Pacing:**
 Faster than Scott's but not rushed. Marcel has energy — use it. The pauses are still doing work, especially after "five legs" and after "MONITOR." Don't let the whole thing blur into one take.
 
+**"The House plays back, by the way. It learns."**
+This is the mini games beat. Keep it conspiratorial — Marcel isn't warning you, he's letting you in on something. The lowered voice is the tell. If he naturally says "it adapts" or "it watches your picks" instead of "it learns," keep it — the idea is The House is not passive.
+
+**"Mix it up."**
+Should feel like advice from someone who's already tried it and learned the hard way. Not a warning, not a tagline — just a tip.
+
 **If Marcel naturally says something different:**
-Keep it. The three things that must survive: the team pick, the parlay multiplier, and the tagline.
+Keep it. The four things that must survive: the team pick, the parlay multiplier, the hint about The House learning, and the tagline.
