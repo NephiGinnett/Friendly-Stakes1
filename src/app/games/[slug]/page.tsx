@@ -15,7 +15,7 @@ const GAME_COMPONENTS: Record<string, React.ComponentType<any>> = {
 };
 
 type Phase = "pending" | "submitting" | "submitted";
-type SubmitResult = { pointsEarned: number; dailyTotal: number; dailyCap: number };
+type SubmitResult = { pointsEarned: number; dailyTotal: number; dailyCap: number; achievementUnlocked: boolean };
 
 export default function GamePage() {
   const { slug } = useParams<{ slug: string }>();
@@ -100,7 +100,7 @@ export default function GamePage() {
   const handleReplay = async () => {
     // Abandon current session (coins already saved to localStorage by game component)
     if (sessionIdRef.current) {
-      await fetch("/api/games/session/end", {
+      const res = await fetch("/api/games/session/end", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -109,7 +109,10 @@ export default function GamePage() {
           metadata: pendingResult?.metadata ?? {},
           submit: false,
         }),
-      }).catch(() => {});
+      }).then((r) => r.json()).catch(() => ({}));
+      if (res.achievementUnlocked) {
+        setSubmitResult((prev) => prev ? { ...prev, achievementUnlocked: true } : null);
+      }
     }
 
     await startSession();
@@ -130,12 +133,19 @@ export default function GamePage() {
       <header className="sticky top-0 z-40 bg-[rgb(15,15,22)]/90 backdrop-blur-lg border-b border-white/5">
         <div className="max-w-lg mx-auto px-4 py-3 flex items-center gap-3">
           <Link href="/games" className="text-slate-400 hover:text-white text-sm transition-colors">←</Link>
-          <div>
+          <div className="flex-1 min-w-0">
             <h1 className="text-base font-bold text-white leading-tight">
               {game.emoji} {game.name}
             </h1>
             <p className="text-slate-500 text-xs">Up to {game.dailyCap} pts/day</p>
           </div>
+          <Link
+            href={`/games/${slug}/leaderboard`}
+            className="text-slate-500 hover:text-violet-400 text-sm transition-colors"
+            title="Leaderboard"
+          >
+            📊
+          </Link>
         </div>
       </header>
 
@@ -183,17 +193,30 @@ export default function GamePage() {
             )}
 
             {overlayPhase === "submitted" && submitResult && (
-              <div className="bg-violet-500/10 border border-violet-500/30 rounded-2xl p-6 text-center space-y-2">
-                <div className="text-3xl">🎉</div>
-                <div className="text-white font-bold text-xl">
-                  +{submitResult.pointsEarned} pts!
+              <div className="space-y-3">
+                <div className="bg-violet-500/10 border border-violet-500/30 rounded-2xl p-6 text-center space-y-2">
+                  <div className="text-3xl">🎉</div>
+                  <div className="text-white font-bold text-xl">
+                    +{submitResult.pointsEarned} pts!
+                  </div>
+                  <div className="text-slate-400 text-sm">
+                    {submitResult.dailyTotal} / {submitResult.dailyCap} pts today
+                  </div>
+                  {submitResult.dailyTotal >= submitResult.dailyCap && (
+                    <div className="text-yellow-400 text-xs pt-1">
+                      Daily cap reached — come back tomorrow!
+                    </div>
+                  )}
                 </div>
-                <div className="text-slate-400 text-sm">
-                  {submitResult.dailyTotal} / {submitResult.dailyCap} pts today
-                </div>
-                {submitResult.dailyTotal >= submitResult.dailyCap && (
-                  <div className="text-yellow-400 text-xs pt-1">
-                    Daily cap reached — come back tomorrow!
+                {submitResult.achievementUnlocked && (
+                  <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl px-4 py-3 flex items-center gap-3">
+                    <span className="text-2xl">🏅</span>
+                    <div>
+                      <div className="text-yellow-300 font-semibold text-sm">Achievement unlocked: Full Send!</div>
+                      <Link href="/achievements" className="text-yellow-600 text-xs hover:text-yellow-400 transition-colors">
+                        Claim your 300 pts →
+                      </Link>
+                    </div>
                   </div>
                 )}
               </div>

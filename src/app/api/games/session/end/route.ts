@@ -9,6 +9,32 @@ function todayDateStr() {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
 }
 
+async function checkFullSendAchievement(userId: number, thisDist: number): Promise<boolean> {
+  if (thisDist <= 40000) return false;
+
+  const otherSessions = await prisma.gameSession.findMany({
+    where: { gameId: "learn-to-fly", endedAt: { not: null }, userId: { not: userId } },
+    select: { metadata: true },
+  });
+
+  const bestOther = Math.max(
+    0,
+    ...otherSessions.map((s) => {
+      try { return (JSON.parse(s.metadata || "{}").distance as number) ?? 0; } catch { return 0; }
+    })
+  );
+
+  if (thisDist <= bestOther) return false;
+
+  const existing = await prisma.userAchievement.findUnique({
+    where: { userId_achievementId: { userId, achievementId: "full_send" } },
+  });
+  if (existing) return false;
+
+  await prisma.userAchievement.create({ data: { userId, achievementId: "full_send" } });
+  return true;
+}
+
 export async function POST(req: Request) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -26,6 +52,7 @@ export async function POST(req: Request) {
   const now = new Date();
   const durationSecs = Math.floor((now.getTime() - session.startedAt.getTime()) / 1000);
   const today = todayDateStr();
+  const thisDist = (metadata as Record<string, unknown>).distance as number ?? 0;
 
   if (!submit) {
     await prisma.gameSession.update({
@@ -38,7 +65,12 @@ export async function POST(req: Request) {
         dailyDate: today,
       },
     });
-    return NextResponse.json({ pointsEarned: 0, dailyTotal: 0, dailyCap: 0 });
+
+    const achievementUnlocked = session.gameId === "learn-to-fly"
+      ? await checkFullSendAchievement(user.id, thisDist)
+      : false;
+
+    return NextResponse.json({ pointsEarned: 0, dailyTotal: 0, dailyCap: 0, achievementUnlocked });
   }
 
   const game = GAME_REGISTRY[session.gameId as keyof typeof GAME_REGISTRY];
@@ -84,9 +116,14 @@ export async function POST(req: Request) {
     }
   });
 
+  const achievementUnlocked = session.gameId === "learn-to-fly"
+    ? await checkFullSendAchievement(user.id, thisDist)
+    : false;
+
   return NextResponse.json({
     pointsEarned,
     dailyTotal: alreadyEarned + pointsEarned,
     dailyCap: game.dailyCap,
+    achievementUnlocked,
   });
 }

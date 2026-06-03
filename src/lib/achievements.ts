@@ -302,6 +302,18 @@ export const ACHIEVEMENTS = {
     emoji: "🥅",
     imageUrl: "/achievements/off-script.png",
   },
+
+  full_send: {
+    id: "full_send",
+    name: "Full Send",
+    description: "Flew 40km in Penguin Flyer and held the #1 spot on the leaderboard. Peak penguin performance.",
+    hint: "Fly 40,000m and top the leaderboard.",
+    reward: "Earn 300 pts",
+    rewardPoints: 300,
+    rewardType: "increment" as const,
+    emoji: "🐧",
+    imageUrl: "/achievements/full-send.svg",
+  },
 } as const;
 
 export type AchievementId = keyof typeof ACHIEVEMENTS;
