@@ -72,6 +72,7 @@ model User {
   parlaysProposed         Parlay[]          @relation("ParlayProposer")
   parlaysOpposed          Parlay[]          @relation("ParlayOpponent")
   parlayVoteLogs          ParlayVoteLog[]
+  gameSessions            GameSession[]
 }
 
 model Session {
@@ -559,4 +560,20 @@ model WorldCupGameLog {
   result     String   // JSON blob — see worldCupMiniGames.ts for structure
   cansEarned Int      @default(0)
   createdAt  DateTime @default(now())
+}
+
+// ── Games Room ────────────────────────────────────────────────────────────────
+
+model GameSession {
+  id           Int       @id @default(autoincrement())
+  userId       Int
+  user         User      @relation(fields: [userId], references: [id])
+  gameId       String
+  startedAt    DateTime  @default(now())
+  lastPingAt   DateTime  @default(now())
+  endedAt      DateTime?
+  durationSecs Int       @default(0)
+  metadata     String    @default("") // JSON: { coinsEarned, distance, … }
+  pointsEarned Int       @default(0)
+  dailyDate    String    @default("") // "YYYY-MM-DD" for daily cap
 }

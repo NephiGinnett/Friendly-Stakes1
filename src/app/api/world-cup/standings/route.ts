@@ -51,7 +51,7 @@ export async function GET() {
     });
   }
 
-  const shootout = [...shootoutByUser.entries()]
+  const shootout = Array.from(shootoutByUser.entries())
     .map(([userId, s]) => {
       const e = entryMap.get(userId);
       return {
@@ -62,7 +62,7 @@ export async function GET() {
     })
     .sort((a, b) => b.bestScore - a.bestScore || b.totalCans - a.totalCans);
 
-  const reflex = [...reflexByUser.entries()]
+  const reflex = Array.from(reflexByUser.entries())
     .map(([userId, r]) => {
       const e = entryMap.get(userId);
       const saveRate = r.plays > 0 ? Math.round((r.totalSaves / (r.plays * 5)) * 100) : 0;
