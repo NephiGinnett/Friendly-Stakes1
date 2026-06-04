@@ -9,7 +9,7 @@ type Row = {
   rank: number;
   userId: number;
   username: string;
-  bestDistance: number;
+  bestMetric: number;
   totalPts: number;
   runs: number;
   isMe: boolean;
@@ -31,6 +31,7 @@ function fmt(n: number, unit: string) {
   if (unit === "m" && n >= 1000) return `${(n / 1000).toFixed(1)}km`;
   return `${n.toLocaleString()}${unit}`;
 }
+
 
 export default function LeaderboardPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -111,7 +112,7 @@ export default function LeaderboardPage() {
                   <div className="text-slate-600 text-xs mt-0.5">{row.runs} run{row.runs !== 1 ? "s" : ""}</div>
                 </div>
                 <div className={`text-right font-mono font-semibold text-sm ${row.rank === 1 ? "text-yellow-400" : "text-slate-300"}`}>
-                  {fmt(row.bestDistance, data.game.leaderboardUnit)}
+                  {fmt(row.bestMetric, data.game.leaderboardUnit)}
                 </div>
                 <div className="text-right text-slate-500 text-xs w-14">
                   {row.totalPts} pts

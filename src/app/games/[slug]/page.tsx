@@ -12,6 +12,7 @@ type GameProps = { onGameOver: (payload: GameOverPayload) => void };
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const GAME_COMPONENTS: Record<string, React.ComponentType<any>> = {
   "learn-to-fly": dynamic<GameProps>(() => import("@/components/games/LearnToFly"), { ssr: false }),
+  "echolocate": dynamic<GameProps>(() => import("@/components/games/Echolocate"), { ssr: false }),
 };
 
 type Phase = "pending" | "submitting" | "submitted";
@@ -212,7 +213,7 @@ export default function GamePage() {
                   <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl px-4 py-3 flex items-center gap-3">
                     <span className="text-2xl">🏅</span>
                     <div>
-                      <div className="text-yellow-300 font-semibold text-sm">Achievement unlocked: Full Send!</div>
+                      <div className="text-yellow-300 font-semibold text-sm">Achievement unlocked: {game.emoji} {game.name === "Penguin Flyer" ? "Full Send" : "Night Hunter"}!</div>
                       <Link href="/achievements" className="text-yellow-600 text-xs hover:text-yellow-400 transition-colors">
                         Claim your 300 pts →
                       </Link>

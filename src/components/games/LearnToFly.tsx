@@ -248,7 +248,7 @@ export default function LearnToFly({ onGameOver }: Props) {
     onGameOver({
       coinsEarned: result.coinsEarned,
       distance: result.distance,
-      metadata: { upgrades: local.upgrades },
+      metadata: { distance: result.distance, upgrades: local.upgrades },
     });
   };
 

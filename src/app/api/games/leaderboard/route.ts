@@ -23,37 +23,39 @@ export async function GET(req: Request) {
     },
   });
 
+  const metric = game.leaderboardMetric;
+
   type Row = {
     userId: number;
     username: string;
-    bestDistance: number;
+    bestMetric: number;
     totalPts: number;
     runs: number;
   };
 
   const byUser = new Map<number, Row>();
   for (const s of sessions) {
-    let dist = 0;
-    try { dist = (JSON.parse(s.metadata || "{}").distance as number) ?? 0; } catch { /* ignore */ }
+    let val = 0;
+    try { val = (JSON.parse(s.metadata || "{}")[metric] as number) ?? 0; } catch { /* ignore */ }
 
     const prev = byUser.get(s.userId);
     if (!prev) {
       byUser.set(s.userId, {
         userId: s.userId,
         username: s.user.username,
-        bestDistance: dist,
+        bestMetric: val,
         totalPts: s.pointsEarned,
         runs: 1,
       });
     } else {
-      prev.bestDistance = Math.max(prev.bestDistance, dist);
+      prev.bestMetric = Math.max(prev.bestMetric, val);
       prev.totalPts += s.pointsEarned;
       prev.runs += 1;
     }
   }
 
   const ranked = Array.from(byUser.values())
-    .sort((a, b) => b.bestDistance - a.bestDistance || b.totalPts - a.totalPts)
+    .sort((a, b) => b.bestMetric - a.bestMetric || b.totalPts - a.totalPts)
     .slice(0, 50)
     .map((r, i) => ({ ...r, rank: i + 1, isMe: r.userId === user.id }));
 

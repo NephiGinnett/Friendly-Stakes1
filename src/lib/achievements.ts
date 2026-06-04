@@ -303,6 +303,17 @@ export const ACHIEVEMENTS = {
     imageUrl: "/achievements/off-script.png",
   },
 
+  night_hunter: {
+    id: "night_hunter",
+    name: "Night Hunter",
+    description: "You cleared an entire level in Echolocate — every last bug devoured in darkness. The cave fears you now.",
+    hint: "Eat every bug without dying.",
+    reward: "Earn 200 pts",
+    rewardPoints: 200,
+    rewardType: "increment" as const,
+    emoji: "🦇",
+    imageUrl: "/achievements/night-hunter.svg",
+  },
   full_send: {
     id: "full_send",
     name: "Full Send",

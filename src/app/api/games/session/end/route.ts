@@ -9,6 +9,16 @@ function todayDateStr() {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
 }
 
+async function checkNightHunterAchievement(userId: number, coinsEarned: number): Promise<boolean> {
+  if (coinsEarned <= 0) return false;
+  const existing = await prisma.userAchievement.findUnique({
+    where: { userId_achievementId: { userId, achievementId: "night_hunter" } },
+  });
+  if (existing) return false;
+  await prisma.userAchievement.create({ data: { userId, achievementId: "night_hunter" } });
+  return true;
+}
+
 async function checkFullSendAchievement(userId: number, thisDist: number): Promise<boolean> {
   if (thisDist <= 40000) return false;
 
@@ -66,9 +76,12 @@ export async function POST(req: Request) {
       },
     });
 
-    const achievementUnlocked = session.gameId === "learn-to-fly"
-      ? await checkFullSendAchievement(user.id, thisDist)
-      : false;
+    let achievementUnlocked = false;
+    if (session.gameId === "learn-to-fly") {
+      achievementUnlocked = await checkFullSendAchievement(user.id, thisDist);
+    } else if (session.gameId === "echolocate") {
+      achievementUnlocked = await checkNightHunterAchievement(user.id, coinsEarned);
+    }
 
     return NextResponse.json({ pointsEarned: 0, dailyTotal: 0, dailyCap: 0, achievementUnlocked });
   }
@@ -111,14 +124,17 @@ export async function POST(req: Request) {
         tx,
         user.id,
         pointsEarned,
-        `Penguin Flyer — ${pointsEarned} pts (${coinsEarned} coins)`
+        `${game.name} — ${pointsEarned} pts (${coinsEarned} coins)`
       );
     }
   });
 
-  const achievementUnlocked = session.gameId === "learn-to-fly"
-    ? await checkFullSendAchievement(user.id, thisDist)
-    : false;
+  let achievementUnlocked = false;
+  if (session.gameId === "learn-to-fly") {
+    achievementUnlocked = await checkFullSendAchievement(user.id, thisDist);
+  } else if (session.gameId === "echolocate") {
+    achievementUnlocked = await checkNightHunterAchievement(user.id, coinsEarned);
+  }
 
   return NextResponse.json({
     pointsEarned,
