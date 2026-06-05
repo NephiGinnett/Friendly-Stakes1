@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- Dark cave background -->
+  <rect width="64" height="64" rx="12" fill="#04020a"/>
+  <!-- Cave walls (two blocks with a gap) -->
+  <rect x="8" y="16" width="12" height="32" rx="2" fill="#1a0a2e" stroke="#6b21a8" stroke-width="1"/>
+  <rect x="44" y="16" width="12" height="32" rx="2" fill="#1a0a2e" stroke="#6b21a8" stroke-width="1"/>
+  <!-- Gap glow (the exit) -->
+  <rect x="22" y="24" width="20" height="16" rx="1" fill="rgba(34,211,238,0.08)"/>
+  <line x1="22" y1="24" x2="22" y2="40" stroke="rgba(34,211,238,0.4)" stroke-width="1.5"/>
+  <line x1="42" y1="24" x2="42" y2="40" stroke="rgba(34,211,238,0.4)" stroke-width="1.5"/>
+  <!-- Bat silhouette moving toward gap -->
+  <ellipse cx="26" cy="32" rx="3" ry="4.5" fill="#c084fc"/>
+  <path d="M23 30 Q18 27 20 33 Q22 31 23 32Z" fill="rgba(192,132,252,0.85)"/>
+  <path d="M29 30 Q34 27 32 33 Q30 31 29 32Z" fill="rgba(192,132,252,0.85)"/>
+  <!-- Signal arcs (sonar) -->
+  <path d="M36 28 Q40 32 36 36" stroke="rgba(34,211,238,0.5)" stroke-width="1.2" stroke-linecap="round" fill="none"/>
+  <path d="M39 25 Q45 32 39 39" stroke="rgba(34,211,238,0.25)" stroke-width="1" stroke-linecap="round" fill="none"/>
+</svg>
