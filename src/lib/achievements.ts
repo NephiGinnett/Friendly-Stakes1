@@ -336,6 +336,17 @@ export const ACHIEVEMENTS = {
     emoji: "🚀",
     imageUrl: "/achievements/full-send.svg",
   },
+  echo_exit: {
+    id: "echo_exit",
+    name: "You Listened",
+    description: "You found the gap in the cave wall and stepped through. Not everyone does.",
+    hint: "There's a way out that isn't the door.",
+    reward: "Earn 150 pts",
+    rewardPoints: 150,
+    rewardType: "increment" as const,
+    emoji: "📡",
+    imageUrl: "/achievements/echo-exit.svg",
+  },
 } as const;
 
 export type AchievementId = keyof typeof ACHIEVEMENTS;

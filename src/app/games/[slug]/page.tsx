@@ -37,6 +37,7 @@ export default function GamePage() {
   const [pendingResult, setPendingResult] = useState<GameOverPayload | null>(null);
   const [submitResult, setSubmitResult] = useState<SubmitResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [replayAchievement, setReplayAchievement] = useState(false);
 
   const sessionIdRef = useRef<number | null>(null);
 
@@ -77,6 +78,7 @@ export default function GamePage() {
   }, []);
 
   const handleGameOver = useCallback((payload: GameOverPayload) => {
+    setReplayAchievement(false);
     setPendingResult(payload);
     setOverlayPhase("pending");
   }, []);
@@ -118,9 +120,7 @@ export default function GamePage() {
           submit: false,
         }),
       }).then((r) => r.json()).catch(() => ({}));
-      if (res.achievementUnlocked) {
-        setSubmitResult((prev) => prev ? { ...prev, achievementUnlocked: true } : null);
-      }
+      if (res.achievementUnlocked) setReplayAchievement(true);
     }
 
     await startSession();
@@ -169,7 +169,18 @@ export default function GamePage() {
         )}
 
         {ready && !showOverlay && GameComponent && (
-          <GameComponent key={gameKey} onGameOver={handleGameOver} />
+          <>
+            {replayAchievement && (
+              <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl px-4 py-3 flex items-center gap-3">
+                <span className="text-2xl">🏅</span>
+                <div>
+                  <div className="text-yellow-300 font-semibold text-sm">Achievement unlocked: {game.emoji} {ACHIEVEMENT_NAMES[slug] ?? "New Achievement"}!</div>
+                  <Link href="/achievements" className="text-yellow-600 text-xs hover:text-yellow-400 transition-colors">Claim your reward →</Link>
+                </div>
+              </div>
+            )}
+            <GameComponent key={gameKey} onGameOver={handleGameOver} />
+          </>
         )}
 
         {showOverlay && (

@@ -1,16 +1,17 @@
 "use client";
 import { useEffect, useRef, useCallback, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { GameOverPayload } from "./LearnToFly";
 
 // ── Map ────────────────────────────────────────────────────────────────────────
-// 0=open 1=wall 2=bug 3=spawn
+// 0=open 1=wall 2=bug 3=spawn 4=exit
 const RAW_MAP = [
   [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
   [1,2,2,2,1,2,2,2,2,2,1,2,2,2,1],
   [1,2,1,2,2,2,1,2,1,2,2,2,1,2,1],
   [1,2,1,2,1,2,1,2,1,2,1,2,1,2,1],
   [1,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
-  [1,2,1,2,1,0,1,3,1,0,1,2,1,2,1],
+  [1,2,1,2,1,0,1,3,1,0,1,2,1,2,4],  // col 14 = secret exit
   [1,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
   [1,2,1,2,1,2,1,2,1,2,1,2,1,2,1],
   [1,2,1,2,2,2,1,2,1,2,2,2,1,2,1],
@@ -30,7 +31,7 @@ const PULSE_MAX_TILES = 4;
 const CS = 36; // cell size pixels (fixed; canvas scales via CSS)
 
 // ── Types ──────────────────────────────────────────────────────────────────────
-type Phase = "start" | "playing" | "dead" | "won";
+type Phase = "start" | "playing" | "dead" | "won" | "exit";
 
 type GameState = {
   map: number[][];
@@ -63,6 +64,7 @@ type Props = { onGameOver: (payload: GameOverPayload) => void };
 
 // ── Component ──────────────────────────────────────────────────────────────────
 export default function Echolocate({ onGameOver }: Props) {
+  const router = useRouter();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rafRef = useRef<number>(0);
   const gsRef = useRef<GameState | null>(null);
@@ -178,6 +180,12 @@ export default function Echolocate({ onGameOver }: Props) {
             ctx.beginPath(); ctx.moveTo(px + 3, py); ctx.lineTo(px + 6 * Math.cos(la), py + 4 * Math.sin(la)); ctx.stroke();
           }
           ctx.restore();
+        } else if (gs.map[r][c] === 4) {
+          const glow = b * 0.15;
+          if (glow > 0) {
+            ctx.fillStyle = `rgba(34,211,238,${glow})`;
+            ctx.fillRect(x, y, CS, CS);
+          }
         }
       }
     }
@@ -321,6 +329,12 @@ export default function Echolocate({ onGameOver }: Props) {
         setPhase("dead");
         return;
       }
+      if (moved && gs.map[gs.tileR][gs.tileC] === 4) {
+        draw(ctx, gs, ts);
+        phaseRef.current = "exit";
+        setPhase("exit");
+        return;
+      }
       // Eat bug
       if (gs.map[gs.tileR]?.[gs.tileC] === 2) {
         gs.map[gs.tileR][gs.tileC] = 0;
@@ -420,6 +434,14 @@ export default function Echolocate({ onGameOver }: Props) {
   // Cleanup RAF on unmount
   useEffect(() => () => cancelAnimationFrame(rafRef.current), []);
 
+  // Navigate to secret page after brief pause
+  useEffect(() => {
+    if (phase !== "exit") return;
+    fetch("/api/achievements/echo-exit", { method: "POST" }).catch(() => {});
+    const timer = setTimeout(() => router.push("/secret"), 1200);
+    return () => clearTimeout(timer);
+  }, [phase, router]);
+
   // ── D-Pad handler ─────────────────────────────────────────────────────────────
   const setDir = (dx: number, dy: number) => {
     if (phaseRef.current !== "playing") return;
@@ -496,6 +518,13 @@ export default function Echolocate({ onGameOver }: Props) {
             >
               TRY AGAIN
             </button>
+          </div>
+        )}
+
+        {/* Exit overlay */}
+        {phase === "exit" && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#04020a]/98 rounded-xl z-10">
+            <p className="text-cyan-400 text-sm font-mono tracking-[0.3em] animate-pulse">. . .</p>
           </div>
         )}
 

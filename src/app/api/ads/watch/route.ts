@@ -38,7 +38,7 @@ export async function POST() {
   }
 
   const newCount = viewsToday + 1;
-  const isLastWatch = newCount === NORMAL_DAILY; // Spud King unlocks at the normal daily cap
+  const isLastWatch = newCount === maxDaily; // Spud King unlocks when the daily cap is reached
 
   await prisma.$transaction(async (tx) => {
     await tx.user.update({
