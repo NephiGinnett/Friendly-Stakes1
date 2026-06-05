@@ -16,11 +16,18 @@ export async function POST() {
       where: { id: user.id },
       select: { adViewDate: true, adViewCount: true, hasWatchedAd: true },
     }),
-    prisma.houseConfig.findUnique({ where: { id: 1 }, select: { arFaireActive: true } }),
+    prisma.houseConfig.findUnique({
+      where: { id: 1 },
+      select: { worldCupPlayerAt: true, worldCupEventEndAt: true },
+    }),
   ]);
   if (!fullUser) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
-  const maxDaily = config?.arFaireActive ? EVENT_DAILY : NORMAL_DAILY;
+  const now = new Date();
+  const worldCupActive =
+    !!config?.worldCupPlayerAt && now >= config.worldCupPlayerAt &&
+    (!config.worldCupEventEndAt || now < config.worldCupEventEndAt);
+  const maxDaily = worldCupActive ? EVENT_DAILY : NORMAL_DAILY;
   const today = new Date().toISOString().slice(0, 10);
   const viewsToday = fullUser.adViewDate === today ? fullUser.adViewCount : 0;
 

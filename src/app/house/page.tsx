@@ -661,7 +661,7 @@ export default function HousePage() {
                 <span className="text-4xl">📺</span>
                 <div>
                   <p className="font-bold text-white text-sm">Watch an Ad — earn 50 pts</p>
-                  <p className="text-xs text-slate-500">{adStatus.viewsToday}/{adStatus.maxDaily} watched today{adStatus.eventBonus ? " · 🎉 Event bonus active" : ""} · Friendly Stakes Ad-nouncements</p>
+                  <p className="text-xs text-slate-500">{adStatus.viewsToday}/{adStatus.maxDaily} watched today{adStatus.eventBonus ? " · ⚽ World Cup bonus" : ""} · Friendly Stakes Ad-nouncements</p>
                 </div>
               </button>
             )}

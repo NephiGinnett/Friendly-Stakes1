@@ -16,10 +16,17 @@ export async function GET() {
       where: { id: user.id },
       select: { adViewDate: true, adViewCount: true, hasWatchedAd: true },
     }),
-    prisma.houseConfig.findUnique({ where: { id: 1 }, select: { arFaireActive: true } }),
+    prisma.houseConfig.findUnique({
+      where: { id: 1 },
+      select: { worldCupPlayerAt: true, worldCupEventEndAt: true },
+    }),
   ]);
 
-  const maxDaily = config?.arFaireActive ? EVENT_DAILY : NORMAL_DAILY;
+  const now = new Date();
+  const worldCupActive =
+    !!config?.worldCupPlayerAt && now >= config.worldCupPlayerAt &&
+    (!config.worldCupEventEndAt || now < config.worldCupEventEndAt);
+  const maxDaily = worldCupActive ? EVENT_DAILY : NORMAL_DAILY;
   const today = new Date().toISOString().slice(0, 10);
   const viewsToday = fullUser?.adViewDate === today ? (fullUser?.adViewCount ?? 0) : 0;
 
@@ -40,7 +47,7 @@ export async function GET() {
     maxDaily,
     canWatch: viewsToday < maxDaily,
     hasWatchedAd: fullUser?.hasWatchedAd ?? false,
-    eventBonus: config?.arFaireActive ?? false,
+    eventBonus: worldCupActive,
     videos,
   });
 }
