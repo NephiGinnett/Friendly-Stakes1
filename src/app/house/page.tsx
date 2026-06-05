@@ -175,7 +175,7 @@ export default function HousePage() {
   const rotRef = useRef(0);
 
   // Ad state
-  type AdStatus = { viewsTotal: number; maxLifetime: number; canWatch: boolean; hasWatchedAd: boolean; eventActive: boolean; videos: string[] };
+  type AdStatus = { viewsToday: number; maxDaily: number; canWatch: boolean; hasWatchedAd: boolean; eventBonus: boolean; videos: string[] };
   const [adStatus, setAdStatus] = useState<AdStatus | null>(null);
   const [adPlaying, setAdPlaying] = useState(false);
   const [adVideo, setAdVideo] = useState<string | null>(null);
@@ -241,7 +241,7 @@ export default function HousePage() {
     const watchedVideo = adVideo;
     setAdPlaying(false);
     if (res.ok) {
-      setAdMsg(`+${d.pointsEarned} pts! ${d.canWatchMore ? `(${5 - d.viewsTotal} ad${5 - d.viewsTotal !== 1 ? "s" : ""} remaining this event)` : "All 5 watched for this event. 🎉"}`);
+      setAdMsg(`+${d.pointsEarned} pts! ${d.canWatchMore ? `(${d.maxDaily - d.viewsToday} ad${d.maxDaily - d.viewsToday !== 1 ? "s" : ""} remaining today)` : `All ${d.maxDaily} watched for today.`}`);
       if (d.showSubscribePrompt) setShowSubscribePrompt(true);
       if (watchedVideo && /petai/i.test(watchedVideo)) setShowPetaiPrompt(true);
       await loadAdStatus();
@@ -661,13 +661,13 @@ export default function HousePage() {
                 <span className="text-4xl">📺</span>
                 <div>
                   <p className="font-bold text-white text-sm">Watch an Ad — earn 50 pts</p>
-                  <p className="text-xs text-slate-500">{adStatus.viewsTotal}/5 watched this event · Friendly Stakes Ad-nouncements</p>
+                  <p className="text-xs text-slate-500">{adStatus.viewsToday}/{adStatus.maxDaily} watched today{adStatus.eventBonus ? " · 🎉 Event bonus active" : ""} · Friendly Stakes Ad-nouncements</p>
                 </div>
               </button>
             )}
             {adStatus && !adStatus.canWatch && (
               <div className="rounded-2xl border border-slate-800 px-5 py-3 text-center">
-                <p className="text-xs text-slate-600 font-mono">📺 All 5 ads watched for this event.</p>
+                <p className="text-xs text-slate-600 font-mono">📺 All {adStatus.maxDaily} ads watched today. Come back tomorrow.</p>
               </div>
             )}
             {adMsg && (

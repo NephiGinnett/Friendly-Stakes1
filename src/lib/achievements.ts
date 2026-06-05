@@ -209,8 +209,8 @@ export const ACHIEVEMENTS = {
   spud_king: {
     id: "spud_king",
     name: "Spud King",
-    description: "You watched all 5 Sysco Brand Security Alert ads during the AR Faire event. Kyle would be proud. Sysco would be proud. The House is indifferent.",
-    hint: "Watch all 5 ads during the event",
+    description: "You watched all 3 Sysco Brand Security Alerts ads in a single day. Kyle would be proud. Sysco would be proud. The House is indifferent.",
+    hint: "Watch 3 ads in one day",
     reward: "Earn 400 pts",
     rewardPoints: 400,
     rewardType: "increment" as const,

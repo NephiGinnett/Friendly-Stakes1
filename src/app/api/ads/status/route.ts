@@ -4,6 +4,9 @@ import { getCurrentUser } from "@/lib/auth";
 import fs from "fs";
 import path from "path";
 
+const NORMAL_DAILY = 3;
+const EVENT_DAILY = 5;
+
 export async function GET() {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -11,13 +14,14 @@ export async function GET() {
   const [fullUser, config] = await Promise.all([
     prisma.user.findUnique({
       where: { id: user.id },
-      select: { adViewCount: true, hasWatchedAd: true },
+      select: { adViewDate: true, adViewCount: true, hasWatchedAd: true },
     }),
     prisma.houseConfig.findUnique({ where: { id: 1 }, select: { arFaireActive: true } }),
   ]);
 
-  const eventActive = config?.arFaireActive ?? false;
-  const viewsTotal = fullUser?.adViewCount ?? 0;
+  const maxDaily = config?.arFaireActive ? EVENT_DAILY : NORMAL_DAILY;
+  const today = new Date().toISOString().slice(0, 10);
+  const viewsToday = fullUser?.adViewDate === today ? (fullUser?.adViewCount ?? 0) : 0;
 
   let videos: string[] = [];
   if (process.env.ADS_VIDEO_URLS) {
@@ -32,11 +36,11 @@ export async function GET() {
   }
 
   return NextResponse.json({
-    viewsTotal,
-    maxLifetime: 5,
-    canWatch: eventActive && viewsTotal < 5,
+    viewsToday,
+    maxDaily,
+    canWatch: viewsToday < maxDaily,
     hasWatchedAd: fullUser?.hasWatchedAd ?? false,
-    eventActive,
+    eventBonus: config?.arFaireActive ?? false,
     videos,
   });
 }
