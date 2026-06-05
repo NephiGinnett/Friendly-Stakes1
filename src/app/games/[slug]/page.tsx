@@ -189,7 +189,7 @@ export default function GamePage() {
               <div className="bg-white/5 border border-white/10 rounded-2xl p-5 space-y-3">
                 <div className="text-center text-slate-300 font-semibold">
                   {slug === "learn-to-fly" ? "Flight complete! 🐧" :
-                   slug === "echolocate" ? "Level cleared! 🦇" :
+                   slug === "echolocate" ? (pendingResult.metadata?.completed ? "Level cleared! 🦇" : "You died! 🦇") :
                    slug === "paint-shop" ? "Day complete! 🌅" :
                    `${game.emoji} Game over!`}
                 </div>

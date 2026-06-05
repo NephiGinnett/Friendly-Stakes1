@@ -327,6 +327,12 @@ export default function Echolocate({ onGameOver }: Props) {
         draw(ctx, gs, ts);
         phaseRef.current = "dead";
         setPhase("dead");
+        const bugPoints = gs.score * 100;
+        onGameOver({
+          coinsEarned: bugPoints,
+          distance: 0,
+          metadata: { score: bugPoints, bugPoints, timeBonus: 0, speedBonus: 0, secs: gs.elapsedMs / 1000, completed: false },
+        });
         return;
       }
       if (moved && gs.map[gs.tileR][gs.tileC] === 4) {
@@ -352,7 +358,7 @@ export default function Echolocate({ onGameOver }: Props) {
         onGameOver({
           coinsEarned: fd.total,
           distance: 0,
-          metadata: { score: fd.total, bugPoints: fd.bugPoints, timeBonus: fd.timeBonus, speedBonus: fd.speedBonus, secs: fd.secs },
+          metadata: { score: fd.total, bugPoints: fd.bugPoints, timeBonus: fd.timeBonus, speedBonus: fd.speedBonus, secs: fd.secs, completed: true },
         });
         return;
       }
