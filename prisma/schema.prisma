@@ -577,14 +577,15 @@ model BracketSlot {
 }
 
 model BracketPick {
-  id        Int      @id @default(autoincrement())
-  userId    Int
-  user      User     @relation(fields: [userId], references: [id])
-  round     String
-  position  Int
-  teamCode  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id])
+  round       String
+  position    Int
+  teamCode    String
+  cansAwarded Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
   @@unique([userId, round, position])
 }
 

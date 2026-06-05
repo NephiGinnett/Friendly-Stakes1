@@ -143,6 +143,10 @@ const STAGE_TO_ROUND: Record<string, string> = {
   FINAL: "FINAL",
 };
 
+const ROUND_CANS: Record<string, number> = {
+  R32: 5, R16: 10, QF: 20, SF: 40, FINAL: 80,
+};
+
 export async function POST(req: Request) {
   const auth = req.headers.get("authorization");
   if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -246,6 +250,23 @@ export async function POST(req: Request) {
           update: { team1Code: r.homeCode, team2Code: r.awayCode, winnerCode: r.winnerCode, fdMatchId: r.fdMatchId },
         });
         bracketSlots++;
+
+        // Award monitor cans to players who correctly predicted this match
+        if (r.winnerCode) {
+          const correctPicks = await prisma.bracketPick.findMany({
+            where: { round, position: pos, teamCode: r.winnerCode, cansAwarded: false },
+          });
+          for (const pick of correctPicks) {
+            await prisma.worldCupEntry.updateMany({
+              where: { userId: pick.userId },
+              data: { monitorCans: { increment: ROUND_CANS[round] ?? 0 } },
+            });
+            await prisma.bracketPick.update({
+              where: { id: pick.id },
+              data: { cansAwarded: true },
+            });
+          }
+        }
       }
     }
 
