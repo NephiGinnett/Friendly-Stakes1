@@ -102,21 +102,24 @@ export async function POST(req: Request) {
   const game = GAME_REGISTRY[session.gameId as keyof typeof GAME_REGISTRY];
   if (!game) return NextResponse.json({ error: "Unknown game" }, { status: 400 });
 
-  const { _sum } = await prisma.gameSession.aggregate({
-    where: {
-      userId: user.id,
-      gameId: session.gameId,
-      dailyDate: today,
-      endedAt: { not: null },
-    },
-    _sum: { pointsEarned: true },
-  });
-
-  const alreadyEarned = _sum.pointsEarned ?? 0;
-  const rawPts = Math.floor(coinsEarned / game.conversionRate);
-  const pointsEarned = Math.max(0, Math.min(rawPts, game.dailyCap - alreadyEarned));
+  let alreadyEarned = 0;
+  let pointsEarned = 0;
 
   await prisma.$transaction(async (tx) => {
+    const { _sum } = await tx.gameSession.aggregate({
+      where: {
+        userId: user.id,
+        gameId: session.gameId,
+        dailyDate: today,
+        endedAt: { not: null },
+      },
+      _sum: { pointsEarned: true },
+    });
+
+    alreadyEarned = _sum.pointsEarned ?? 0;
+    const rawPts = Math.floor(coinsEarned / game.conversionRate);
+    pointsEarned = Math.max(0, Math.min(rawPts, game.dailyCap - alreadyEarned));
+
     await tx.gameSession.update({
       where: { id: sessionId },
       data: {
