@@ -8,6 +8,9 @@ export async function POST() {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const config = await prisma.houseConfig.findUnique({ where: { id: 1 }, select: { arFaireActive: true } });
+  if (!config?.arFaireActive) return NextResponse.json({ error: "The AR Faire event has ended." }, { status: 403 });
+
   const fullUser = await prisma.user.findUnique({
     where: { id: user.id },
     select: { bookmarkTokens: true },

@@ -6,6 +6,8 @@ import Navbar from "@/components/Navbar";
 import PointsBadge from "@/components/PointsBadge";
 import { formatPoints } from "@/lib/utils";
 
+const EVENT_END = new Date("2026-06-10T00:00:00Z");
+
 type User = { id: number; username: string; points: number; isAdmin: boolean };
 type BookmarkEntry = { bookmarkId: number; label: string; imageUrl: string; tier: string; count: number };
 type ShopData = { tokens: number; gachaPulls: number; pityCounter: number; avidReaderOwned: boolean; bookmarks: BookmarkEntry[] };
@@ -160,6 +162,7 @@ export default function ArShopPage() {
   if (!user || !shop) return null;
 
   const tokens = shop.tokens;
+  const eventClosed = new Date() >= EVENT_END;
 
   return (
     <div className="min-h-screen pb-20">
@@ -188,110 +191,121 @@ export default function ArShopPage() {
           </div>
         )}
 
-        {/* Avid Reader achievement */}
-        <div className="card space-y-3">
-          <div className="flex items-center gap-3">
-            <span className="text-2xl">📚</span>
-            <div>
-              <p className="font-semibold text-white">Avid Reader Achievement</p>
-              <p className="text-xs text-slate-500">Shows permanently in your achievements tab. One-time purchase.</p>
-            </div>
+        {eventClosed && (
+          <div className="bg-slate-500/10 border border-slate-500/20 rounded-xl px-4 py-3 text-center space-y-1">
+            <p className="text-slate-300 font-semibold text-sm">📖 The AR Faire has ended</p>
+            <p className="text-slate-500 text-xs">Purchases are closed — your bookmark collection is preserved below.</p>
           </div>
-          {shop.avidReaderOwned ? (
-            <div className="text-center text-emerald-400 text-sm py-1">✓ Already owned</div>
-          ) : (
-            <button
-              onClick={purchaseAvid}
-              disabled={loading === "avid" || tokens < 45}
-              className="btn-primary w-full"
-            >
-              {loading === "avid" ? "Purchasing..." : "Purchase — 45 🔖 tokens"}
-            </button>
-          )}
-        </div>
+        )}
 
-        {/* Token trade */}
-        <div className="card space-y-3">
-          <div className="flex items-center gap-3">
-            <span className="text-2xl">💱</span>
-            <div>
-              <p className="font-semibold text-white">Trade Tokens for Points</p>
-              <p className="text-xs text-slate-500">1 🔖 = 10 pts</p>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            {([1, 5, 10] as const).map((amt) => (
-              <button
-                key={amt}
-                onClick={() => setTradeAmt(amt)}
-                className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all border ${
-                  tradeAmt === amt
-                    ? "bg-violet-500/20 border-violet-500/50 text-violet-300"
-                    : "bg-white/5 border-white/10 text-slate-400 hover:text-white"
-                }`}
-              >
-                {amt} 🔖<br />
-                <span className="text-xs opacity-70">→ {amt * 10} pts</span>
-              </button>
-            ))}
-          </div>
-          <button
-            onClick={trade}
-            disabled={loading === "trade" || tokens < tradeAmt}
-            className="btn-ghost w-full"
-          >
-            {loading === "trade" ? "Trading..." : `Trade ${tradeAmt} token${tradeAmt !== 1 ? "s" : ""} → ${tradeAmt * 10} pts`}
-          </button>
-        </div>
-
-        {/* Gacha */}
-        <div className="card space-y-4">
-          <div className="flex items-center gap-3">
-            <span className="text-2xl">🎰</span>
-            <div>
-              <p className="font-semibold text-white">Bookmark Gacha</p>
-              <p className="text-xs text-slate-500">5 🔖 per pull · Uncommon 60% · Rare 25% · Epic 10% · Legendary 5%</p>
-            </div>
-          </div>
-          <div className="flex items-center justify-between text-xs text-slate-600">
-            <span>Total pulls: {shop.gachaPulls}</span>
-            {shop.pityCounter > 0 && (
-              <span className="text-violet-400/70">
-                ✨ Pity: +{shop.pityCounter}% epic odds
-              </span>
-            )}
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              onClick={() => gacha(1)}
-              disabled={!!loading || tokens < 5}
-              className="btn-ghost"
-            >
-              {loading === "gacha-1" ? "..." : "Pull ×1 — 5 🔖"}
-            </button>
-            <button
-              onClick={() => gacha(10)}
-              disabled={!!loading || tokens < 50}
-              className="btn-primary"
-            >
-              {loading === "gacha-10" ? "..." : "Pull ×10 — 50 🔖"}
-            </button>
-          </div>
-
-          {/* Tier legend */}
-          <div className="grid grid-cols-2 gap-1 text-xs">
-            {[
-              { tier: "uncommon", label: "Uncommon", chance: "60%" },
-              { tier: "rare", label: "Rare", chance: "25%" },
-              { tier: "epic", label: "Epic", chance: "10%" },
-              { tier: "legendary", label: "Legendary", chance: "5%" },
-            ].map((t) => (
-              <div key={t.tier} className={`flex justify-between px-2 py-1 rounded-lg ${TIER_COLOR[t.tier].split(" ")[0]} bg-white/5`}>
-                <span>{t.label}</span><span className="opacity-70">{t.chance}</span>
+        {!eventClosed && (
+          <>
+            {/* Avid Reader achievement */}
+            <div className="card space-y-3">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">📚</span>
+                <div>
+                  <p className="font-semibold text-white">Avid Reader Achievement</p>
+                  <p className="text-xs text-slate-500">Shows permanently in your achievements tab. One-time purchase.</p>
+                </div>
               </div>
-            ))}
-          </div>
-        </div>
+              {shop.avidReaderOwned ? (
+                <div className="text-center text-emerald-400 text-sm py-1">✓ Already owned</div>
+              ) : (
+                <button
+                  onClick={purchaseAvid}
+                  disabled={loading === "avid" || tokens < 45}
+                  className="btn-primary w-full"
+                >
+                  {loading === "avid" ? "Purchasing..." : "Purchase — 45 🔖 tokens"}
+                </button>
+              )}
+            </div>
+
+            {/* Token trade */}
+            <div className="card space-y-3">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">💱</span>
+                <div>
+                  <p className="font-semibold text-white">Trade Tokens for Points</p>
+                  <p className="text-xs text-slate-500">1 🔖 = 10 pts</p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                {([1, 5, 10] as const).map((amt) => (
+                  <button
+                    key={amt}
+                    onClick={() => setTradeAmt(amt)}
+                    className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all border ${
+                      tradeAmt === amt
+                        ? "bg-violet-500/20 border-violet-500/50 text-violet-300"
+                        : "bg-white/5 border-white/10 text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    {amt} 🔖<br />
+                    <span className="text-xs opacity-70">→ {amt * 10} pts</span>
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={trade}
+                disabled={loading === "trade" || tokens < tradeAmt}
+                className="btn-ghost w-full"
+              >
+                {loading === "trade" ? "Trading..." : `Trade ${tradeAmt} token${tradeAmt !== 1 ? "s" : ""} → ${tradeAmt * 10} pts`}
+              </button>
+            </div>
+
+            {/* Gacha */}
+            <div className="card space-y-4">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">🎰</span>
+                <div>
+                  <p className="font-semibold text-white">Bookmark Gacha</p>
+                  <p className="text-xs text-slate-500">5 🔖 per pull · Uncommon 60% · Rare 25% · Epic 10% · Legendary 5%</p>
+                </div>
+              </div>
+              <div className="flex items-center justify-between text-xs text-slate-600">
+                <span>Total pulls: {shop.gachaPulls}</span>
+                {shop.pityCounter > 0 && (
+                  <span className="text-violet-400/70">
+                    ✨ Pity: +{shop.pityCounter}% epic odds
+                  </span>
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => gacha(1)}
+                  disabled={!!loading || tokens < 5}
+                  className="btn-ghost"
+                >
+                  {loading === "gacha-1" ? "..." : "Pull ×1 — 5 🔖"}
+                </button>
+                <button
+                  onClick={() => gacha(10)}
+                  disabled={!!loading || tokens < 50}
+                  className="btn-primary"
+                >
+                  {loading === "gacha-10" ? "..." : "Pull ×10 — 50 🔖"}
+                </button>
+              </div>
+
+              {/* Tier legend */}
+              <div className="grid grid-cols-2 gap-1 text-xs">
+                {[
+                  { tier: "uncommon", label: "Uncommon", chance: "60%" },
+                  { tier: "rare", label: "Rare", chance: "25%" },
+                  { tier: "epic", label: "Epic", chance: "10%" },
+                  { tier: "legendary", label: "Legendary", chance: "5%" },
+                ].map((t) => (
+                  <div key={t.tier} className={`flex justify-between px-2 py-1 rounded-lg ${TIER_COLOR[t.tier].split(" ")[0]} bg-white/5`}>
+                    <span>{t.label}</span><span className="opacity-70">{t.chance}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
 
         {/* Bookmark collection */}
         {shop.bookmarks.length > 0 && (

@@ -24,12 +24,10 @@ export default function ArFairePage() {
     fetch("/api/auth/me")
       .then((r) => { if (!r.ok) { router.push("/login"); return null; } return r.json(); })
       .then(setUser);
-    if (!isClosed) {
-      fetch("/api/ar-faire/shop").then((r) => r.ok ? r.json() : null).then((d) => {
-        if (d) setTokens(d.tokens ?? 0);
-      });
-    }
-  }, [router, isClosed]);
+    fetch("/api/ar-faire/shop").then((r) => r.ok ? r.json() : null).then((d) => {
+      if (d) setTokens(d.tokens ?? 0);
+    });
+  }, [router]);
 
   if (!user) return null;
 
@@ -55,19 +53,41 @@ export default function ArFairePage() {
 
   if (isClosed) {
     return (
-      <div className="min-h-screen pb-20 flex flex-col">
+      <div className="min-h-screen pb-20">
         <header className="sticky top-0 z-40 bg-[rgb(15,15,22)]/90 backdrop-blur-lg border-b border-white/5">
           <div className="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
             <button onClick={() => router.back()} className="text-slate-400 hover:text-white text-sm">&larr; Back</button>
-            <PointsBadge points={user.points} />
+            <div className="flex items-center gap-3">
+              {tokens > 0 && (
+                <span className="text-xs text-violet-300 font-medium bg-violet-500/15 px-2.5 py-1 rounded-full">
+                  🔖 {tokens} tokens
+                </span>
+              )}
+              <PointsBadge points={user.points} />
+            </div>
           </div>
         </header>
-        <div className="flex-1 flex items-center justify-center px-4">
-          <div className="card text-center space-y-3 max-w-sm">
+        <div className="max-w-lg mx-auto px-4 pt-5 space-y-4">
+          <div className="card text-center space-y-3">
             <p className="text-4xl">📖</p>
-            <p className="font-bold text-white text-lg">Sorry, the AR Faire is closed now.</p>
-            <p className="text-sm text-slate-500">The event ran through July 2026. Perhaps next time you will prioritize reading over wagering.</p>
+            <p className="font-bold text-white text-lg">The AR Faire has ended.</p>
+            <p className="text-sm text-slate-500">
+              Perhaps next time you will prioritize reading over wagering. Your bookmarks are preserved below.
+            </p>
           </div>
+          <Link
+            href="/ar-faire/shop"
+            className="card block hover:border-violet-500/40 transition-colors"
+          >
+            <div className="flex items-center gap-4">
+              <span className="text-3xl">🔖</span>
+              <div>
+                <p className="font-semibold text-white">View Your Bookmark Collection</p>
+                <p className="text-sm text-slate-500">All your bookmarks are saved — take a look</p>
+              </div>
+              <span className="ml-auto text-slate-500">→</span>
+            </div>
+          </Link>
         </div>
         <Navbar />
       </div>
