@@ -19,8 +19,8 @@ async function checkColorPerfectAchievement(userId: number, perfectMatch: boolea
   return true;
 }
 
-async function checkNightHunterAchievement(userId: number, coinsEarned: number): Promise<boolean> {
-  if (coinsEarned <= 0) return false;
+async function checkNightHunterAchievement(userId: number, completed: boolean): Promise<boolean> {
+  if (!completed) return false;
   const existing = await prisma.userAchievement.findUnique({
     where: { userId_achievementId: { userId, achievementId: "night_hunter" } },
   });
@@ -90,7 +90,8 @@ export async function POST(req: Request) {
     if (session.gameId === "learn-to-fly") {
       achievementUnlocked = await checkFullSendAchievement(user.id, thisDist);
     } else if (session.gameId === "echolocate") {
-      achievementUnlocked = await checkNightHunterAchievement(user.id, coinsEarned);
+      const completed = !!(metadata as Record<string, unknown>).completed;
+      achievementUnlocked = await checkNightHunterAchievement(user.id, completed);
     } else if (session.gameId === "paint-shop") {
       const perfectMatch = !!(metadata as Record<string, unknown>).perfectMatch;
       achievementUnlocked = await checkColorPerfectAchievement(user.id, perfectMatch);
@@ -149,7 +150,8 @@ export async function POST(req: Request) {
   if (session.gameId === "learn-to-fly") {
     achievementUnlocked = await checkFullSendAchievement(user.id, thisDist);
   } else if (session.gameId === "echolocate") {
-    achievementUnlocked = await checkNightHunterAchievement(user.id, coinsEarned);
+    const completed = !!(metadata as Record<string, unknown>).completed;
+    achievementUnlocked = await checkNightHunterAchievement(user.id, completed);
   } else if (session.gameId === "paint-shop") {
     const perfectMatch = !!(metadata as Record<string, unknown>).perfectMatch;
     achievementUnlocked = await checkColorPerfectAchievement(user.id, perfectMatch);
