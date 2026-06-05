@@ -29,6 +29,7 @@ function rankBadge(rank: number) {
 
 function fmt(n: number, unit: string) {
   if (unit === "m" && n >= 1000) return `${(n / 1000).toFixed(1)}km`;
+  if (unit === "$") return `$${n.toLocaleString()}`;
   return `${n.toLocaleString()}${unit}`;
 }
 
@@ -63,7 +64,7 @@ export default function LeaderboardPage() {
             <h1 className="text-base font-bold text-white leading-tight">
               {game.emoji} {game.name} — Leaderboard
             </h1>
-            <p className="text-slate-500 text-xs">All-time best distance</p>
+            <p className="text-slate-500 text-xs">All-time best · {data?.game.leaderboardLabel ?? "Score"}</p>
           </div>
         </div>
       </header>
@@ -75,8 +76,8 @@ export default function LeaderboardPage() {
 
         {!loading && data && data.rows.length === 0 && (
           <div className="text-center py-16 space-y-2">
-            <div className="text-4xl">🐧</div>
-            <p className="text-slate-400">No flights recorded yet.</p>
+            <div className="text-4xl">{game.emoji}</div>
+            <p className="text-slate-400">No scores recorded yet.</p>
             <p className="text-slate-600 text-sm">Be the first to make it to the leaderboard!</p>
             <Link href={`/games/${slug}`} className="inline-block mt-3 text-violet-400 text-sm hover:text-violet-300">
               Play now →
@@ -121,7 +122,7 @@ export default function LeaderboardPage() {
             ))}
 
             <p className="text-center text-slate-700 text-xs pt-3">
-              Top 50 · ranked by best single flight
+              Top 50 · ranked by {data.game.leaderboardLabel.toLowerCase()}
             </p>
           </div>
         )}

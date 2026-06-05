@@ -9,6 +9,16 @@ function todayDateStr() {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
 }
 
+async function checkColorPerfectAchievement(userId: number, perfectMatch: boolean): Promise<boolean> {
+  if (!perfectMatch) return false;
+  const existing = await prisma.userAchievement.findUnique({
+    where: { userId_achievementId: { userId, achievementId: "color_perfect" } },
+  });
+  if (existing) return false;
+  await prisma.userAchievement.create({ data: { userId, achievementId: "color_perfect" } });
+  return true;
+}
+
 async function checkNightHunterAchievement(userId: number, coinsEarned: number): Promise<boolean> {
   if (coinsEarned <= 0) return false;
   const existing = await prisma.userAchievement.findUnique({
@@ -81,6 +91,9 @@ export async function POST(req: Request) {
       achievementUnlocked = await checkFullSendAchievement(user.id, thisDist);
     } else if (session.gameId === "echolocate") {
       achievementUnlocked = await checkNightHunterAchievement(user.id, coinsEarned);
+    } else if (session.gameId === "paint-shop") {
+      const perfectMatch = !!(metadata as Record<string, unknown>).perfectMatch;
+      achievementUnlocked = await checkColorPerfectAchievement(user.id, perfectMatch);
     }
 
     return NextResponse.json({ pointsEarned: 0, dailyTotal: 0, dailyCap: 0, achievementUnlocked });
@@ -134,6 +147,9 @@ export async function POST(req: Request) {
     achievementUnlocked = await checkFullSendAchievement(user.id, thisDist);
   } else if (session.gameId === "echolocate") {
     achievementUnlocked = await checkNightHunterAchievement(user.id, coinsEarned);
+  } else if (session.gameId === "paint-shop") {
+    const perfectMatch = !!(metadata as Record<string, unknown>).perfectMatch;
+    achievementUnlocked = await checkColorPerfectAchievement(user.id, perfectMatch);
   }
 
   return NextResponse.json({

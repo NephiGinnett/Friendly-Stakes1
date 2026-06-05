@@ -13,6 +13,13 @@ type GameProps = { onGameOver: (payload: GameOverPayload) => void };
 const GAME_COMPONENTS: Record<string, React.ComponentType<any>> = {
   "learn-to-fly": dynamic<GameProps>(() => import("@/components/games/LearnToFly"), { ssr: false }),
   "echolocate": dynamic<GameProps>(() => import("@/components/games/Echolocate"), { ssr: false }),
+  "paint-shop": dynamic<GameProps>(() => import("@/components/games/PaintShop"), { ssr: false }),
+};
+
+const ACHIEVEMENT_NAMES: Record<string, string> = {
+  "learn-to-fly": "Full Send",
+  "echolocate": "Night Hunter",
+  "paint-shop": "Exact Science",
 };
 
 type Phase = "pending" | "submitting" | "submitted";
@@ -169,16 +176,37 @@ export default function GamePage() {
           <div className="space-y-4">
             {overlayPhase === "pending" && pendingResult && (
               <div className="bg-white/5 border border-white/10 rounded-2xl p-5 space-y-3">
-                <div className="text-center text-slate-300 font-semibold">Flight complete!</div>
+                <div className="text-center text-slate-300 font-semibold">
+                  {slug === "learn-to-fly" ? "Flight complete! 🐧" :
+                   slug === "echolocate" ? "Level cleared! 🦇" :
+                   slug === "paint-shop" ? "Day complete! 🌅" :
+                   `${game.emoji} Game over!`}
+                </div>
                 <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Distance</span>
-                    <span className="text-white font-semibold">{pendingResult.distance.toLocaleString()}m</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Coins earned</span>
-                    <span className="text-yellow-400 font-semibold">🪙 {pendingResult.coinsEarned}</span>
-                  </div>
+                  {slug === "learn-to-fly" && (
+                    <>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Distance</span>
+                        <span className="text-white font-semibold">{pendingResult.distance.toLocaleString()}m</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Coins earned</span>
+                        <span className="text-yellow-400 font-semibold">🪙 {pendingResult.coinsEarned}</span>
+                      </div>
+                    </>
+                  )}
+                  {slug === "echolocate" && (
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Final score</span>
+                      <span className="text-purple-400 font-semibold">{pendingResult.coinsEarned.toLocaleString()} pts</span>
+                    </div>
+                  )}
+                  {slug === "paint-shop" && (
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Earned this shift</span>
+                      <span className="text-green-400 font-semibold">${pendingResult.coinsEarned}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between border-t border-white/10 pt-2">
                     <span className="text-slate-400">Worth up to</span>
                     <span className="text-violet-400 font-semibold">
@@ -213,9 +241,9 @@ export default function GamePage() {
                   <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl px-4 py-3 flex items-center gap-3">
                     <span className="text-2xl">🏅</span>
                     <div>
-                      <div className="text-yellow-300 font-semibold text-sm">Achievement unlocked: {game.emoji} {game.name === "Penguin Flyer" ? "Full Send" : "Night Hunter"}!</div>
+                      <div className="text-yellow-300 font-semibold text-sm">Achievement unlocked: {game.emoji} {ACHIEVEMENT_NAMES[slug] ?? "New Achievement"}!</div>
                       <Link href="/achievements" className="text-yellow-600 text-xs hover:text-yellow-400 transition-colors">
-                        Claim your 300 pts →
+                        Claim your reward →
                       </Link>
                     </div>
                   </div>

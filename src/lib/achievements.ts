@@ -303,6 +303,17 @@ export const ACHIEVEMENTS = {
     imageUrl: "/achievements/off-script.png",
   },
 
+  color_perfect: {
+    id: "color_perfect",
+    name: "Exact Science",
+    description: "You matched a customer's paint color with 100% accuracy. The sliders don't lie — but they make you work for it.",
+    hint: "Match a color exactly on any order.",
+    reward: "Earn 250 pts",
+    rewardPoints: 250,
+    rewardType: "increment" as const,
+    emoji: "🎯",
+    imageUrl: "/achievements/exact-science.svg",
+  },
   night_hunter: {
     id: "night_hunter",
     name: "Night Hunter",

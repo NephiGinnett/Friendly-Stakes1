@@ -21,6 +21,17 @@ export const GAME_REGISTRY = {
     leaderboardLabel: "Best Score",
     leaderboardUnit: " pts",
   },
+  "paint-shop": {
+    id: "paint-shop",
+    name: "Paint Shop",
+    description: "Mix custom paint colors to match customer orders. Faster and more accurate = bigger tips!",
+    emoji: "🎨",
+    conversionRate: 3,
+    dailyCap: 50,
+    leaderboardMetric: "total" as const,
+    leaderboardLabel: "Best Day",
+    leaderboardUnit: "$",
+  },
 } as const;
 
 export type GameId = keyof typeof GAME_REGISTRY;
