@@ -312,7 +312,7 @@ export const ACHIEVEMENTS = {
     rewardPoints: 250,
     rewardType: "increment" as const,
     emoji: "🎯",
-    imageUrl: "/achievements/exact-science.svg",
+    imageUrl: "/achievements/exact-science.png",
   },
   night_hunter: {
     id: "night_hunter",
@@ -323,7 +323,7 @@ export const ACHIEVEMENTS = {
     rewardPoints: 200,
     rewardType: "increment" as const,
     emoji: "🦇",
-    imageUrl: "/achievements/night-hunter.svg",
+    imageUrl: "/achievements/night-hunter.png",
   },
   full_send: {
     id: "full_send",
@@ -334,7 +334,7 @@ export const ACHIEVEMENTS = {
     rewardPoints: 300,
     rewardType: "increment" as const,
     emoji: "🚀",
-    imageUrl: "/achievements/full-send.svg",
+    imageUrl: "/achievements/full-send.png",
   },
   echo_exit: {
     id: "echo_exit",
@@ -345,7 +345,7 @@ export const ACHIEVEMENTS = {
     rewardPoints: 150,
     rewardType: "increment" as const,
     emoji: "📡",
-    imageUrl: "/achievements/echo-exit.svg",
+    imageUrl: "/achievements/echo-exit.png",
   },
 } as const;
 
