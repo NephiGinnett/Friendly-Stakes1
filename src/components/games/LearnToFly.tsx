@@ -591,17 +591,16 @@ export default function LearnToFly({ onGameOver }: Props) {
   // ── Flying screen ──────────────────────────────────────────────────────────
   if (screen === "flying") {
     return (
-      <div style={{ background: "#000", display: "flex", flexDirection: "column", alignItems: "center",
-        justifyContent: "center", fontFamily: "monospace", padding: "8px 0" }}>
+      <div className="flex flex-col items-center gap-2">
         <canvas
           ref={canvasRef} width={CW} height={CH}
-          style={{ border: "3px solid #FFD700", borderRadius: 8, display: "block",
-            maxWidth: "100%", cursor: "pointer", touchAction: "none" }}
+          style={{ border: "2px solid rgba(255,215,0,0.3)", borderRadius: 8, display: "block",
+            maxWidth: "100%", height: "auto", aspectRatio: `${CW} / ${CH}`, cursor: "pointer", touchAction: "none" }}
           onMouseDown={() => { const s = stateRef.current; if (s && !s.landed && s.fuel > 0) s.boosting = true; }}
           onMouseUp={()   => { const s = stateRef.current; if (s) s.boosting = false; }}
         />
-        <div style={{ color: "#FFD700", marginTop: 8, fontSize: 13 }}>
-          {boostActive ? "🔥 BOOSTING!" : `${fmtDist(liveDist * 5)} · HOLD SPACE or CLICK to boost`}
+        <div className="text-yellow-400 text-xs font-mono">
+          {boostActive ? "🔥 BOOSTING!" : `${fmtDist(liveDist * 5)} · HOLD SPACE or TAP to boost`}
         </div>
       </div>
     );
@@ -610,83 +609,71 @@ export default function LearnToFly({ onGameOver }: Props) {
   // ── Shop ────────────────────────────────────────────────────────────────────
   if (screen === "shop") {
     return (
-      <div style={S.screen}>
-        <div style={{ ...S.panel, maxWidth: 520, width: "95%" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-            <h2 style={{ ...S.title, margin: 0, fontSize: 22 }}>⚙️ Upgrade Shop</h2>
-            <div style={{ color: "#FFD700", fontSize: 16, fontWeight: "bold" }}>
-              🪙 {coins.toLocaleString()}
-              <span style={{ color: "#555", fontSize: 11, marginLeft: 8 }}>resets in {daysLeft}d</span>
-            </div>
+      <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-3">
+        <div className="flex justify-between items-center">
+          <h2 className="text-white font-bold text-base">⚙️ Upgrade Shop</h2>
+          <div className="text-right">
+            <div className="text-yellow-400 font-bold text-sm">🪙 {coins.toLocaleString()}</div>
+            <div className="text-slate-600 text-[10px]">resets in {daysLeft}d</div>
           </div>
+        </div>
 
-          {shopMsg && (
-            <div style={{ background: "#2a2a2a", color: "#FFD700", padding: "8px 14px",
-              borderRadius: 6, marginBottom: 12, textAlign: "center", fontSize: 13 }}>
-              {shopMsg}
-            </div>
-          )}
+        {shopMsg && (
+          <div className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-slate-300 text-xs text-center">
+            {shopMsg}
+          </div>
+        )}
 
+        <div className="space-y-2">
           {UPGRADE_KEYS.map(key => {
             const upg     = UPGRADES[key];
             const level   = upgradeLevels[key];
             const current = upg.levels[level];
             const next    = upg.levels[level + 1];
             const maxed   = level >= upg.levels.length - 1;
+            const canAfford = !maxed && next && coins >= next.cost;
             return (
-              <div key={key} style={S.upgradeCard}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                  <div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                      <span style={{ fontSize: 20 }}>{upg.icon}</span>
-                      <span style={{ color: "#fff", fontWeight: "bold", fontSize: 14 }}>{upg.label}</span>
-                    </div>
-                    <div style={{ color: "#aaa", fontSize: 11, marginBottom: 6 }}>{upg.desc}</div>
-                    <div style={{ display: "flex", gap: 3 }}>
-                      {upg.levels.map((_, i) => (
-                        <div key={i} style={{
-                          width: 14, height: 7, borderRadius: 2,
-                          background: i <= level ? "#FFD700" : "#333",
-                          border: `1px solid ${i === level ? "#fff" : "#555"}`,
-                        }} />
-                      ))}
-                    </div>
-                    <div style={{ color: "#ccc", fontSize: 11, marginTop: 5 }}>
-                      Current: <span style={{ color: "#FFD700" }}>{current.name}</span>
-                    </div>
+              <div key={key} className="bg-white/[0.04] border border-white/[0.07] rounded-xl px-3 py-2.5 flex items-center justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <span className="text-base leading-none">{upg.icon}</span>
+                    <span className="text-white text-xs font-semibold">{upg.label}</span>
                   </div>
-                  <div style={{ textAlign: "right", flexShrink: 0 }}>
-                    {!maxed && next ? (
-                      <>
-                        <div style={{ color: "#aaa", fontSize: 10, marginBottom: 4 }}>→ {next.name}</div>
-                        <button
-                          onClick={() => buyUpgrade(key)}
-                          style={{
-                            ...S.btn, padding: "5px 12px", fontSize: 12,
-                            background:   coins >= next.cost ? "#1a3a1a" : "#2a1a1a",
-                            borderColor:  coins >= next.cost ? "#00FF7F" : "#FF4500",
-                            color:        coins >= next.cost ? "#00FF7F" : "#FF4500",
-                          }}
-                        >
-                          🪙 {next.cost.toLocaleString()}
-                        </button>
-                      </>
-                    ) : (
-                      <div style={{ color: "#FFD700", fontSize: 11, padding: "5px 8px",
-                        background: "#2a2a00", borderRadius: 6, border: "1px solid #FFD700" }}>
-                        ⭐ MAXED
-                      </div>
-                    )}
+                  <div className="flex gap-1 mb-1">
+                    {upg.levels.map((_, i) => (
+                      <div key={i} className={`h-1.5 w-4 rounded-sm ${i <= level ? "bg-yellow-400" : "bg-white/10"}`} />
+                    ))}
                   </div>
+                  <div className="text-slate-500 text-[10px]">{current.name}</div>
+                </div>
+                <div className="shrink-0">
+                  {maxed ? (
+                    <span className="text-yellow-600 text-[10px] font-mono">⭐ MAX</span>
+                  ) : (
+                    <button
+                      onClick={() => buyUpgrade(key)}
+                      className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                        canAfford
+                          ? "bg-violet-600 hover:bg-violet-500 text-white"
+                          : "bg-white/5 text-slate-500 cursor-not-allowed"
+                      }`}
+                    >
+                      🪙 {next?.cost.toLocaleString()}
+                    </button>
+                  )}
                 </div>
               </div>
             );
           })}
+        </div>
 
-          <div style={{ display: "flex", gap: 12, marginTop: 16 }}>
-            <button style={S.btn} onClick={startFlight}>🚀 Launch!</button>
-            <button style={{ ...S.btn, background: "#1a1a2a" }} onClick={() => setScreen("menu")}>← Menu</button>
-          </div>
+        <div className="flex gap-2 pt-1">
+          <button onClick={startFlight} className="flex-1 py-2.5 bg-violet-600 hover:bg-violet-500 text-white font-bold rounded-xl text-sm transition-colors">
+            🚀 Launch!
+          </button>
+          <button onClick={() => setScreen("menu")} className="flex-1 py-2.5 bg-white/8 hover:bg-white/12 text-slate-400 font-semibold rounded-xl text-sm transition-colors">
+            ← Menu
+          </button>
         </div>
       </div>
     );
@@ -694,91 +681,42 @@ export default function LearnToFly({ onGameOver }: Props) {
 
   // ── Menu ────────────────────────────────────────────────────────────────────
   return (
-    <div style={S.screen}>
-      <div style={S.panel}>
-        <div style={{ fontSize: 56, marginBottom: 4, filter: "drop-shadow(0 4px 12px #0008)" }}>🐧</div>
-        <h1 style={{ ...S.title, fontSize: 30, letterSpacing: 3, marginBottom: 4 }}>LEARN TO FLY</h1>
-        <div style={{ color: "#aaa", fontSize: 12, marginBottom: 20, letterSpacing: 1 }}>
-          A penguin&apos;s journey to defy gravity
-        </div>
+    <div className="bg-white/5 border border-white/10 rounded-2xl p-5 flex flex-col items-center text-center space-y-4 select-none">
+      <div className="text-5xl leading-none">🐧</div>
+      <div>
+        <h1 className="text-white font-bold text-xl tracking-widest uppercase">Penguin Flyer</h1>
+        <p className="text-slate-600 text-xs mt-1">A penguin&apos;s journey to defy gravity</p>
+      </div>
 
-        <div style={{ display: "flex", justifyContent: "space-around", marginBottom: 16, fontSize: 13 }}>
-          <div style={{ textAlign: "center" }}>
-            <div style={{ color: "#00FF7F", fontWeight: "bold", fontSize: 16 }}>
-              {bestDist >= 1000 ? `${(bestDist / 1000).toFixed(2)} km` : `${bestDist} m`}
-            </div>
-            <div style={{ color: "#555", fontSize: 10 }}>BEST</div>
+      <div className="flex justify-around w-full">
+        <div className="text-center">
+          <div className="text-emerald-400 font-bold text-base">
+            {bestDist >= 1000 ? `${(bestDist / 1000).toFixed(2)} km` : `${bestDist} m`}
           </div>
-          <div style={{ textAlign: "center" }}>
-            <div style={{ color: "#FFD700", fontWeight: "bold", fontSize: 16 }}>🪙 {coins.toLocaleString()}</div>
-            <div style={{ color: "#555", fontSize: 10 }}>COINS · resets {daysLeft}d</div>
-          </div>
+          <div className="text-slate-600 text-[10px] uppercase tracking-widest">Best</div>
         </div>
-
-        <button style={{ ...S.btn, width: "100%", padding: "13px 0", fontSize: 17, marginBottom: 10 }}
-          onClick={startFlight}>
-          🚀 LAUNCH!
-        </button>
-        <button style={{ ...S.btn, width: "100%", padding: "9px 0", fontSize: 14, background: "#1a2a3a" }}
-          onClick={() => setScreen("shop")}>
-          🛒 Upgrades
-        </button>
-
-        <div style={{ marginTop: 18, color: "#444", fontSize: 10, lineHeight: 1.8 }}>
-          SPACE · CLICK · TAP to boost mid-air<br />
-          Earn coins per meter · Buy upgrades · Fly further
+        <div className="text-center">
+          <div className="text-yellow-400 font-bold text-base">🪙 {coins.toLocaleString()}</div>
+          <div className="text-slate-600 text-[10px]">COINS · resets {daysLeft}d</div>
         </div>
       </div>
+
+      <button
+        onClick={startFlight}
+        className="w-full py-3.5 bg-violet-600 hover:bg-violet-500 text-white font-bold rounded-xl text-sm tracking-wide transition-colors"
+      >
+        🚀 LAUNCH!
+      </button>
+      <button
+        onClick={() => setScreen("shop")}
+        className="w-full py-2.5 bg-white/[0.07] hover:bg-white/[0.11] text-slate-300 font-semibold rounded-xl text-sm transition-colors"
+      >
+        🛒 Upgrades
+      </button>
+
+      <p className="text-slate-700 text-[10px] tracking-wider">SPACE · CLICK · TAP to boost mid-air<br />
+        Earn coins per meter · Buy upgrades · Fly further</p>
     </div>
   );
 }
 
-// ── Styles ─────────────────────────────────────────────────────────────────────
-const S = {
-  screen: {
-    minHeight: "100vh",
-    background: "linear-gradient(160deg, #0a0e1a 0%, #0d1f0d 50%, #0a0e1a 100%)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontFamily: "'Courier New', monospace",
-    padding: 16,
-  } as React.CSSProperties,
-  panel: {
-    background: "rgba(15,20,30,0.95)",
-    border: "2px solid #FFD700",
-    borderRadius: 16,
-    padding: "24px 28px",
-    maxWidth: 400,
-    width: "100%",
-    boxShadow: "0 0 40px rgba(255,215,0,0.15), 0 20px 60px #000",
-    textAlign: "center",
-  } as React.CSSProperties,
-  title: {
-    color: "#FFD700",
-    fontFamily: "'Courier New', monospace",
-    fontWeight: "bold",
-    margin: 0,
-    textShadow: "0 0 20px rgba(255,215,0,0.5)",
-  } as React.CSSProperties,
-  btn: {
-    background: "#1a3a1a",
-    border: "2px solid #FFD700",
-    color: "#FFD700",
-    padding: "9px 18px",
-    borderRadius: 8,
-    cursor: "pointer",
-    fontFamily: "'Courier New', monospace",
-    fontWeight: "bold",
-    fontSize: 13,
-    letterSpacing: 1,
-  } as React.CSSProperties,
-  upgradeCard: {
-    background: "#111820",
-    border: "1px solid #2a3a4a",
-    borderRadius: 10,
-    padding: "11px 13px",
-    marginBottom: 8,
-    textAlign: "left",
-  } as React.CSSProperties,
-};
