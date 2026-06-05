@@ -35,6 +35,9 @@ export async function POST(req: Request) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const config = await prisma.houseConfig.findUnique({ where: { id: 1 }, select: { arFaireActive: true } });
+  if (!config?.arFaireActive) return NextResponse.json({ error: "The AR Faire event has ended." }, { status: 403 });
+
   const { count } = await req.json(); // 1 or 10
   if (![1, 10].includes(count)) return NextResponse.json({ error: "Count must be 1 or 10" }, { status: 400 });
 

@@ -15,6 +15,15 @@ type Match = {
 type Record = { played: number; wins: number; draws: number; losses: number };
 type TeamData = { team: Team; record: Record; upcoming: Match[]; recent: Match[]; allMatches: Match[] };
 
+function predictionUrl(m: Match, teamName: string): string {
+  const kickoff = new Date(m.kickoff);
+  const title = encodeURIComponent(`${m.homeTeamName} vs ${m.awayTeamName} — ${m.stage}`);
+  const position = encodeURIComponent(`${teamName} wins`);
+  const deadlineDate = kickoff.toLocaleDateString("en-CA"); // YYYY-MM-DD
+  const deadlineTime = kickoff.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+  return `/wagers/new?title=${title}&position=${position}&deadlineDate=${deadlineDate}&deadlineTime=${deadlineTime}`;
+}
+
 function matchResult(m: Match, teamId: number): "W" | "D" | "L" | null {
   if (m.status !== "FINISHED") return null;
   if (m.winner === "DRAW") return "D";
@@ -91,9 +100,12 @@ export default function TeamRecordPage() {
                   <p className="text-sm text-white font-medium">{m.homeTeamName} <span className="text-slate-500">vs</span> {m.awayTeamName}</p>
                   <p className="text-xs text-slate-500">{m.stage}{m.group ? ` · Group ${m.group}` : ""}</p>
                 </div>
-                <div className="text-right">
+                <div className="text-right space-y-0.5">
                   <p className="text-xs text-slate-400">{new Date(m.kickoff).toLocaleDateString()}</p>
                   <p className="text-xs text-slate-600">{new Date(m.kickoff).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</p>
+                  <Link href={predictionUrl(m, team.name)} className="text-xs text-violet-400 hover:text-violet-300 font-medium">
+                    Place Prediction →
+                  </Link>
                 </div>
               </div>
             ))}

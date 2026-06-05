@@ -18,6 +18,7 @@ type WCStatus = {
   teams: Team[];
   takenTeamIds: number[];
   entry: Entry | null;
+  monitorCans: number;
 };
 
 const CONFEDERATIONS = ["CONCACAF", "CONMEBOL", "UEFA", "CAF", "AFC", "OFC"];
@@ -140,6 +141,45 @@ export default function WorldCupPage() {
             <div>
               <p className="font-semibold text-white">Parlay</p>
               <p className="text-xs text-slate-500">Chain up to 5 predictions · ×2 to ×13 payout · earn 🥤 MONITOR</p>
+            </div>
+            <span className="ml-auto text-slate-600">›</span>
+          </Link>
+
+          <Link href="/world-cup/shop" className="card flex items-center gap-4 hover:border-amber-500/40 transition-colors">
+            <span className="text-3xl">🥤</span>
+            <div>
+              <p className="font-semibold text-white">Event Shop</p>
+              <p className="text-xs text-slate-500">Spend Monitor Cans · {status.monitorCans} cans</p>
+            </div>
+            <span className="ml-auto text-slate-600">›</span>
+          </Link>
+
+          {/* Mini Games */}
+          <p className="text-xs font-mono text-slate-500 uppercase tracking-widest pt-1">Mini Games · earn Monitor Cans daily</p>
+
+          <Link href="/world-cup/shootout" className="card flex items-center gap-4 hover:border-violet-500/40 transition-colors">
+            <span className="text-3xl">⚽</span>
+            <div>
+              <p className="font-semibold text-white">Penalty Shootout</p>
+              <p className="text-xs text-slate-500">Pick 5 zones · beat The House · earn up to 3 🥤</p>
+            </div>
+            <span className="ml-auto text-slate-600">›</span>
+          </Link>
+
+          <Link href="/world-cup/reflex" className="card flex items-center gap-4 hover:border-violet-500/40 transition-colors">
+            <span className="text-3xl">🧤</span>
+            <div>
+              <p className="font-semibold text-white">Keeper&apos;s Reflex</p>
+              <p className="text-xs text-slate-500">Face a real player&apos;s kicks · earn up to 3 🥤</p>
+            </div>
+            <span className="ml-auto text-slate-600">›</span>
+          </Link>
+
+          <Link href="/world-cup/standings" className="card flex items-center gap-4 hover:border-slate-500/40 transition-colors">
+            <span className="text-3xl">📊</span>
+            <div>
+              <p className="font-semibold text-white">Mini Game Standings</p>
+              <p className="text-xs text-slate-500">Shootout scores · Keeper save rates</p>
             </div>
             <span className="ml-auto text-slate-600">›</span>
           </Link>

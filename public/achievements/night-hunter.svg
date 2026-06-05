@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <rect width="120" height="120" rx="18" fill="#0d0118"/>
+  <circle cx="60" cy="60" r="48" fill="none" stroke="#7c3aed" stroke-width="1.5" opacity="0.4"/>
+  <!-- bat body -->
+  <ellipse cx="60" cy="62" rx="10" ry="14" fill="#c084fc"/>
+  <!-- left wing -->
+  <path d="M50 58 Q30 40 18 52 Q32 60 50 65Z" fill="#a855f7" opacity="0.85"/>
+  <!-- right wing -->
+  <path d="M70 58 Q90 40 102 52 Q88 60 70 65Z" fill="#a855f7" opacity="0.85"/>
+  <!-- ears -->
+  <polygon points="52,50 48,42 56,48" fill="#e879f9"/>
+  <polygon points="68,50 72,42 64,48" fill="#e879f9"/>
+  <!-- eyes -->
+  <circle cx="56" cy="60" r="2.5" fill="#fde68a"/>
+  <circle cx="64" cy="60" r="2.5" fill="#fde68a"/>
+  <!-- sonar pulse rings -->
+  <circle cx="60" cy="60" r="28" fill="none" stroke="#a855f7" stroke-width="1.2" opacity="0.35"/>
+  <circle cx="60" cy="60" r="38" fill="none" stroke="#a855f7" stroke-width="0.8" opacity="0.2"/>
+  <!-- bugs -->
+  <circle cx="30" cy="35" r="3" fill="#7fff3a" opacity="0.7"/>
+  <circle cx="90" cy="35" r="3" fill="#7fff3a" opacity="0.7"/>
+  <circle cx="25" cy="88" r="3" fill="#7fff3a" opacity="0.7"/>
+  <circle cx="95" cy="88" r="3" fill="#7fff3a" opacity="0.7"/>
+</svg>

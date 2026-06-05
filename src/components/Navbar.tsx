@@ -95,6 +95,7 @@ export default function Navbar() {
     { href: "/achievements", label: "🏆", dotKey: "achievements" },
     { href: "/challenges", label: "⚔️", dotKey: "challenges" },
     { href: "/bingo", label: "🎱", dotKey: "bingo" },
+    { href: "/games", label: "🎮" },
     { href: "/house", label: "🎰", dotKey: "house" },
     ...(showWorldCup ? [{ href: "/world-cup", label: "⚽" }] : []),
     { href: "/profile", label: user.username },

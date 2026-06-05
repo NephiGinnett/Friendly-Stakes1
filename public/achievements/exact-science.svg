@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <rect width="120" height="120" rx="18" fill="#0a0a1a"/>
+  <!-- concentric rings: target -->
+  <circle cx="60" cy="60" r="46" fill="none" stroke="#1a1a3a" stroke-width="3"/>
+  <circle cx="60" cy="60" r="36" fill="none" stroke="#2a2a5a" stroke-width="3"/>
+  <circle cx="60" cy="60" r="26" fill="none" stroke="#4040aa" stroke-width="3"/>
+  <circle cx="60" cy="60" r="16" fill="none" stroke="#6060cc" stroke-width="3"/>
+  <!-- bullseye -->
+  <circle cx="60" cy="60" r="8" fill="#7070cc"/>
+  <circle cx="60" cy="60" r="4" fill="#ffffff"/>
+  <!-- color swatches around the ring -->
+  <circle cx="30" cy="30" r="7" fill="rgb(0,160,170)" stroke="#fff" stroke-width="1.5"/>
+  <circle cx="90" cy="30" r="7" fill="rgb(220,30,130)" stroke="#fff" stroke-width="1.5"/>
+  <circle cx="30" cy="90" r="7" fill="rgb(230,100,20)" stroke="#fff" stroke-width="1.5"/>
+  <circle cx="90" cy="90" r="7" fill="rgb(60,200,40)" stroke="#fff" stroke-width="1.5"/>
+  <!-- dart -->
+  <line x1="105" y1="15" x2="64" y2="56" stroke="#ffd700" stroke-width="2.5" stroke-linecap="round"/>
+  <polygon points="105,15 99,22 108,24" fill="#ffd700"/>
+  <circle cx="60" cy="60" r="3" fill="#ffd700"/>
+  <!-- 100% text -->
+  <text x="60" y="110" text-anchor="middle" font-size="11" font-family="monospace" font-weight="bold" fill="#7070cc">100%</text>
+</svg>

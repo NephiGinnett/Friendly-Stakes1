@@ -41,6 +41,7 @@ export async function GET() {
     teams,
     takenTeamIds: takenEntries.map((e) => e.teamId),
     entry: entry ? { teamId: entry.teamId, team: entry.team, createdAt: entry.createdAt } : null,
+    monitorCans: entry?.monitorCans ?? 0,
   });
 }
 

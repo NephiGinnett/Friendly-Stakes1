@@ -1233,6 +1233,23 @@ export default function AdminPage() {
         </section>
 
         {/* ── Restart Game ── */}
+        {/* ── Database Backup ── */}
+        <section className="space-y-3">
+          <h2 className="font-semibold text-white">💾 Database Backup</h2>
+          <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-3">
+            <p className="text-slate-400 text-sm leading-snug">
+              Downloads a copy of the live SQLite database file. Save it somewhere safe — it contains all users, points, wagers, and game history.
+            </p>
+            <a
+              href="/api/admin/backup"
+              download
+              className="inline-block px-4 py-2.5 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 font-semibold text-sm rounded-xl transition-colors"
+            >
+              ⬇️ Download backup
+            </a>
+          </div>
+        </section>
+
         <section className="space-y-3 pb-4">
           <h2 className="font-semibold text-white">🔄 Restart Game</h2>
 
