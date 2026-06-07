@@ -1,0 +1,200 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <!-- Background gradient -->
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0a0a12"/>
+      <stop offset="100%" style="stop-color:#0f0f1e"/>
+    </linearGradient>
+
+    <!-- Green glow for ball -->
+    <radialGradient id="ballGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#10b981;stop-opacity:0.35"/>
+      <stop offset="100%" style="stop-color:#10b981;stop-opacity:0"/>
+    </radialGradient>
+
+    <!-- Left violet glow -->
+    <radialGradient id="glowLeft" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#7c3aed;stop-opacity:0.25"/>
+      <stop offset="100%" style="stop-color:#7c3aed;stop-opacity:0"/>
+    </radialGradient>
+
+    <!-- Amber center glow -->
+    <radialGradient id="glowCenter" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#f59e0b;stop-opacity:0.12"/>
+      <stop offset="100%" style="stop-color:#f59e0b;stop-opacity:0"/>
+    </radialGradient>
+
+    <!-- Card gradient -->
+    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:0.07"/>
+      <stop offset="100%" style="stop-color:#ffffff;stop-opacity:0.02"/>
+    </linearGradient>
+
+    <!-- Title gradient -->
+    <linearGradient id="titleGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#ffffff"/>
+      <stop offset="55%" style="stop-color:#ffffff"/>
+      <stop offset="100%" style="stop-color:#a78bfa"/>
+    </linearGradient>
+
+    <!-- Clip for rounded corners -->
+    <clipPath id="roundedClip">
+      <rect width="1200" height="630" rx="0"/>
+    </clipPath>
+
+    <filter id="blur8">
+      <feGaussianBlur stdDeviation="8"/>
+    </filter>
+    <filter id="blur20">
+      <feGaussianBlur stdDeviation="20"/>
+    </filter>
+    <filter id="blur40">
+      <feGaussianBlur stdDeviation="40"/>
+    </filter>
+    <filter id="textGlow">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Base background -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <!-- Ambient glows -->
+  <ellipse cx="180" cy="200" rx="320" ry="280" fill="url(#glowLeft)" filter="url(#blur40)"/>
+  <ellipse cx="600" cy="320" rx="380" ry="300" fill="url(#glowCenter)" filter="url(#blur40)"/>
+  <ellipse cx="980" cy="180" rx="260" ry="240" fill="url(#ballGlow)" filter="url(#blur40)"/>
+
+  <!-- Subtle grid lines -->
+  <g opacity="0.04" stroke="#ffffff" stroke-width="1">
+    <line x1="0" y1="105" x2="1200" y2="105"/>
+    <line x1="0" y1="210" x2="1200" y2="210"/>
+    <line x1="0" y1="315" x2="1200" y2="315"/>
+    <line x1="0" y1="420" x2="1200" y2="420"/>
+    <line x1="0" y1="525" x2="1200" y2="525"/>
+    <line x1="200" y1="0" x2="200" y2="630"/>
+    <line x1="400" y1="0" x2="400" y2="630"/>
+    <line x1="600" y1="0" x2="600" y2="630"/>
+    <line x1="800" y1="0" x2="800" y2="630"/>
+    <line x1="1000" y1="0" x2="1000" y2="630"/>
+  </g>
+
+  <!-- Decorative pitch arc (top right) -->
+  <circle cx="1100" cy="80" r="220" fill="none" stroke="#10b981" stroke-width="1.5" opacity="0.12"/>
+  <circle cx="1100" cy="80" r="150" fill="none" stroke="#10b981" stroke-width="1" opacity="0.08"/>
+
+  <!-- Decorative bracket lines (left side) -->
+  <g stroke="#7c3aed" stroke-width="1.5" opacity="0.18" fill="none" stroke-linecap="round">
+    <!-- Left bracket tree -->
+    <line x1="68" y1="200" x2="68" y2="265"/>
+    <line x1="68" y1="232" x2="108" y2="232"/>
+    <line x1="68" y1="310" x2="68" y2="375"/>
+    <line x1="68" y1="342" x2="108" y2="342"/>
+    <line x1="108" y1="232" x2="108" y2="342"/>
+    <line x1="108" y1="287" x2="148" y2="287"/>
+    <!-- Small team boxes -->
+    <rect x="30" y="190" width="38" height="42" rx="6"/>
+    <rect x="30" y="300" width="38" height="42" rx="6"/>
+    <rect x="110" y="265" width="38" height="44" rx="6"/>
+  </g>
+
+  <!-- Decorative bracket lines (right side) -->
+  <g stroke="#10b981" stroke-width="1.5" opacity="0.15" fill="none" stroke-linecap="round">
+    <line x1="1132" y1="300" x2="1132" y2="365"/>
+    <line x1="1132" y1="332" x2="1092" y2="332"/>
+    <line x1="1132" y1="410" x2="1132" y2="475"/>
+    <line x1="1132" y1="442" x2="1092" y2="442"/>
+    <line x1="1092" y1="332" x2="1092" y2="442"/>
+    <line x1="1092" y1="387" x2="1052" y2="387"/>
+    <rect x="1134" y="290" width="38" height="42" rx="6"/>
+    <rect x="1134" y="400" width="38" height="42" rx="6"/>
+    <rect x="1010" y="365" width="38" height="44" rx="6"/>
+  </g>
+
+  <!-- ═══ MAIN CONTENT ═══ -->
+
+  <!-- Branding pill -->
+  <rect x="464" y="72" width="272" height="30" rx="15" fill="#7c3aed" opacity="0.2"/>
+  <rect x="464" y="72" width="272" height="30" rx="15" fill="none" stroke="#7c3aed" stroke-width="1" opacity="0.5"/>
+  <text x="600" y="92" text-anchor="middle" font-family="'SF Mono', 'Fira Mono', monospace" font-size="12" font-weight="600" letter-spacing="3" fill="#a78bfa">FRIENDLY STAKES · EXCLUSIVE</text>
+
+  <!-- Giant soccer ball emoji -->
+  <text x="600" y="205" text-anchor="middle" font-size="96" filter="url(#blur8)" opacity="0.3">⚽</text>
+  <text x="600" y="205" text-anchor="middle" font-size="96">⚽</text>
+
+  <!-- WORLD CUP 2026 -->
+  <text x="600" y="278" text-anchor="middle"
+        font-family="system-ui, -apple-system, 'Helvetica Neue', sans-serif"
+        font-size="72" font-weight="900" letter-spacing="-1"
+        fill="url(#titleGrad)">WORLD CUP 2026</text>
+
+  <!-- Subtitle -->
+  <text x="600" y="322" text-anchor="middle"
+        font-family="system-ui, -apple-system, sans-serif"
+        font-size="22" font-weight="400" fill="#94a3b8" letter-spacing="1">
+    June 11 – July 19 · USA, Canada &amp; Mexico
+  </text>
+
+  <!-- Divider line -->
+  <line x1="300" y1="345" x2="900" y2="345" stroke="url(#titleGrad)" stroke-width="1" opacity="0.3"/>
+
+  <!-- Three feature cards -->
+  <!-- Card 1: Team Pick -->
+  <rect x="216" y="368" width="216" height="118" rx="16" fill="url(#cardGrad)" stroke="#7c3aed" stroke-width="1" stroke-opacity="0.35"/>
+  <text x="324" y="402" text-anchor="middle" font-size="32">🏳️</text>
+  <text x="324" y="432" text-anchor="middle"
+        font-family="system-ui, -apple-system, sans-serif"
+        font-size="15" font-weight="700" fill="#ffffff">Pick Your Team</text>
+  <text x="324" y="452" text-anchor="middle"
+        font-family="system-ui, -apple-system, sans-serif"
+        font-size="12" fill="#64748b">48 nations · one allegiance</text>
+  <text x="324" y="470" text-anchor="middle"
+        font-family="system-ui, -apple-system, sans-serif"
+        font-size="12" fill="#64748b">Entry pool splits to winners</text>
+
+  <!-- Card 2: Bracket (center highlight) -->
+  <rect x="492" y="358" width="216" height="138" rx="16" fill="#10b981" fill-opacity="0.08" stroke="#10b981" stroke-width="1.5" stroke-opacity="0.5"/>
+  <!-- glow behind center card -->
+  <rect x="492" y="358" width="216" height="138" rx="16" fill="#10b981" fill-opacity="0.03" filter="url(#blur8)"/>
+  <text x="600" y="395" text-anchor="middle" font-size="32">🏆</text>
+  <text x="600" y="427" text-anchor="middle"
+        font-family="system-ui, -apple-system, sans-serif"
+        font-size="15" font-weight="700" fill="#ffffff">Fill Your Bracket</text>
+  <text x="600" y="447" text-anchor="middle"
+        font-family="system-ui, -apple-system, sans-serif"
+        font-size="12" fill="#64748b">Predict champion &amp; finalist</text>
+  <text x="600" y="465" text-anchor="middle"
+        font-family="system-ui, -apple-system, sans-serif"
+        font-size="12" fill="#64748b">before the whistle blows</text>
+  <!-- "OPEN NOW" badge -->
+  <rect x="546" y="476" width="108" height="22" rx="11" fill="#10b981" fill-opacity="0.25" stroke="#10b981" stroke-width="1" stroke-opacity="0.6"/>
+  <text x="600" y="491" text-anchor="middle"
+        font-family="'SF Mono', monospace" font-size="10" font-weight="700" letter-spacing="2" fill="#34d399">OPEN NOW</text>
+
+  <!-- Card 3: Wagering -->
+  <rect x="768" y="368" width="216" height="118" rx="16" fill="url(#cardGrad)" stroke="#f59e0b" stroke-width="1" stroke-opacity="0.3"/>
+  <text x="876" y="402" text-anchor="middle" font-size="32">🤝</text>
+  <text x="876" y="432" text-anchor="middle"
+        font-family="system-ui, -apple-system, sans-serif"
+        font-size="15" font-weight="700" fill="#ffffff">Live Wagering</text>
+  <text x="876" y="452" text-anchor="middle"
+        font-family="system-ui, -apple-system, sans-serif"
+        font-size="12" fill="#64748b">Confidence wagers · Parlays</text>
+  <text x="876" y="470" text-anchor="middle"
+        font-family="system-ui, -apple-system, sans-serif"
+        font-size="12" fill="#64748b">Match-by-match · up to ×13</text>
+
+  <!-- Bottom CTA bar -->
+  <rect x="320" y="524" width="560" height="52" rx="26" fill="#7c3aed" fill-opacity="0.15" stroke="#7c3aed" stroke-width="1.5" stroke-opacity="0.5"/>
+  <text x="600" y="555" text-anchor="middle"
+        font-family="system-ui, -apple-system, sans-serif"
+        font-size="17" font-weight="600" fill="#ffffff">
+    Preview is free · 500 pts to enter when it kicks off
+  </text>
+
+  <!-- Corner accent dots -->
+  <circle cx="1185" cy="615" r="4" fill="#7c3aed" opacity="0.4"/>
+  <circle cx="1170" cy="615" r="2.5" fill="#7c3aed" opacity="0.25"/>
+  <circle cx="15" cy="15" r="4" fill="#10b981" opacity="0.35"/>
+  <circle cx="30" cy="15" r="2.5" fill="#10b981" opacity="0.2"/>
+</svg>
