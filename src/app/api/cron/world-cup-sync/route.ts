@@ -135,6 +135,18 @@ async function settleMatchConfidenceWagers(matchId: number, winnerTeamId: number
   return settled;
 }
 
+const STAGE_TO_ROUND: Record<string, string> = {
+  ROUND_OF_32: "R32",
+  ROUND_OF_16: "R16",
+  QUARTER_FINALS: "QF",
+  SEMI_FINALS: "SF",
+  FINAL: "FINAL",
+};
+
+const ROUND_CANS: Record<string, number> = {
+  R32: 5, R16: 10, QF: 20, SF: 40, FINAL: 80,
+};
+
 export async function POST(req: Request) {
   const auth = req.headers.get("authorization");
   if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -152,6 +164,12 @@ export async function POST(req: Request) {
 
     let upserted = 0;
     let settled = 0;
+
+    // Accumulate knockout match data for bracket slot sync
+    const knockoutRows: {
+      fdMatchId: number; stage: string; kickoff: Date;
+      homeCode: string; awayCode: string; winnerCode: string;
+    }[] = [];
 
     for (const m of matches) {
       const homeTeam = await prisma.worldCupTeam.findFirst({
@@ -197,9 +215,80 @@ export async function POST(req: Request) {
         const count = await settleMatchConfidenceWagers(dbMatch.id, winnerTeamId);
         settled += count;
       }
+
+      if (STAGE_TO_ROUND[m.stage]) {
+        knockoutRows.push({
+          fdMatchId: m.id,
+          stage: m.stage,
+          kickoff: new Date(m.utcDate),
+          homeCode: homeTeam?.code ?? "",
+          awayCode: awayTeam?.code ?? "",
+          winnerCode: m.score.winner === "HOME_TEAM" ? (homeTeam?.code ?? "")
+            : m.score.winner === "AWAY_TEAM" ? (awayTeam?.code ?? "")
+            : "",
+        });
+      }
     }
 
-    return NextResponse.json({ ok: true, upserted, settled });
+    // Sync bracket slots — group by stage, sort by fdMatchId for stable positions
+    let bracketSlots = 0;
+    const byStage = new Map<string, typeof knockoutRows>();
+    for (const row of knockoutRows) {
+      if (!byStage.has(row.stage)) byStage.set(row.stage, []);
+      byStage.get(row.stage)!.push(row);
+    }
+
+    for (const stage of Array.from(byStage.keys())) {
+      const rows = byStage.get(stage)!;
+      const round = STAGE_TO_ROUND[stage];
+      rows.sort((a: { fdMatchId: number }, b: { fdMatchId: number }) => a.fdMatchId - b.fdMatchId);
+      for (let pos = 0; pos < rows.length; pos++) {
+        const r = rows[pos];
+        await prisma.bracketSlot.upsert({
+          where: { round_position: { round, position: pos } },
+          create: { round, position: pos, team1Code: r.homeCode, team2Code: r.awayCode, winnerCode: r.winnerCode, fdMatchId: r.fdMatchId },
+          update: { team1Code: r.homeCode, team2Code: r.awayCode, winnerCode: r.winnerCode, fdMatchId: r.fdMatchId },
+        });
+        bracketSlots++;
+
+        // Award monitor cans to players who correctly predicted this match
+        if (r.winnerCode) {
+          const correctPicks = await prisma.bracketPick.findMany({
+            where: { round, position: pos, teamCode: r.winnerCode, cansAwarded: false },
+          });
+          for (const pick of correctPicks) {
+            await prisma.worldCupEntry.updateMany({
+              where: { userId: pick.userId },
+              data: { monitorCans: { increment: ROUND_CANS[round] ?? 0 } },
+            });
+            await prisma.bracketPick.update({
+              where: { id: pick.id },
+              data: { cansAwarded: true },
+            });
+          }
+        }
+      }
+    }
+
+    // Auto-lock bracket when R32 has started — set bracketLockedAt to earliest R32 kickoff if not already set
+    const r32Rows = byStage.get("ROUND_OF_32") ?? [];
+    const anyR32Started = r32Rows.some(r => {
+      const dbMatch = matches.find(m => m.id === r.fdMatchId);
+      return dbMatch && !["SCHEDULED", "TIMED"].includes(dbMatch.status);
+    });
+    if (anyR32Started) {
+      const config = await prisma.houseConfig.findUnique({ where: { id: 1 }, select: { bracketLockedAt: true } });
+      if (!config?.bracketLockedAt) {
+        const earliestKickoff = r32Rows.reduce<Date | null>((min, r) => (!min || r.kickoff < min) ? r.kickoff : min, null);
+        await prisma.houseConfig.upsert({
+          where: { id: 1 },
+          create: { id: 1, bracketLockedAt: earliestKickoff ?? new Date() },
+          update: { bracketLockedAt: earliestKickoff ?? new Date() },
+        });
+      }
+    }
+
+    return NextResponse.json({ ok: true, upserted, settled, bracketSlots });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Unknown error";
     return NextResponse.json({ error: msg }, { status: 500 });
