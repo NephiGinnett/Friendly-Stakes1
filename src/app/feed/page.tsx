@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import WagerCard from "@/components/WagerCard";
 import PointsBadge from "@/components/PointsBadge";
@@ -33,6 +34,8 @@ export default function FeedPage() {
   const [loading, setLoading] = useState(true);
   const [distributions, setDistributions] = useState<Distribution[]>([]);
   const [claiming, setClaiming] = useState<number | null>(null);
+  const [showWcTeaser, setShowWcTeaser] = useState(false);
+  const [wcHasPreEntry, setWcHasPreEntry] = useState(false);
 
   const fetchDistributions = () => {
     fetch("/api/distribution/pending")
@@ -50,6 +53,14 @@ export default function FeedPage() {
       .then((u) => { setUser(u); })
       .catch(() => router.push("/login"));
     fetchDistributions();
+    fetch("/api/world-cup/teaser")
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => {
+        if (!d || d.isLive || d.hasRealEntry) return;
+        setShowWcTeaser(true);
+        setWcHasPreEntry(!!d.preEntry);
+      })
+      .catch(() => {});
   }, [router]);
 
   useEffect(() => {
@@ -85,6 +96,22 @@ export default function FeedPage() {
       </header>
 
       <div className="max-w-lg mx-auto px-4 pt-4">
+        {/* World Cup teaser banner */}
+        {showWcTeaser && (
+          <Link href="/world-cup/teaser" className="block mb-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 hover:border-emerald-500/50 transition-colors">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs text-emerald-400 font-semibold uppercase tracking-wide mb-0.5">⚽ World Cup 2026 · June 11</p>
+                <p className="text-sm text-white font-medium">
+                  {wcHasPreEntry ? "Edit your bracket picks →" : "Pick your team & fill out your bracket →"}
+                </p>
+                <p className="text-xs text-slate-500 mt-0.5">Free to preview · entry costs 500 pts at launch</p>
+              </div>
+              <span className="text-2xl shrink-0">🏆</span>
+            </div>
+          </Link>
+        )}
+
         {/* Admin distributions */}
         {distributions.length > 0 && (
           <div className="space-y-2 mb-4">

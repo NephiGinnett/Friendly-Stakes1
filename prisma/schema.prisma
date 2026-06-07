@@ -66,6 +66,7 @@ model User {
   userBookmarks      UserBookmark[]
   avatarAchievementId     String?
   worldCupEntry           WorldCupEntry?
+  worldCupPreEntry        WorldCupPreEntry?
   worldCupGameLogs        WorldCupGameLog[]
   confidenceWagersWon     ConfidenceWager[] @relation("CWWinner")
   confidenceWagersLost    ConfidenceWager[] @relation("CWLoser")
@@ -550,6 +551,17 @@ model ParlayVoteLog {
   user      User     @relation(fields: [userId], references: [id])
   createdAt DateTime @default(now())
   @@unique([parlayId, userId])
+}
+
+model WorldCupPreEntry {
+  id              Int      @id @default(autoincrement())
+  userId          Int      @unique
+  user            User     @relation(fields: [userId], references: [id])
+  teamId          Int?     // team they intend to back on entry
+  championPickId  Int?     // predicted World Cup winner
+  runnerUpPickId  Int?     // predicted finalist
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
 
 model WorldCupGameLog {
