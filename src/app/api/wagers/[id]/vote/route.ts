@@ -3,7 +3,6 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { doSettle, checkThumbAchievement } from "@/lib/settle";
 
-const MIN_VOTES_TO_SETTLE = 3;
 
 export async function POST(
   req: Request,
@@ -22,7 +21,7 @@ export async function POST(
 
     const wager = await prisma.wager.findUnique({
       where: { id: wagerId },
-      include: { votes: true },
+      include: { votes: true, entries: true },
     });
 
     if (!wager) return NextResponse.json({ error: "Wager not found" }, { status: 404 });
@@ -57,18 +56,18 @@ export async function POST(
       await checkThumbAchievement(user.id);
     }
 
-    // Auto-settle: tally by weight, not count
+    // Auto-settle: a side wins when its weighted votes exceed half of all participants.
+    // totalParticipants = creator (1) + all entries, matching who can actually vote.
     const allVotes = await prisma.vote.findMany({ where: { wagerId } });
-    const totalWeight = allVotes.reduce((sum, v) => sum + v.weight, 0);
+    const totalParticipants = 1 + wager.entries.length;
+    const majorityThreshold = totalParticipants / 2;
     const forWeight = allVotes.filter((v) => v.choice === "for").reduce((sum, v) => sum + v.weight, 0);
     const againstWeight = allVotes.filter((v) => v.choice === "against").reduce((sum, v) => sum + v.weight, 0);
 
-    if (totalWeight >= MIN_VOTES_TO_SETTLE) {
-      if (forWeight > againstWeight && forWeight > totalWeight / 2) {
-        await doSettle(wagerId, "for", "vote");
-      } else if (againstWeight > forWeight && againstWeight > totalWeight / 2) {
-        await doSettle(wagerId, "against", "vote");
-      }
+    if (forWeight > majorityThreshold) {
+      await doSettle(wagerId, "for", "vote");
+    } else if (againstWeight > majorityThreshold) {
+      await doSettle(wagerId, "against", "vote");
     }
 
     return NextResponse.json({ ok: true });
