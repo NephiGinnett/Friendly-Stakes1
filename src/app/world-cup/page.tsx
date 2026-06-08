@@ -64,12 +64,15 @@ export default function WorldCupPage() {
   // Hidden from players
   if (status.visibility === "hidden") {
     return (
-      <div className="min-h-screen pb-20 flex flex-col items-center justify-center px-4">
-        <p className="text-4xl mb-4">⚽</p>
+      <div className="min-h-screen pb-20 flex flex-col items-center justify-center px-4 gap-3">
+        <p className="text-4xl">⚽</p>
         <p className="text-white font-bold text-lg">Coming Soon</p>
-        <p className="text-slate-500 text-sm mt-1">
+        <p className="text-slate-500 text-sm">
           {status.playerLiveAt ? `Opens ${new Date(status.playerLiveAt).toLocaleDateString()}` : "Date TBD"}
         </p>
+        <Link href="/world-cup/teaser" className="mt-2 px-5 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold transition-colors">
+          Fill out your bracket →
+        </Link>
         <Navbar />
       </div>
     );
@@ -78,12 +81,15 @@ export default function WorldCupPage() {
   // Admin preview window
   if (status.visibility === "preview" && !user.isAdmin) {
     return (
-      <div className="min-h-screen pb-20 flex flex-col items-center justify-center px-4">
-        <p className="text-4xl mb-4">⚽</p>
+      <div className="min-h-screen pb-20 flex flex-col items-center justify-center px-4 gap-3">
+        <p className="text-4xl">⚽</p>
         <p className="text-white font-bold text-lg">Opening Soon</p>
-        <p className="text-slate-500 text-sm mt-1">
+        <p className="text-slate-500 text-sm">
           {status.playerLiveAt ? `Kicks off ${new Date(status.playerLiveAt).toLocaleDateString()}` : ""}
         </p>
+        <Link href="/world-cup/teaser" className="mt-2 px-5 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold transition-colors">
+          Fill out your bracket →
+        </Link>
         <Navbar />
       </div>
     );
@@ -151,6 +157,15 @@ export default function WorldCupPage() {
             <div>
               <p className="font-semibold text-white">Parlay</p>
               <p className="text-xs text-slate-500">Chain up to 5 predictions · ×2 to ×13 payout · earn 🥤 MONITOR</p>
+            </div>
+            <span className="ml-auto text-slate-600">›</span>
+          </Link>
+
+          <Link href="/world-cup/fan-competition" className="card flex items-center gap-4 hover:border-amber-500/40 transition-colors">
+            <span className="text-3xl">🏅</span>
+            <div>
+              <p className="font-semibold text-white">Fan Competition</p>
+              <p className="text-xs text-slate-500">Earn fan score · top 2 split the prize pot</p>
             </div>
             <span className="ml-auto text-slate-600">›</span>
           </Link>

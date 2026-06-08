@@ -87,5 +87,38 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, championsFound: winners.length, rewarded });
   }
 
+  // Pay out Fan Competition — top 2 fan scores split the pot 50/50
+  if (action === "payFanCompetition") {
+    const config = await prisma.houseConfig.findUnique({ where: { id: 1 } });
+    const pot = config?.wcFanPot ?? 0;
+    if (pot === 0) return NextResponse.json({ error: "Fan pot is empty" }, { status: 400 });
+
+    const top2 = await prisma.worldCupEntry.findMany({
+      where: { fanScore: { gt: 0 } },
+      orderBy: { fanScore: "desc" },
+      take: 2,
+      include: { user: true },
+    });
+    if (top2.length === 0) return NextResponse.json({ error: "No fan scores recorded" }, { status: 400 });
+
+    const firstShare = Math.floor(pot / 2);
+    const secondShare = pot - firstShare; // catches odd-number rounding
+
+    await prisma.$transaction(async (tx) => {
+      await tx.user.update({ where: { id: top2[0].userId }, data: { points: { increment: firstShare } } });
+      if (top2[1]) {
+        await tx.user.update({ where: { id: top2[1].userId }, data: { points: { increment: secondShare } } });
+      }
+      await tx.houseConfig.update({ where: { id: 1 }, data: { wcFanPot: 0 } });
+    });
+
+    return NextResponse.json({
+      ok: true,
+      pot,
+      first: { username: top2[0].user.username, fanScore: top2[0].fanScore, payout: firstShare },
+      second: top2[1] ? { username: top2[1].user.username, fanScore: top2[1].fanScore, payout: secondShare } : null,
+    });
+  }
+
   return NextResponse.json({ error: "Unknown action" }, { status: 400 });
 }

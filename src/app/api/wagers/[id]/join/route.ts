@@ -32,6 +32,7 @@ export async function POST(
 
     if (!wager) return NextResponse.json({ error: "Wager not found" }, { status: 404 });
     if (wager.status !== "open") return NextResponse.json({ error: "This wager is no longer open to join" }, { status: 400 });
+    if (wager.deadline < new Date()) return NextResponse.json({ error: "This wager's deadline has passed" }, { status: 400 });
     if (wager.creatorId === user.id) return NextResponse.json({ error: "You created this wager — you're already on the 'for' side" }, { status: 400 });
 
     const existing = wager.entries.find((e) => e.userId === user.id);

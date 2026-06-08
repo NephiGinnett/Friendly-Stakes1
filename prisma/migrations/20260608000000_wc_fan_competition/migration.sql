@@ -1,0 +1,3 @@
+-- Add Fan Competition fields
+ALTER TABLE "WorldCupEntry" ADD COLUMN "fanScore" INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE "HouseConfig" ADD COLUMN "wcFanPot" INTEGER NOT NULL DEFAULT 0;
