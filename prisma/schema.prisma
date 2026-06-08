@@ -74,6 +74,7 @@ model User {
   parlaysOpposed          Parlay[]          @relation("ParlayOpponent")
   parlayVoteLogs          ParlayVoteLog[]
   gameSessions            GameSession[]
+  bracketPicks            BracketPick[]
 }
 
 model Session {
@@ -244,6 +245,7 @@ model HouseConfig {
   worldCupPlayerAt  DateTime? // players see at this time
   worldCupEventEndAt DateTime?
   wcFanPot          Int       @default(0) // accumulated Fan Competition prize pot
+  bracketLockedAt   DateTime? // picks locked when this is set and in the past
   updatedAt         DateTime @updatedAt
 }
 
@@ -574,6 +576,31 @@ model WorldCupGameLog {
   result     String   // JSON blob — see worldCupMiniGames.ts for structure
   cansEarned Int      @default(0)
   createdAt  DateTime @default(now())
+}
+
+// Bracket picks — user predicts the winner of each knockout match
+model BracketSlot {
+  id         Int    @id @default(autoincrement())
+  round      String // "R32" | "R16" | "QF" | "SF" | "FINAL"
+  position   Int    // 0-based position within the round
+  team1Code  String @default("") // top team code
+  team2Code  String @default("") // bottom team code
+  winnerCode String @default("") // actual winner (auto-set from cron)
+  fdMatchId  Int?   @unique      // linked WorldCupMatch.fdMatchId
+  @@unique([round, position])
+}
+
+model BracketPick {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id])
+  round       String
+  position    Int
+  teamCode    String
+  cansAwarded Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  @@unique([userId, round, position])
 }
 
 // ── Games Room ────────────────────────────────────────────────────────────────

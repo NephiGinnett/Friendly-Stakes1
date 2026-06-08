@@ -123,6 +123,16 @@ export default function WorldCupPage() {
             Your 500 pts are in the allegiance pool. All entries split equally to players backing the World Cup champion.
           </div>
 
+          {/* Bracket */}
+          <Link href="/world-cup/bracket" className="card flex items-center gap-4 hover:border-amber-500/40 transition-colors bg-amber-500/5 border-amber-500/20">
+            <span className="text-3xl">🏆</span>
+            <div>
+              <p className="font-semibold text-white">Build-a-Bracket</p>
+              <p className="text-xs text-slate-500">Predict the full knockout bracket · earn up to 875 pts</p>
+            </div>
+            <span className="ml-auto text-slate-600">›</span>
+          </Link>
+
           {/* Nav cards */}
           <Link href="/world-cup/team" className="card flex items-center gap-4 hover:border-violet-500/40 transition-colors">
             <span className="text-3xl">📊</span>
@@ -222,13 +232,67 @@ export default function WorldCupPage() {
         </div>
       </header>
 
-      <div className="max-w-lg mx-auto px-4 pt-5 space-y-5">
-        <div className="card border-amber-500/30 bg-amber-500/5 space-y-2 text-center">
-          <p className="text-3xl">🏆</p>
-          <p className="font-bold text-white">Enter the Allegiance Pool</p>
+      <div className="max-w-lg mx-auto px-4 pt-0 space-y-4">
+
+        {/* ── Hero banner ─────────────────────────────────────────────────── */}
+        {/* Replace /world-cup/hero.jpg with a ~800×360px stadium/trophy image */}
+        <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-emerald-950 via-[#0a1a0f] to-[#0f0f16] border border-emerald-900/40"
+          style={{ minHeight: 180 }}>
+          {/* Placeholder — swap out once you have art */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-6 text-center">
+            <div className="flex gap-3 text-5xl">🇺🇸⚽🏆</div>
+            <h2 className="text-white font-black text-2xl tracking-tight leading-tight">
+              FIFA World Cup<br />
+              <span className="text-emerald-400">2026</span>
+            </h2>
+            <p className="text-emerald-700 text-xs font-mono tracking-widest uppercase">June 11 — July 19 · USA, Canada, Mexico</p>
+          </div>
+          {/* Decorative pitch lines */}
+          <svg className="absolute inset-0 w-full h-full opacity-[0.04]" viewBox="0 0 400 180" fill="none">
+            <circle cx="200" cy="90" r="50" stroke="white" strokeWidth="2"/>
+            <line x1="200" y1="0" x2="200" y2="180" stroke="white" strokeWidth="2"/>
+            <rect x="0" y="30" width="60" height="120" stroke="white" strokeWidth="2"/>
+            <rect x="340" y="30" width="60" height="120" stroke="white" strokeWidth="2"/>
+          </svg>
+        </div>
+
+        {/* ── Event explainer ──────────────────────────────────────────────── */}
+        <div className="space-y-2">
+          <p className="text-slate-400 text-xs font-mono uppercase tracking-widest">How it works</p>
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              { icon: "🏳️", label: "Back a Team", desc: "Pay 500 pts. Pick one of 48 nations as your allegiance." },
+              { icon: "🏆", label: "Build Bracket", desc: "Predict every knockout round. Earn up to 875 pts." },
+              { icon: "🤝", label: "Confidence Bets", desc: "Head-to-head wagers against players backing the opposite team." },
+              { icon: "🎰", label: "Parlays", desc: "Chain up to 5 match predictions for ×2–×13 payouts." },
+              { icon: "⚽", label: "Mini Games", desc: "Penalty Shootout & Keeper Reflex — earn Monitor Cans daily." },
+              { icon: "🥤", label: "Event Shop", desc: "Spend Monitor Cans on bonuses, items, and rewards." },
+            ].map(({ icon, label, desc }) => (
+              <div key={label} className="bg-white/[0.04] border border-white/[0.07] rounded-xl px-3 py-2.5 space-y-0.5">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-base">{icon}</span>
+                  <span className="text-white text-xs font-semibold">{label}</span>
+                </div>
+                <p className="text-slate-500 text-[11px] leading-snug">{desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Prize pool ───────────────────────────────────────────────────── */}
+        <div className="bg-amber-500/8 border border-amber-500/20 rounded-xl px-4 py-3 flex items-center gap-3">
+          <span className="text-2xl">💰</span>
+          <div>
+            <p className="text-amber-300 font-bold text-sm">Allegiance Pool</p>
+            <p className="text-slate-400 text-xs">Every 500 pt entry goes in the pot. Players who backed the champion split it equally.</p>
+          </div>
+        </div>
+
+        {/* ── Entry gate ───────────────────────────────────────────────────── */}
+        <div className="card border-emerald-500/30 bg-emerald-500/5 space-y-1 text-center">
+          <p className="font-bold text-white">Pick Your Nation</p>
           <p className="text-sm text-slate-400">
-            Pay <span className="text-amber-300 font-bold">500 pts</span> to pick a team. All entry points pool together.
-            Players who backed the champion split the entire pot equally when it&apos;s over.
+            <span className="text-emerald-300 font-bold">500 pts</span> · one team per player · first come, first served
           </p>
           <p className="text-xs text-slate-500">You have {formatPoints(user.points)} pts</p>
         </div>
