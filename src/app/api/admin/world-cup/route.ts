@@ -2,6 +2,47 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 
+const ROUND_EXPECTED: Record<string, number> = { R32: 16, R16: 8, QF: 4, SF: 2, FINAL: 1 };
+const ROUNDS = ["R32", "R16", "QF", "SF", "FINAL"];
+
+export async function GET() {
+  const user = await getCurrentUser();
+  if (!user?.isAdmin) return NextResponse.json({ error: "Admin only" }, { status: 403 });
+
+  const [config, slots, teams, entryCount, pickCounts] = await Promise.all([
+    prisma.houseConfig.findUnique({ where: { id: 1 } }),
+    prisma.bracketSlot.findMany({ orderBy: [{ round: "asc" }, { position: "asc" }] }),
+    prisma.worldCupTeam.findMany({ select: { code: true, name: true, flag: true } }),
+    prisma.worldCupEntry.count(),
+    prisma.bracketPick.groupBy({ by: ["round"], _count: { id: true } }),
+  ]);
+
+  const now = new Date();
+  const locked = !!(config?.bracketLockedAt && now >= config.bracketLockedAt);
+
+  // Unique players who have at least one pick
+  const pickerCount = await prisma.bracketPick.findMany({ select: { userId: true }, distinct: ["userId"] });
+
+  const byRound = Object.fromEntries(
+    ROUNDS.map((r) => {
+      const roundSlots = slots.filter((s) => s.round === r);
+      const pickRow = pickCounts.find((p) => p.round === r);
+      return [r, { slots: roundSlots, slotCount: roundSlots.length, expected: ROUND_EXPECTED[r], pickCount: pickRow?._count.id ?? 0 }];
+    })
+  );
+
+  return NextResponse.json({
+    locked,
+    bracketLockedAt: config?.bracketLockedAt ?? null,
+    worldCupAdminAt: config?.worldCupAdminAt ?? null,
+    worldCupPlayerAt: config?.worldCupPlayerAt ?? null,
+    entryCount,
+    pickerCount: pickerCount.length,
+    byRound,
+    teams,
+  });
+}
+
 export async function POST(req: Request) {
   const user = await getCurrentUser();
   if (!user?.isAdmin) return NextResponse.json({ error: "Admin only" }, { status: 403 });
@@ -85,6 +126,40 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ ok: true, championsFound: winners.length, rewarded });
+  }
+
+  // Lock bracket immediately
+  if (action === "lockBracket") {
+    await prisma.houseConfig.upsert({
+      where: { id: 1 },
+      create: { id: 1, bracketLockedAt: new Date() },
+      update: { bracketLockedAt: new Date() },
+    });
+    return NextResponse.json({ ok: true, bracketLockedAt: new Date() });
+  }
+
+  // Unlock bracket
+  if (action === "unlockBracket") {
+    await prisma.houseConfig.upsert({
+      where: { id: 1 },
+      create: { id: 1, bracketLockedAt: null },
+      update: { bracketLockedAt: null },
+    });
+    return NextResponse.json({ ok: true, bracketLockedAt: null });
+  }
+
+  // Manually seed (upsert) a single bracket slot
+  if (action === "seedSlot") {
+    const { round, position, team1Code, team2Code, winnerCode: wCode } = body;
+    if (!round || position == null || !team1Code || !team2Code) {
+      return NextResponse.json({ error: "round, position, team1Code, team2Code required" }, { status: 400 });
+    }
+    const slot = await prisma.bracketSlot.upsert({
+      where: { round_position: { round, position } },
+      create: { round, position, team1Code, team2Code, winnerCode: wCode ?? "" },
+      update: { team1Code, team2Code, ...(wCode !== undefined ? { winnerCode: wCode } : {}) },
+    });
+    return NextResponse.json({ ok: true, slot });
   }
 
   // Pay out Fan Competition — top 2 fan scores split the pot 50/50

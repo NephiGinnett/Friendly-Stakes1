@@ -74,6 +74,18 @@ export default function AdminPage() {
   const [sacrificeMsg, setSacrificeMsg] = useState<string | null>(null);
   const [sacrificing, setSacrificing] = useState(false);
 
+  // World Cup bracket state
+  type BracketRoundInfo = { slotCount: number; expected: number; pickCount: number; slots: { round: string; position: number; team1Code: string; team2Code: string; winnerCode: string }[] };
+  type BracketStatus = { locked: boolean; bracketLockedAt: string | null; worldCupPlayerAt: string | null; entryCount: number; pickerCount: number; byRound: Record<string, BracketRoundInfo>; teams: { code: string; name: string; flag: string }[] };
+  const [bracketStatus, setBracketStatus] = useState<BracketStatus | null>(null);
+  const [bracketMsg, setBracketMsg] = useState<string | null>(null);
+  const [bracketExpandRound, setBracketExpandRound] = useState<string | null>(null);
+  const [seedForm, setSeedForm] = useState({ round: "R32", position: "0", team1Code: "", team2Code: "" });
+  const [seeding, setSeeding] = useState(false);
+
+  const loadBracketStatus = () =>
+    fetch("/api/admin/world-cup").then((r) => r.ok ? r.json() : null).then(setBracketStatus);
+
   // AR Faire state
   type ArQuestion = { id: number; order: number; text: string; choiceA: string; choiceB: string; choiceC: string; correctIndex: number };
   type ArPendingQuiz = { id: number; title: string; author: string; tier: string; imageUrl: string | null; sponsor: { id: number; username: string } | null; questions: ArQuestion[] };
@@ -233,6 +245,7 @@ export default function AdminPage() {
         setUser(u);
       });
     fetchAll();
+    loadBracketStatus();
   }, [router]);
 
   const adjustPoints = async (targetId: number) => {
@@ -943,6 +956,167 @@ export default function AdminPage() {
                 Close Event
               </button>
             </div>
+          </div>
+
+          {/* World Cup Bracket Infrastructure */}
+          <div className="card space-y-4">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium text-white">⚽ Bracket Infrastructure</p>
+              <button onClick={loadBracketStatus} className="text-xs text-slate-500 hover:text-white transition-colors">↻ Refresh</button>
+            </div>
+
+            {!bracketStatus ? (
+              <p className="text-xs text-slate-500">Loading...</p>
+            ) : (
+              <>
+                {/* Event dates */}
+                <div className="rounded-xl bg-white/5 border border-white/10 px-3 py-2 text-xs text-slate-400 space-y-1">
+                  <div className="flex justify-between">
+                    <span>Players live</span>
+                    <span className="text-white font-mono">{bracketStatus.worldCupPlayerAt ? new Date(bracketStatus.worldCupPlayerAt).toLocaleString() : "Not scheduled"}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Event entrants</span>
+                    <span className="text-white font-mono">{bracketStatus.entryCount}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Players w/ picks</span>
+                    <span className="text-white font-mono">{bracketStatus.pickerCount}</span>
+                  </div>
+                </div>
+
+                {/* Lock status */}
+                <div className="flex items-center gap-3">
+                  <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${bracketStatus.locked ? "bg-amber-500/20 text-amber-300 border border-amber-500/30" : "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"}`}>
+                    {bracketStatus.locked ? "🔒 Locked" : "🔓 Open"}
+                  </span>
+                  {bracketStatus.bracketLockedAt && (
+                    <span className="text-xs text-slate-500 font-mono">{new Date(bracketStatus.bracketLockedAt).toLocaleString()}</span>
+                  )}
+                  <div className="ml-auto flex gap-2">
+                    <button
+                      onClick={async () => {
+                        setBracketMsg(null);
+                        const res = await fetch("/api/admin/world-cup", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "lockBracket" }) });
+                        setBracketMsg(res.ok ? "Bracket locked." : "Error locking.");
+                        loadBracketStatus();
+                      }}
+                      className="text-xs px-3 py-1.5 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-300 hover:bg-amber-500/25 transition-colors"
+                    >
+                      Lock now
+                    </button>
+                    <button
+                      onClick={async () => {
+                        setBracketMsg(null);
+                        const res = await fetch("/api/admin/world-cup", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "unlockBracket" }) });
+                        setBracketMsg(res.ok ? "Bracket unlocked." : "Error unlocking.");
+                        loadBracketStatus();
+                      }}
+                      className="text-xs px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-slate-400 hover:text-white transition-colors"
+                    >
+                      Unlock
+                    </button>
+                  </div>
+                </div>
+
+                {/* Slot counts per round */}
+                <div className="space-y-1">
+                  <p className="text-xs text-slate-500 font-mono uppercase tracking-widest">Match slots seeded by cron</p>
+                  {["R32", "R16", "QF", "SF", "FINAL"].map((r) => {
+                    const info = bracketStatus.byRound[r];
+                    const full = info.slotCount >= info.expected;
+                    return (
+                      <div key={r}>
+                        <button
+                          onClick={() => setBracketExpandRound(bracketExpandRound === r ? null : r)}
+                          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-white/[0.03] border border-white/8 hover:border-white/15 transition-colors"
+                        >
+                          <span className={`w-2 h-2 rounded-full shrink-0 ${full ? "bg-emerald-500" : info.slotCount > 0 ? "bg-amber-500" : "bg-slate-600"}`} />
+                          <span className="text-xs font-mono text-white">{r}</span>
+                          <span className="text-xs text-slate-500">{info.slotCount}/{info.expected} slots · {info.pickCount} picks</span>
+                          <span className="ml-auto text-slate-600 text-xs">{bracketExpandRound === r ? "▲" : "▼"}</span>
+                        </button>
+                        {bracketExpandRound === r && info.slots.length > 0 && (
+                          <div className="mt-1 ml-3 space-y-1">
+                            {info.slots.map((s) => {
+                              const t1 = bracketStatus.teams.find(t => t.code === s.team1Code);
+                              const t2 = bracketStatus.teams.find(t => t.code === s.team2Code);
+                              const w = bracketStatus.teams.find(t => t.code === s.winnerCode);
+                              return (
+                                <div key={s.position} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.02] text-xs">
+                                  <span className="text-slate-600 font-mono w-4">{s.position}</span>
+                                  <span>{t1 ? `${t1.flag} ${t1.name}` : s.team1Code || "TBD"}</span>
+                                  <span className="text-slate-600">vs</span>
+                                  <span>{t2 ? `${t2.flag} ${t2.name}` : s.team2Code || "TBD"}</span>
+                                  {w && <span className="ml-auto text-emerald-400">→ {w.flag} {w.name}</span>}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                        {bracketExpandRound === r && info.slots.length === 0 && (
+                          <p className="mt-1 ml-3 text-xs text-slate-600 px-3 py-1.5">No slots seeded yet.</p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Manual slot seed */}
+                <div className="space-y-2 pt-1 border-t border-white/5">
+                  <p className="text-xs text-slate-500 font-mono uppercase tracking-widest">Manual slot seed (cron fallback)</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <p className="text-xs text-slate-500 mb-1">Round</p>
+                      <select
+                        value={seedForm.round}
+                        onChange={(e) => setSeedForm(f => ({ ...f, round: e.target.value }))}
+                        className="w-full bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white"
+                      >
+                        {["R32", "R16", "QF", "SF", "FINAL"].map(r => <option key={r} value={r}>{r}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-500 mb-1">Position (0-based)</p>
+                      <input type="number" min={0} value={seedForm.position} onChange={(e) => setSeedForm(f => ({ ...f, position: e.target.value }))}
+                        className="w-full bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-500 mb-1">Team 1 code (e.g. BRA)</p>
+                      <input type="text" maxLength={3} placeholder="BRA" value={seedForm.team1Code} onChange={(e) => setSeedForm(f => ({ ...f, team1Code: e.target.value.toUpperCase() }))}
+                        className="w-full bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white font-mono uppercase" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-500 mb-1">Team 2 code (e.g. ARG)</p>
+                      <input type="text" maxLength={3} placeholder="ARG" value={seedForm.team2Code} onChange={(e) => setSeedForm(f => ({ ...f, team2Code: e.target.value.toUpperCase() }))}
+                        className="w-full bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white font-mono uppercase" />
+                    </div>
+                  </div>
+                  <button
+                    disabled={seeding || !seedForm.team1Code || !seedForm.team2Code}
+                    onClick={async () => {
+                      setSeeding(true); setBracketMsg(null);
+                      const res = await fetch("/api/admin/world-cup", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ action: "seedSlot", round: seedForm.round, position: parseInt(seedForm.position), team1Code: seedForm.team1Code, team2Code: seedForm.team2Code }),
+                      });
+                      const d = await res.json();
+                      setBracketMsg(res.ok ? `Seeded ${seedForm.round} pos ${seedForm.position}: ${seedForm.team1Code} vs ${seedForm.team2Code}` : (d.error ?? "Error"));
+                      setSeeding(false);
+                      loadBracketStatus();
+                    }}
+                    className="btn-primary text-xs w-full disabled:opacity-40"
+                  >
+                    {seeding ? "Seeding..." : "Seed this slot"}
+                  </button>
+                </div>
+
+                {bracketMsg && (
+                  <p className={`text-xs font-mono ${bracketMsg.includes("Error") || bracketMsg.includes("error") ? "text-rose-400" : "text-emerald-400"}`}>{bracketMsg}</p>
+                )}
+              </>
+            )}
           </div>
 
           {/* Phase selector */}
