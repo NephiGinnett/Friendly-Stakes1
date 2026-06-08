@@ -80,6 +80,12 @@ export async function POST(req: Request) {
   const successfulLegs = resolvedLegs.filter((l) => l.result === true).length;
   const proposerCans = successfulLegs * (MONITOR_PER_LEG[parlay.costPerLeg] ?? 1);
 
+  // Fan Competition: 10% skim of net profit → fan pot; full net → fan score
+  const proposerNet = proposerWon ? Math.max(0, parlay.payout - parlay.totalEscrowed) : 0;
+  const opponentNet = proposerWon ? 0 : parlay.totalEscrowed;
+  const proposerSkim = Math.floor(proposerNet * 0.10);
+  const opponentSkim = Math.floor(opponentNet * 0.10);
+
   await prisma.$transaction(async (tx) => {
     await tx.parlay.update({
       where: { id: parlayId },
@@ -87,12 +93,21 @@ export async function POST(req: Request) {
     });
 
     if (proposerWon) {
-      await tx.user.update({ where: { id: parlay.proposerId }, data: { points: { increment: parlay.payout } } });
-      await logPoints(tx, parlay.proposerId, parlay.payout, `Parlay won — ${resolvedLegs.length} legs`);
+      const effectivePayout = parlay.payout - proposerSkim;
+      await tx.user.update({ where: { id: parlay.proposerId }, data: { points: { increment: effectivePayout } } });
+      await logPoints(tx, parlay.proposerId, effectivePayout, `Parlay won — ${resolvedLegs.length} legs${proposerSkim > 0 ? ` (−${proposerSkim} fan pot)` : ""}`);
+      if (proposerNet > 0) {
+        await tx.worldCupEntry.update({ where: { userId: parlay.proposerId }, data: { fanScore: { increment: proposerNet } } });
+        if (proposerSkim > 0) await tx.houseConfig.update({ where: { id: 1 }, data: { wcFanPot: { increment: proposerSkim } } });
+      }
     } else {
-      // Opponent keeps the escrowed pot
-      await tx.user.update({ where: { id: parlay.opponentId }, data: { points: { increment: parlay.totalEscrowed } } });
-      await logPoints(tx, parlay.opponentId, parlay.totalEscrowed, `Parlay failed — kept proposer's stake`);
+      const effectivePayout = parlay.totalEscrowed - opponentSkim;
+      await tx.user.update({ where: { id: parlay.opponentId }, data: { points: { increment: effectivePayout } } });
+      await logPoints(tx, parlay.opponentId, effectivePayout, `Parlay failed — kept proposer's stake${opponentSkim > 0 ? ` (−${opponentSkim} fan pot)` : ""}`);
+      if (opponentNet > 0) {
+        await tx.worldCupEntry.update({ where: { userId: parlay.opponentId }, data: { fanScore: { increment: opponentNet } } });
+        if (opponentSkim > 0) await tx.houseConfig.update({ where: { id: 1 }, data: { wcFanPot: { increment: opponentSkim } } });
+      }
     }
 
     // Award MONITOR cans to proposer for each successful leg

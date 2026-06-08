@@ -243,6 +243,7 @@ model HouseConfig {
   worldCupAdminAt      DateTime? // admins can see 12h early
   worldCupPlayerAt  DateTime? // players see at this time
   worldCupEventEndAt DateTime?
+  wcFanPot          Int       @default(0) // accumulated Fan Competition prize pot
   updatedAt         DateTime @updatedAt
 }
 
@@ -462,6 +463,7 @@ model WorldCupEntry {
   paid              Int          @default(500)
   confidenceStake   Int          @default(100)
   monitorCans       Int          @default(0) // 🥤 MONITOR event currency
+  fanScore          Int          @default(0) // Fan Competition cumulative score
   lastShootoutPicks String       @default("") // JSON: Zone[5] — saved after each shootout
   createdAt         DateTime     @default(now())
 }

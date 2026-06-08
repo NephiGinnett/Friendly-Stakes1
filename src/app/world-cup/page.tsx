@@ -151,6 +151,15 @@ export default function WorldCupPage() {
             <span className="ml-auto text-slate-600">›</span>
           </Link>
 
+          <Link href="/world-cup/fan-competition" className="card flex items-center gap-4 hover:border-amber-500/40 transition-colors">
+            <span className="text-3xl">🏅</span>
+            <div>
+              <p className="font-semibold text-white">Fan Competition</p>
+              <p className="text-xs text-slate-500">Earn fan score · top 2 split the prize pot</p>
+            </div>
+            <span className="ml-auto text-slate-600">›</span>
+          </Link>
+
           <Link href="/world-cup/shop" className="card flex items-center gap-4 hover:border-amber-500/40 transition-colors">
             <span className="text-3xl">🥤</span>
             <div>

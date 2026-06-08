@@ -67,6 +67,11 @@ async function settleMatchConfidenceWagers(matchId: number, winnerTeamId: number
           : totalEscrowed - bonusAmount
         : totalEscrowed;
 
+      // Fan Competition: 10% skim of net profit goes to pot; full net added to fan score
+      const netProfit = Math.max(0, winnerPayout - winnerStake);
+      const fanSkim = Math.floor(netProfit * 0.10);
+      const effectivePayout = winnerPayout - fanSkim;
+
       await prisma.$transaction(async (tx) => {
         // Deduct stakes from both players
         if (winnerStake > 0) {
@@ -77,9 +82,9 @@ async function settleMatchConfidenceWagers(matchId: number, winnerTeamId: number
           await tx.user.update({ where: { id: loser.userId }, data: { points: { decrement: loserStake } } });
           await logPoints(tx, loser.userId, -loserStake, `Confidence wager stake — vs ${winner.user.username}`);
         }
-        // Pay out winner
-        await tx.user.update({ where: { id: winner.userId }, data: { points: { increment: winnerPayout } } });
-        await logPoints(tx, winner.userId, winnerPayout, `Confidence wager won vs ${loser.user.username}${bonusAmount > 0 ? ` (+${bonusAmount} bonus)` : ""}`);
+        // Pay out winner (minus fan skim)
+        await tx.user.update({ where: { id: winner.userId }, data: { points: { increment: effectivePayout } } });
+        await logPoints(tx, winner.userId, effectivePayout, `Confidence wager won vs ${loser.user.username}${bonusAmount > 0 ? ` (+${bonusAmount} bonus)` : ""}${fanSkim > 0 ? ` (−${fanSkim} fan pot)` : ""}`);
         // Create settlement record
         await tx.confidenceWager.create({
           data: {
@@ -88,11 +93,24 @@ async function settleMatchConfidenceWagers(matchId: number, winnerTeamId: number
             loserId: loser.userId,
             winnerStake,
             loserStake,
-            winnerPayout,
+            winnerPayout: effectivePayout,
             bonusApplied: isAsymmetric,
             bonusAmount,
           },
         });
+        // Fan Competition — update winner's score and add skim to pot
+        if (netProfit > 0) {
+          await tx.worldCupEntry.update({
+            where: { userId: winner.userId },
+            data: { fanScore: { increment: netProfit } },
+          });
+          if (fanSkim > 0) {
+            await tx.houseConfig.update({
+              where: { id: 1 },
+              data: { wcFanPot: { increment: fanSkim } },
+            });
+          }
+        }
       });
 
       settled++;
