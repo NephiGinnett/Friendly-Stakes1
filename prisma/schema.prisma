@@ -561,7 +561,7 @@ model WorldCupPreEntry {
   id              Int      @id @default(autoincrement())
   userId          Int      @unique
   user            User     @relation(fields: [userId], references: [id])
-  teamId          Int?     // team they intend to back on entry
+  teamId          Int?     @unique // team they intend to back — one player per team
   championPickId  Int?     // predicted World Cup winner
   runnerUpPickId  Int?     // predicted finalist
   createdAt       DateTime @default(now())
