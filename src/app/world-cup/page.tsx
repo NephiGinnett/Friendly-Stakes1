@@ -346,16 +346,27 @@ export default function WorldCupPage() {
 
         {error && <p className="text-rose-400 text-sm text-center">{error}</p>}
 
-        <button
-          onClick={enter}
-          disabled={!selectedTeamId || loading || user.points < 500}
-          className="btn-primary w-full"
-        >
-          {loading ? "Entering..." : selectedTeamId ? `Back ${status.teams.find((t) => t.id === selectedTeamId)?.name} — 500 pts` : "Select a team to enter"}
-        </button>
-
-        {user.points < 500 && (
-          <p className="text-xs text-rose-400 text-center">You need at least 500 pts to enter.</p>
+        {user.isAdmin ? (
+          <button
+            onClick={enter}
+            disabled={!selectedTeamId || loading}
+            className="w-full py-3 rounded-xl font-bold text-sm transition-colors bg-amber-500/20 border border-amber-500/40 text-amber-300 hover:bg-amber-500/30 disabled:opacity-40"
+          >
+            {loading ? "Entering..." : selectedTeamId ? `⚙️ Admin preview entry — ${status.teams.find((t) => t.id === selectedTeamId)?.name} (free)` : "⚙️ Select a team to enter (admin, free)"}
+          </button>
+        ) : (
+          <>
+            <button
+              onClick={enter}
+              disabled={!selectedTeamId || loading || user.points < 500}
+              className="btn-primary w-full"
+            >
+              {loading ? "Entering..." : selectedTeamId ? `Back ${status.teams.find((t) => t.id === selectedTeamId)?.name} — 500 pts` : "Select a team to enter"}
+            </button>
+            {user.points < 500 && (
+              <p className="text-xs text-rose-400 text-center">You need at least 500 pts to enter.</p>
+            )}
+          </>
         )}
       </div>
       <Navbar />

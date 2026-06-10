@@ -9,12 +9,13 @@ export async function GET() {
   const user = await getCurrentUser();
   if (!user?.isAdmin) return NextResponse.json({ error: "Admin only" }, { status: 403 });
 
-  const [config, slots, teams, entryCount, pickCounts] = await Promise.all([
+  const [config, slots, teams, entryCount, pickCounts, adminEntry] = await Promise.all([
     prisma.houseConfig.findUnique({ where: { id: 1 } }),
     prisma.bracketSlot.findMany({ orderBy: [{ round: "asc" }, { position: "asc" }] }),
     prisma.worldCupTeam.findMany({ select: { code: true, name: true, flag: true } }),
     prisma.worldCupEntry.count(),
     prisma.bracketPick.groupBy({ by: ["round"], _count: { id: true } }),
+    prisma.worldCupEntry.findUnique({ where: { userId: user.id } }),
   ]);
 
   const now = new Date();
@@ -40,6 +41,7 @@ export async function GET() {
     pickerCount: pickerCount.length,
     byRound,
     teams,
+    adminHasEntry: !!adminEntry,
   });
 }
 
@@ -193,6 +195,14 @@ export async function POST(req: Request) {
       first: { username: top2[0].user.username, fanScore: top2[0].fanScore, payout: firstShare },
       second: top2[1] ? { username: top2[1].user.username, fanScore: top2[1].fanScore, payout: secondShare } : null,
     });
+  }
+
+  // Remove admin's own test entry so they can re-enter or clean up before launch
+  if (action === "resetEntry") {
+    const entry = await prisma.worldCupEntry.findUnique({ where: { userId: user.id } });
+    if (!entry) return NextResponse.json({ error: "No entry to remove" }, { status: 404 });
+    await prisma.worldCupEntry.delete({ where: { userId: user.id } });
+    return NextResponse.json({ ok: true });
   }
 
   return NextResponse.json({ error: "Unknown action" }, { status: 400 });

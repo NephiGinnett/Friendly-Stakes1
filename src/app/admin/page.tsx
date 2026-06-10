@@ -76,7 +76,7 @@ export default function AdminPage() {
 
   // World Cup bracket state
   type BracketRoundInfo = { slotCount: number; expected: number; pickCount: number; slots: { round: string; position: number; team1Code: string; team2Code: string; winnerCode: string }[] };
-  type BracketStatus = { locked: boolean; bracketLockedAt: string | null; worldCupPlayerAt: string | null; entryCount: number; pickerCount: number; byRound: Record<string, BracketRoundInfo>; teams: { code: string; name: string; flag: string }[] };
+  type BracketStatus = { locked: boolean; bracketLockedAt: string | null; worldCupPlayerAt: string | null; entryCount: number; pickerCount: number; byRound: Record<string, BracketRoundInfo>; teams: { code: string; name: string; flag: string }[]; adminHasEntry: boolean };
   const [bracketStatus, setBracketStatus] = useState<BracketStatus | null>(null);
   const [bracketMsg, setBracketMsg] = useState<string | null>(null);
   const [bracketExpandRound, setBracketExpandRound] = useState<string | null>(null);
@@ -983,6 +983,29 @@ export default function AdminPage() {
                     <span>Players w/ picks</span>
                     <span className="text-white font-mono">{bracketStatus.pickerCount}</span>
                   </div>
+                </div>
+
+                {/* Admin preview entry controls */}
+                <div className="rounded-xl bg-amber-500/8 border border-amber-500/20 px-3 py-2.5 space-y-2">
+                  <p className="text-xs text-amber-300 font-semibold">⚙️ Admin preview</p>
+                  {bracketStatus.adminHasEntry ? (
+                    <div className="flex items-center gap-3">
+                      <p className="text-xs text-slate-400 flex-1">You have a test entry. <a href="/world-cup" target="_blank" className="text-violet-400 underline">Explore the event →</a></p>
+                      <button
+                        onClick={async () => {
+                          setBracketMsg(null);
+                          const res = await fetch("/api/admin/world-cup", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "resetEntry" }) });
+                          setBracketMsg(res.ok ? "Test entry removed." : "Error removing entry.");
+                          loadBracketStatus();
+                        }}
+                        className="text-xs px-3 py-1.5 rounded-lg bg-rose-500/15 border border-rose-500/30 text-rose-400 hover:bg-rose-500/25 transition-colors whitespace-nowrap"
+                      >
+                        Remove entry
+                      </button>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-slate-400">No test entry yet. <a href="/world-cup" target="_blank" className="text-violet-400 underline">Go to the event →</a> and enter for free to preview all pages.</p>
+                  )}
                 </div>
 
                 {/* Lock status */}
