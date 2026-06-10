@@ -19,6 +19,7 @@ type WCStatus = {
   takenTeamIds: number[];
   entry: Entry | null;
   monitorCans: number;
+  preEntryTeamId: number | null;
 };
 
 const CONFEDERATIONS = ["CONCACAF", "CONMEBOL", "UEFA", "CAF", "AFC", "OFC"];
@@ -38,7 +39,10 @@ export default function WorldCupPage() {
       .then(setUser);
     fetch("/api/world-cup")
       .then((r) => r.ok ? r.json() : null)
-      .then(setStatus);
+      .then((data) => {
+        setStatus(data);
+        if (data?.preEntryTeamId) setSelectedTeamId(data.preEntryTeamId);
+      });
   }, [router]);
 
   const enter = async () => {
