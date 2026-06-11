@@ -411,8 +411,8 @@ Over the course of the tournament, this pot grows with every wager settled. The 
 
 ```
   ┌────────────────────────────────────────────────────────┐
-  │  1st place  →  50% of total pot                        │
-  │  2nd place  →  remaining 50%                           │
+  │  1st place  →  65% of total pot                        │
+  │  2nd place  →  remaining 35%                           │
   │                                                        │
   │  Fan Score = total net profit from confidence wagers   │
   │             (win more, score higher)                   │

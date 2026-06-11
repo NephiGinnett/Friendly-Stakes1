@@ -180,8 +180,8 @@ export async function POST(req: Request) {
     });
     if (top2.length === 0) return NextResponse.json({ error: "No fan scores recorded" }, { status: 400 });
 
-    const firstShare = Math.floor(pot / 2);
-    const secondShare = pot - firstShare; // catches odd-number rounding
+    const firstShare = Math.floor(pot * 0.65);
+    const secondShare = pot - firstShare;
 
     await prisma.$transaction(async (tx) => {
       await tx.user.update({ where: { id: top2[0].userId }, data: { points: { increment: firstShare } } });
