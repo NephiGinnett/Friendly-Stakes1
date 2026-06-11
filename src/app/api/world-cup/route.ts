@@ -44,6 +44,7 @@ export async function GET() {
     entry: entry ? { teamId: entry.teamId, team: entry.team, createdAt: entry.createdAt } : null,
     teamEliminated: entry?.team?.eliminated ?? false,
     proxyTeam: entry?.proxyTeam ?? null,
+    proxyTeamEliminated: entry?.proxyTeam?.eliminated ?? false,
     monitorCans: entry?.monitorCans ?? 0,
     preEntryTeamId: preEntry?.teamId ?? null,
   });

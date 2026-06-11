@@ -24,8 +24,8 @@ export async function GET() {
     myTeam: entry.team,
     eliminated: entry.team.eliminated,
     proxyTeam: entry.proxyTeam ?? null,
-    proxyPaid: entry.proxyPaid,
-    proxyCost: entry.proxyPaid > 0 ? 0 : PROXY_COST, // free to change after first pick
+    proxyEliminated: entry.proxyTeam?.eliminated ?? false,
+    proxyCost: PROXY_COST,
     availableTeams,
   });
 }
@@ -52,27 +52,19 @@ export async function POST(req: Request) {
     proxyTeamName = team.name;
   }
 
-  const isFirstProxy = entry.proxyPaid === 0;
-
-  if (isFirstProxy) {
-    const freshUser = await prisma.user.findUnique({ where: { id: user.id } });
-    if (!freshUser || freshUser.points < PROXY_COST) {
-      return NextResponse.json({ error: `Not enough points (${PROXY_COST} required to back a proxy)` }, { status: 400 });
-    }
-    await prisma.$transaction(async (tx) => {
-      await tx.worldCupEntry.update({
-        where: { userId: user.id },
-        data: { proxyTeamId: teamId ?? null, proxyPaid: PROXY_COST },
-      });
-      await tx.user.update({ where: { id: user.id }, data: { points: { decrement: PROXY_COST } } });
-      await logPoints(tx, user.id, -PROXY_COST, `World Cup proxy entry — backing ${proxyTeamName}`);
-    });
-  } else {
-    await prisma.worldCupEntry.update({
-      where: { userId: user.id },
-      data: { proxyTeamId: teamId ?? null },
-    });
+  const freshUser = await prisma.user.findUnique({ where: { id: user.id } });
+  if (!freshUser || freshUser.points < PROXY_COST) {
+    return NextResponse.json({ error: `Not enough points (${PROXY_COST} required to back a proxy)` }, { status: 400 });
   }
 
-  return NextResponse.json({ ok: true, charged: isFirstProxy ? PROXY_COST : 0 });
+  await prisma.$transaction(async (tx) => {
+    await tx.worldCupEntry.update({
+      where: { userId: user.id },
+      data: { proxyTeamId: teamId ?? null, proxyPaid: { increment: PROXY_COST } },
+    });
+    await tx.user.update({ where: { id: user.id }, data: { points: { decrement: PROXY_COST } } });
+    await logPoints(tx, user.id, -PROXY_COST, `World Cup proxy entry — backing ${proxyTeamName}`);
+  });
+
+  return NextResponse.json({ ok: true, charged: PROXY_COST });
 }

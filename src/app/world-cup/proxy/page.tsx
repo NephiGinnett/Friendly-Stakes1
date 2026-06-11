@@ -66,11 +66,7 @@ export default function ProxyPage() {
           <p className="text-3xl">{myTeam.flag}</p>
           <p className="text-white font-bold">{myTeam.name} was eliminated</p>
           <p className="text-xs text-rose-400">Confidence wagers are no longer available. Pick a proxy team to keep doing parlays.</p>
-          {proxyCost > 0 ? (
-            <p className="text-xs text-amber-400 font-semibold">{proxyCost} pts · one-time fee · goes into the allegiance pool{userPoints !== null ? ` · you have ${userPoints.toLocaleString()} pts` : ""}</p>
-          ) : (
-            <p className="text-xs text-emerald-400 font-semibold">Already paid · change your proxy for free</p>
-          )}
+          <p className="text-xs text-amber-400 font-semibold">{proxyCost} pts each time · goes into the allegiance pool{userPoints !== null ? ` · you have ${userPoints.toLocaleString()} pts` : ""}</p>
         </div>
 
         {proxyTeam && selectedId !== proxyTeam.id && (
@@ -127,9 +123,7 @@ export default function ProxyPage() {
           className="btn-primary w-full"
         >
           {loading ? "Saving..." : selectedId
-            ? proxyCost > 0
-              ? `Back ${availableTeams.find((t) => t.id === selectedId)?.name ?? "..."} as proxy — ${proxyCost} pts`
-              : `Switch proxy to ${availableTeams.find((t) => t.id === selectedId)?.name ?? "..."}`
+            ? `Back ${availableTeams.find((t) => t.id === selectedId)?.name ?? "..."} as proxy — ${proxyCost} pts`
             : "Select a team"}
         </button>
         {proxyCost > 0 && userPoints !== null && userPoints < proxyCost && (

@@ -20,6 +20,7 @@ type WCStatus = {
   entry: Entry | null;
   teamEliminated: boolean;
   proxyTeam: { id: number; name: string; flag: string; code: string; confederation: string } | null;
+  proxyTeamEliminated: boolean;
   monitorCans: number;
   preEntryTeamId: number | null;
 };
@@ -125,12 +126,12 @@ export default function WorldCupPage() {
                 <p className="text-white font-bold text-lg">{team.name}</p>
                 <p className="text-xs text-rose-400 font-mono uppercase tracking-widest">Eliminated · {team.confederation}</p>
               </div>
-              {status.proxyTeam ? (
+              {status.proxyTeam && !status.proxyTeamEliminated ? (
                 <Link href="/world-cup/proxy" className="card flex items-center gap-4 hover:border-violet-500/40 transition-colors bg-violet-500/5 border-violet-500/20">
                   <span className="text-3xl">{status.proxyTeam.flag}</span>
                   <div>
                     <p className="font-semibold text-white">{status.proxyTeam.name} · Proxy</p>
-                    <p className="text-xs text-violet-400">Following for parlays · tap to change</p>
+                    <p className="text-xs text-violet-400">Following for parlays · tap to re-proxy · 250 pts</p>
                   </div>
                   <span className="ml-auto text-slate-600">›</span>
                 </Link>
@@ -138,8 +139,10 @@ export default function WorldCupPage() {
                 <Link href="/world-cup/proxy" className="card flex items-center gap-4 hover:border-amber-500/40 transition-colors bg-amber-500/5 border-amber-500/20">
                   <span className="text-3xl">🔄</span>
                   <div>
-                    <p className="font-semibold text-white">Pick a Proxy Team</p>
-                    <p className="text-xs text-amber-400">Still earn from parlays · 250 pts · goes into the allegiance pool</p>
+                    <p className="font-semibold text-white">
+                      {status.proxyTeamEliminated ? `${status.proxyTeam?.name} was knocked out` : "Pick a Proxy Team"}
+                    </p>
+                    <p className="text-xs text-amber-400">Back a new team · 250 pts · goes into the allegiance pool</p>
                   </div>
                   <span className="ml-auto text-slate-600">›</span>
                 </Link>
