@@ -286,25 +286,9 @@ export default function WorldCupPage() {
       <div className="max-w-lg mx-auto px-4 pt-0 space-y-4">
 
         {/* ── Hero banner ─────────────────────────────────────────────────── */}
-        {/* Replace /world-cup/hero.jpg with a ~800×360px stadium/trophy image */}
-        <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-emerald-950 via-[#0a1a0f] to-[#0f0f16] border border-emerald-900/40"
-          style={{ minHeight: 180 }}>
-          {/* Placeholder — swap out once you have art */}
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-6 text-center">
-            <div className="flex gap-3 text-5xl">🇺🇸⚽🏆</div>
-            <h2 className="text-white font-black text-2xl tracking-tight leading-tight">
-              FIFA World Cup<br />
-              <span className="text-emerald-400">2026</span>
-            </h2>
-            <p className="text-emerald-700 text-xs font-mono tracking-widest uppercase">June 11 — July 19 · USA, Canada, Mexico</p>
-          </div>
-          {/* Decorative pitch lines */}
-          <svg className="absolute inset-0 w-full h-full opacity-[0.04]" viewBox="0 0 400 180" fill="none">
-            <circle cx="200" cy="90" r="50" stroke="white" strokeWidth="2"/>
-            <line x1="200" y1="0" x2="200" y2="180" stroke="white" strokeWidth="2"/>
-            <rect x="0" y="30" width="60" height="120" stroke="white" strokeWidth="2"/>
-            <rect x="340" y="30" width="60" height="120" stroke="white" strokeWidth="2"/>
-          </svg>
+        <div className="relative rounded-2xl overflow-hidden border border-emerald-900/40" style={{ minHeight: 180 }}>
+          <img src="/hero.jpg" alt="FIFA World Cup 2026" className="w-full h-full object-cover absolute inset-0" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
         </div>
 
         {/* ── Event explainer ──────────────────────────────────────────────── */}
