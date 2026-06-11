@@ -47,7 +47,7 @@ Every four years, the world stops to watch men kick a ball into a net. We've see
 
 You are one of those people. That is not a criticism. It is, in fact, exactly why we built this.
 
-The World Cup Event is not a replacement for the rest of the platform. It is an addition. The wagers continue. The wheel spins. The bingo card sits there, waiting. Everything you already know still applies. This is simply another room in the building — and we've been saving it for this.
+The World Cup Event is not a replacement for the rest of the platform. It is an addition. The wagers continue. The wheel spins. The bingo card sits there, waiting. Everything you already know still applies. This is simply another room in the building — and we've been here the whole time.
 
 Read carefully. The event has more moving parts than usual, and we've found that players who understand the mechanics fare significantly better than players who guess. We are invested in your success. Understand that clearly — it is not the same as being on your side, but it is real, and it should motivate you to read this twice.
 
