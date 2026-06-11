@@ -22,6 +22,7 @@ type HistoryEntry = {
 type PageData = {
   myTeam: Team; confidenceStake: number; nextMatch: Match | null;
   opponents: Opponent[]; history: HistoryEntry[];
+  eliminated?: boolean;
 };
 
 export default function ConfidencePage() {
@@ -71,6 +72,33 @@ export default function ConfidencePage() {
     );
   }
   if (!data || !user) return null;
+
+  // Eliminated players cannot use confidence wagers
+  if (data.eliminated) {
+    return (
+      <div className="min-h-screen pb-20">
+        <header className="sticky top-0 z-40 bg-[rgb(15,15,22)]/90 backdrop-blur-lg border-b border-white/5">
+          <div className="max-w-lg mx-auto px-4 py-3 flex items-center gap-3">
+            <Link href="/world-cup" className="text-slate-400 hover:text-white text-sm">←</Link>
+            <div>
+              <h1 className="text-lg font-bold text-white">🤝 Confidence Wager</h1>
+              <p className="text-xs text-slate-500">{data.myTeam.flag} {data.myTeam.name}</p>
+            </div>
+          </div>
+        </header>
+        <div className="max-w-lg mx-auto px-4 pt-10 flex flex-col items-center gap-4 text-center">
+          <p className="text-4xl">{data.myTeam.flag}</p>
+          <p className="text-white font-bold text-lg">{data.myTeam.name} was eliminated</p>
+          <p className="text-slate-400 text-sm max-w-xs">Confidence wagers are no longer available since your team was knocked out of the tournament.</p>
+          <Link href="/world-cup/proxy" className="mt-2 px-5 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold transition-colors">
+            Pick a proxy team →
+          </Link>
+          <Link href="/world-cup" className="text-slate-500 text-sm hover:text-slate-300">← Back to World Cup</Link>
+        </div>
+        <Navbar />
+      </div>
+    );
+  }
 
   const { myTeam, confidenceStake, nextMatch, opponents, history } = data;
   const stakeNum = parseInt(stake) || 0;

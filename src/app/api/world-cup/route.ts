@@ -21,11 +21,12 @@ export async function GET() {
 
   await seedWorldCupTeams();
 
-  const [config, teams, entry, takenEntries] = await Promise.all([
+  const [config, teams, entry, takenEntries, preEntry] = await Promise.all([
     prisma.houseConfig.findUnique({ where: { id: 1 } }),
     prisma.worldCupTeam.findMany({ orderBy: [{ confederation: "asc" }, { name: "asc" }] }),
-    prisma.worldCupEntry.findUnique({ where: { userId: user.id }, include: { team: true } }),
+    prisma.worldCupEntry.findUnique({ where: { userId: user.id }, include: { team: true, proxyTeam: true } }),
     prisma.worldCupEntry.findMany({ select: { teamId: true } }),
+    prisma.worldCupPreEntry.findUnique({ where: { userId: user.id }, select: { teamId: true } }),
   ]);
 
   const visibility = getVisibility(
@@ -34,14 +35,18 @@ export async function GET() {
   );
 
   return NextResponse.json({
-    visibility,          // "hidden" | "preview" | "visible"
+    visibility,
     adminLiveAt: config?.worldCupAdminAt ?? null,
     playerLiveAt: config?.worldCupPlayerAt ?? null,
     eventEndAt: config?.worldCupEventEndAt ?? null,
     teams,
     takenTeamIds: takenEntries.map((e) => e.teamId),
     entry: entry ? { teamId: entry.teamId, team: entry.team, createdAt: entry.createdAt } : null,
+    teamEliminated: entry?.team?.eliminated ?? false,
+    proxyTeam: entry?.proxyTeam ?? null,
+    proxyTeamEliminated: entry?.proxyTeam?.eliminated ?? false,
     monitorCans: entry?.monitorCans ?? 0,
+    preEntryTeamId: preEntry?.teamId ?? null,
   });
 }
 
@@ -57,7 +62,7 @@ export async function POST(req: Request) {
     { worldCupAdminAt: config?.worldCupAdminAt ?? null, worldCupPlayerAt: config?.worldCupPlayerAt ?? null },
     user.isAdmin
   );
-  if (visibility === "hidden") return NextResponse.json({ error: "Event not yet open" }, { status: 403 });
+  if (visibility === "hidden" && !user.isAdmin) return NextResponse.json({ error: "Event not yet open" }, { status: 403 });
 
   const existing = await prisma.worldCupEntry.findUnique({ where: { userId: user.id } });
   if (existing) return NextResponse.json({ error: "You've already entered" }, { status: 409 });
@@ -68,12 +73,15 @@ export async function POST(req: Request) {
   const team = await prisma.worldCupTeam.findUnique({ where: { id: teamId } });
   if (!team) return NextResponse.json({ error: "Team not found" }, { status: 404 });
 
-  if (user.points < ENTRY_COST) return NextResponse.json({ error: "Not enough points (500 required)" }, { status: 400 });
+  const cost = user.isAdmin ? 0 : ENTRY_COST;
+  if (!user.isAdmin && user.points < ENTRY_COST) return NextResponse.json({ error: "Not enough points (500 required)" }, { status: 400 });
 
   await prisma.$transaction(async (tx) => {
-    await tx.worldCupEntry.create({ data: { userId: user.id, teamId, paid: ENTRY_COST } });
-    await tx.user.update({ where: { id: user.id }, data: { points: { decrement: ENTRY_COST } } });
-    await logPoints(tx, user.id, -ENTRY_COST, `World Cup 2026 entry — backing ${team.name}`);
+    await tx.worldCupEntry.create({ data: { userId: user.id, teamId, paid: cost } });
+    if (cost > 0) {
+      await tx.user.update({ where: { id: user.id }, data: { points: { decrement: cost } } });
+      await logPoints(tx, user.id, -cost, `World Cup 2026 entry — backing ${team.name}`);
+    }
   });
 
   return NextResponse.json({ ok: true, team });

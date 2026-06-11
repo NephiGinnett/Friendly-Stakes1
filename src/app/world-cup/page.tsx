@@ -18,7 +18,11 @@ type WCStatus = {
   teams: Team[];
   takenTeamIds: number[];
   entry: Entry | null;
+  teamEliminated: boolean;
+  proxyTeam: { id: number; name: string; flag: string; code: string; confederation: string } | null;
+  proxyTeamEliminated: boolean;
   monitorCans: number;
+  preEntryTeamId: number | null;
 };
 
 const CONFEDERATIONS = ["CONCACAF", "CONMEBOL", "UEFA", "CAF", "AFC", "OFC"];
@@ -38,7 +42,10 @@ export default function WorldCupPage() {
       .then(setUser);
     fetch("/api/world-cup")
       .then((r) => r.ok ? r.json() : null)
-      .then(setStatus);
+      .then((data) => {
+        setStatus(data);
+        if (data?.preEntryTeamId) setSelectedTeamId(data.preEntryTeamId);
+      });
   }, [router]);
 
   const enter = async () => {
@@ -111,17 +118,50 @@ export default function WorldCupPage() {
         </header>
 
         <div className="max-w-lg mx-auto px-4 pt-5 space-y-4">
-          {/* My team card */}
-          <div className="card bg-emerald-500/10 border-emerald-500/30 text-center space-y-1">
-            <p className="text-3xl">{team.flag}</p>
-            <p className="text-white font-bold text-lg">{team.name}</p>
-            <p className="text-xs text-emerald-400 font-mono uppercase tracking-widest">{team.confederation} · Your allegiance</p>
-          </div>
-
-          {/* Allegiance pool note */}
-          <div className="rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-xs text-slate-400 text-center">
-            Your 500 pts are in the allegiance pool. All entries split equally to players backing the World Cup champion.
-          </div>
+          {/* Eliminated notice + proxy */}
+          {status.teamEliminated ? (
+            <>
+              <div className="rounded-2xl bg-rose-500/10 border border-rose-500/30 px-4 py-3 text-center space-y-1">
+                <p className="text-3xl">{team.flag}</p>
+                <p className="text-white font-bold text-lg">{team.name}</p>
+                <p className="text-xs text-rose-400 font-mono uppercase tracking-widest">Eliminated · {team.confederation}</p>
+              </div>
+              {status.proxyTeam && !status.proxyTeamEliminated ? (
+                <Link href="/world-cup/proxy" className="card flex items-center gap-4 hover:border-violet-500/40 transition-colors bg-violet-500/5 border-violet-500/20">
+                  <span className="text-3xl">{status.proxyTeam.flag}</span>
+                  <div>
+                    <p className="font-semibold text-white">{status.proxyTeam.name} · Proxy</p>
+                    <p className="text-xs text-violet-400">Following for parlays · tap to re-proxy · 250 pts</p>
+                  </div>
+                  <span className="ml-auto text-slate-600">›</span>
+                </Link>
+              ) : (
+                <Link href="/world-cup/proxy" className="card flex items-center gap-4 hover:border-amber-500/40 transition-colors bg-amber-500/5 border-amber-500/20">
+                  <span className="text-3xl">🔄</span>
+                  <div>
+                    <p className="font-semibold text-white">
+                      {status.proxyTeamEliminated ? `${status.proxyTeam?.name} was knocked out` : "Pick a Proxy Team"}
+                    </p>
+                    <p className="text-xs text-amber-400">Back a new team · 250 pts · goes into the allegiance pool</p>
+                  </div>
+                  <span className="ml-auto text-slate-600">›</span>
+                </Link>
+              )}
+            </>
+          ) : (
+            <>
+              {/* My team card */}
+              <div className="card bg-emerald-500/10 border-emerald-500/30 text-center space-y-1">
+                <p className="text-3xl">{team.flag}</p>
+                <p className="text-white font-bold text-lg">{team.name}</p>
+                <p className="text-xs text-emerald-400 font-mono uppercase tracking-widest">{team.confederation} · Your allegiance</p>
+              </div>
+              {/* Allegiance pool note */}
+              <div className="rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-xs text-slate-400 text-center">
+                Your 500 pts are in the allegiance pool. All entries split equally to players backing the World Cup champion.
+              </div>
+            </>
+          )}
 
           {/* Bracket */}
           <Link href="/world-cup/bracket" className="card flex items-center gap-4 hover:border-amber-500/40 transition-colors bg-amber-500/5 border-amber-500/20">
@@ -143,14 +183,25 @@ export default function WorldCupPage() {
             <span className="ml-auto text-slate-600">›</span>
           </Link>
 
-          <Link href="/world-cup/confidence" className="card flex items-center gap-4 hover:border-violet-500/40 transition-colors">
-            <span className="text-3xl">🤝</span>
-            <div>
-              <p className="font-semibold text-white">Confidence Wager</p>
-              <p className="text-xs text-slate-500">Head-to-head bets with players backing the opposing team</p>
+          {status.teamEliminated ? (
+            <div className="card flex items-center gap-4 opacity-40 cursor-not-allowed">
+              <span className="text-3xl">🤝</span>
+              <div>
+                <p className="font-semibold text-white">Confidence Wager</p>
+                <p className="text-xs text-slate-500">Not available — your team was eliminated</p>
+              </div>
+              <span className="ml-auto text-slate-600">✕</span>
             </div>
-            <span className="ml-auto text-slate-600">›</span>
-          </Link>
+          ) : (
+            <Link href="/world-cup/confidence" className="card flex items-center gap-4 hover:border-violet-500/40 transition-colors">
+              <span className="text-3xl">🤝</span>
+              <div>
+                <p className="font-semibold text-white">Confidence Wager</p>
+                <p className="text-xs text-slate-500">Head-to-head bets with players backing the opposing team</p>
+              </div>
+              <span className="ml-auto text-slate-600">›</span>
+            </Link>
+          )}
 
           <Link href="/world-cup/parlay" className="card flex items-center gap-4 hover:border-violet-500/40 transition-colors">
             <span className="text-3xl">🎰</span>
@@ -203,8 +254,8 @@ export default function WorldCupPage() {
           <Link href="/world-cup/standings" className="card flex items-center gap-4 hover:border-slate-500/40 transition-colors">
             <span className="text-3xl">📊</span>
             <div>
-              <p className="font-semibold text-white">Mini Game Standings</p>
-              <p className="text-xs text-slate-500">Shootout scores · Keeper save rates</p>
+              <p className="font-semibold text-white">Standings</p>
+              <p className="text-xs text-slate-500">Confidence W/L · Shootout · Keeper save rates</p>
             </div>
             <span className="ml-auto text-slate-600">›</span>
           </Link>
@@ -235,25 +286,9 @@ export default function WorldCupPage() {
       <div className="max-w-lg mx-auto px-4 pt-0 space-y-4">
 
         {/* ── Hero banner ─────────────────────────────────────────────────── */}
-        {/* Replace /world-cup/hero.jpg with a ~800×360px stadium/trophy image */}
-        <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-emerald-950 via-[#0a1a0f] to-[#0f0f16] border border-emerald-900/40"
-          style={{ minHeight: 180 }}>
-          {/* Placeholder — swap out once you have art */}
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-6 text-center">
-            <div className="flex gap-3 text-5xl">🇺🇸⚽🏆</div>
-            <h2 className="text-white font-black text-2xl tracking-tight leading-tight">
-              FIFA World Cup<br />
-              <span className="text-emerald-400">2026</span>
-            </h2>
-            <p className="text-emerald-700 text-xs font-mono tracking-widest uppercase">June 11 — July 19 · USA, Canada, Mexico</p>
-          </div>
-          {/* Decorative pitch lines */}
-          <svg className="absolute inset-0 w-full h-full opacity-[0.04]" viewBox="0 0 400 180" fill="none">
-            <circle cx="200" cy="90" r="50" stroke="white" strokeWidth="2"/>
-            <line x1="200" y1="0" x2="200" y2="180" stroke="white" strokeWidth="2"/>
-            <rect x="0" y="30" width="60" height="120" stroke="white" strokeWidth="2"/>
-            <rect x="340" y="30" width="60" height="120" stroke="white" strokeWidth="2"/>
-          </svg>
+        <div className="relative rounded-2xl overflow-hidden border border-emerald-900/40" style={{ minHeight: 180 }}>
+          <img src="/hero.jpg" alt="FIFA World Cup 2026" className="w-full h-full object-cover absolute inset-0" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
         </div>
 
         {/* ── Event explainer ──────────────────────────────────────────────── */}
@@ -342,16 +377,27 @@ export default function WorldCupPage() {
 
         {error && <p className="text-rose-400 text-sm text-center">{error}</p>}
 
-        <button
-          onClick={enter}
-          disabled={!selectedTeamId || loading || user.points < 500}
-          className="btn-primary w-full"
-        >
-          {loading ? "Entering..." : selectedTeamId ? `Back ${status.teams.find((t) => t.id === selectedTeamId)?.name} — 500 pts` : "Select a team to enter"}
-        </button>
-
-        {user.points < 500 && (
-          <p className="text-xs text-rose-400 text-center">You need at least 500 pts to enter.</p>
+        {user.isAdmin ? (
+          <button
+            onClick={enter}
+            disabled={!selectedTeamId || loading}
+            className="w-full py-3 rounded-xl font-bold text-sm transition-colors bg-amber-500/20 border border-amber-500/40 text-amber-300 hover:bg-amber-500/30 disabled:opacity-40"
+          >
+            {loading ? "Entering..." : selectedTeamId ? `⚙️ Admin preview entry — ${status.teams.find((t) => t.id === selectedTeamId)?.name} (free)` : "⚙️ Select a team to enter (admin, free)"}
+          </button>
+        ) : (
+          <>
+            <button
+              onClick={enter}
+              disabled={!selectedTeamId || loading || user.points < 500}
+              className="btn-primary w-full"
+            >
+              {loading ? "Entering..." : selectedTeamId ? `Back ${status.teams.find((t) => t.id === selectedTeamId)?.name} — 500 pts` : "Select a team to enter"}
+            </button>
+            {user.points < 500 && (
+              <p className="text-xs text-rose-400 text-center">You need at least 500 pts to enter.</p>
+            )}
+          </>
         )}
       </div>
       <Navbar />

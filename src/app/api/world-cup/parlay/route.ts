@@ -12,15 +12,17 @@ export async function GET() {
 
   const entry = await prisma.worldCupEntry.findUnique({
     where: { userId: user.id },
-    include: { team: true },
+    include: { team: true, proxyTeam: true },
   });
   if (!entry) return NextResponse.json({ error: "Not entered" }, { status: 404 });
 
-  // Next match for this player's team
+  const effectiveTeamId = entry.proxyTeamId ?? entry.teamId;
+
+  // Next match for this player's effective team
   const nextMatch = await prisma.worldCupMatch.findFirst({
     where: {
       status: "SCHEDULED",
-      OR: [{ homeTeamId: entry.teamId }, { awayTeamId: entry.teamId }],
+      OR: [{ homeTeamId: effectiveTeamId }, { awayTeamId: effectiveTeamId }],
     },
     orderBy: { kickoff: "asc" },
     include: { homeTeam: true, awayTeam: true },
@@ -36,13 +38,13 @@ export async function GET() {
 
   // Find the opposing team's player with the highest confidence stake
   const opposingTeamId = nextMatch
-    ? nextMatch.homeTeamId === entry.teamId ? nextMatch.awayTeamId : nextMatch.homeTeamId
+    ? nextMatch.homeTeamId === effectiveTeamId ? nextMatch.awayTeamId : nextMatch.homeTeamId
     : null;
 
   let opponent: { userId: number; username: string; confidenceStake: number } | null = null;
   if (opposingTeamId) {
     const oppEntry = await prisma.worldCupEntry.findFirst({
-      where: { teamId: opposingTeamId },
+      where: { OR: [{ teamId: opposingTeamId ?? -1 }, { proxyTeamId: opposingTeamId ?? -1 }] },
       orderBy: { confidenceStake: "desc" },
       include: { user: { select: { id: true, username: true } } },
     });
@@ -91,7 +93,8 @@ export async function GET() {
   });
 
   return NextResponse.json({
-    myTeam: entry.team,
+    myTeam: entry.proxyTeam ?? entry.team,
+    isProxy: !!entry.proxyTeamId,
     confidenceStake: entry.confidenceStake,
     monitorCans: entry.monitorCans,
     nextMatch,
@@ -127,6 +130,8 @@ export async function POST(req: Request) {
   });
   if (!entry) return NextResponse.json({ error: "Not entered" }, { status: 404 });
 
+  const effectiveTeamId = entry.proxyTeamId ?? entry.teamId;
+
   const match = await prisma.worldCupMatch.findUnique({ where: { id: matchId } });
   if (!match || match.status !== "SCHEDULED") {
     return NextResponse.json({ error: "Match not available" }, { status: 400 });
@@ -139,15 +144,15 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Parlay window is 2h–1h before kickoff" }, { status: 400 });
   }
 
-  // Verify proposer's team is in this match
-  const isHome = match.homeTeamId === entry.teamId;
-  const isAway = match.awayTeamId === entry.teamId;
+  // Verify proposer's effective team is in this match
+  const isHome = match.homeTeamId === effectiveTeamId;
+  const isAway = match.awayTeamId === effectiveTeamId;
   if (!isHome && !isAway) return NextResponse.json({ error: "Your team is not in this match" }, { status: 400 });
 
   // Find opponent with highest confidence stake backing the other team
   const opposingTeamId = isHome ? match.awayTeamId : match.homeTeamId;
   const oppEntry = await prisma.worldCupEntry.findFirst({
-    where: { teamId: opposingTeamId ?? -1 },
+    where: { OR: [{ teamId: opposingTeamId ?? -1 }, { proxyTeamId: opposingTeamId ?? -1 }] },
     orderBy: { confidenceStake: "desc" },
     include: { user: { select: { id: true } } },
   });

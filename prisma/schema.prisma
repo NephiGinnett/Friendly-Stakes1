@@ -451,18 +451,23 @@ model WorldCupTeam {
   flag          String           // flag emoji
   confederation String           // UEFA, CONMEBOL, CONCACAF, CAF, AFC, OFC
   group         String?          // set once group draw happens
-  entries       WorldCupEntry[]
+  eliminated    Boolean          @default(false)
+  entries       WorldCupEntry[]  @relation("MainTeam")
+  proxyEntries  WorldCupEntry[]  @relation("ProxyTeam")
   homeMatches   WorldCupMatch[]  @relation("HomeTeam")
   awayMatches   WorldCupMatch[]  @relation("AwayTeam")
 }
 
 model WorldCupEntry {
-  id               Int          @id @default(autoincrement())
-  userId           Int          @unique
-  user             User         @relation(fields: [userId], references: [id])
-  teamId           Int          @unique  // one player per team
-  team             WorldCupTeam @relation(fields: [teamId], references: [id])
+  id               Int           @id @default(autoincrement())
+  userId           Int           @unique
+  user             User          @relation(fields: [userId], references: [id])
+  teamId           Int           @unique  // one player per team
+  team             WorldCupTeam  @relation("MainTeam", fields: [teamId], references: [id])
+  proxyTeamId      Int?
+  proxyTeam        WorldCupTeam? @relation("ProxyTeam", fields: [proxyTeamId], references: [id])
   paid              Int          @default(500)
+  proxyPaid         Int          @default(0)
   confidenceStake   Int          @default(100)
   monitorCans       Int          @default(0) // 🥤 MONITOR event currency
   fanScore          Int          @default(0) // Fan Competition cumulative score
@@ -561,7 +566,7 @@ model WorldCupPreEntry {
   id              Int      @id @default(autoincrement())
   userId          Int      @unique
   user            User     @relation(fields: [userId], references: [id])
-  teamId          Int?     // team they intend to back on entry
+  teamId          Int?     @unique // team they intend to back — one player per team
   championPickId  Int?     // predicted World Cup winner
   runnerUpPickId  Int?     // predicted finalist
   createdAt       DateTime @default(now())
