@@ -451,17 +451,21 @@ model WorldCupTeam {
   flag          String           // flag emoji
   confederation String           // UEFA, CONMEBOL, CONCACAF, CAF, AFC, OFC
   group         String?          // set once group draw happens
-  entries       WorldCupEntry[]
+  eliminated    Boolean          @default(false)
+  entries       WorldCupEntry[]  @relation("MainTeam")
+  proxyEntries  WorldCupEntry[]  @relation("ProxyTeam")
   homeMatches   WorldCupMatch[]  @relation("HomeTeam")
   awayMatches   WorldCupMatch[]  @relation("AwayTeam")
 }
 
 model WorldCupEntry {
-  id               Int          @id @default(autoincrement())
-  userId           Int          @unique
-  user             User         @relation(fields: [userId], references: [id])
-  teamId           Int          @unique  // one player per team
-  team             WorldCupTeam @relation(fields: [teamId], references: [id])
+  id               Int           @id @default(autoincrement())
+  userId           Int           @unique
+  user             User          @relation(fields: [userId], references: [id])
+  teamId           Int           @unique  // one player per team
+  team             WorldCupTeam  @relation("MainTeam", fields: [teamId], references: [id])
+  proxyTeamId      Int?
+  proxyTeam        WorldCupTeam? @relation("ProxyTeam", fields: [proxyTeamId], references: [id])
   paid              Int          @default(500)
   confidenceStake   Int          @default(100)
   monitorCans       Int          @default(0) // 🥤 MONITOR event currency

@@ -76,12 +76,13 @@ export default function AdminPage() {
 
   // World Cup bracket state
   type BracketRoundInfo = { slotCount: number; expected: number; pickCount: number; slots: { round: string; position: number; team1Code: string; team2Code: string; winnerCode: string }[] };
-  type BracketStatus = { locked: boolean; bracketLockedAt: string | null; worldCupPlayerAt: string | null; entryCount: number; pickerCount: number; byRound: Record<string, BracketRoundInfo>; teams: { code: string; name: string; flag: string }[]; adminHasEntry: boolean };
+  type BracketStatus = { locked: boolean; bracketLockedAt: string | null; worldCupPlayerAt: string | null; entryCount: number; pickerCount: number; byRound: Record<string, BracketRoundInfo>; teams: { id: number; code: string; name: string; flag: string; eliminated: boolean }[]; adminHasEntry: boolean; eliminatedCount: number };
   const [bracketStatus, setBracketStatus] = useState<BracketStatus | null>(null);
   const [bracketMsg, setBracketMsg] = useState<string | null>(null);
   const [bracketExpandRound, setBracketExpandRound] = useState<string | null>(null);
   const [seedForm, setSeedForm] = useState({ round: "R32", position: "0", team1Code: "", team2Code: "" });
   const [seeding, setSeeding] = useState(false);
+  const [elimTeamCode, setElimTeamCode] = useState("");
 
   const loadBracketStatus = () =>
     fetch("/api/admin/world-cup").then((r) => r.ok ? r.json() : null).then(setBracketStatus);
@@ -1133,6 +1134,70 @@ export default function AdminPage() {
                   >
                     {seeding ? "Seeding..." : "Seed this slot"}
                   </button>
+                </div>
+
+                {/* Team elimination */}
+                <div className="space-y-2 pt-1 border-t border-white/5">
+                  <p className="text-xs text-slate-500 font-mono uppercase tracking-widest">
+                    Team elimination · {bracketStatus.eliminatedCount} team{bracketStatus.eliminatedCount !== 1 ? "s" : ""} out
+                  </p>
+                  {/* Currently eliminated */}
+                  {bracketStatus.teams.filter(t => t.eliminated).length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {bracketStatus.teams.filter(t => t.eliminated).map(t => (
+                        <button
+                          key={t.id}
+                          onClick={async () => {
+                            setBracketMsg(null);
+                            const res = await fetch("/api/admin/world-cup", {
+                              method: "POST", headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ action: "restoreTeam", teamId: t.id }),
+                            });
+                            const d = await res.json();
+                            setBracketMsg(res.ok ? `Restored ${t.flag} ${t.name}` : (d.error ?? "Error"));
+                            loadBracketStatus();
+                          }}
+                          className="flex items-center gap-1 px-2 py-1 rounded-lg bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs hover:bg-rose-500/25 transition-colors"
+                          title="Click to restore"
+                        >
+                          {t.flag} {t.name} <span className="text-rose-500 ml-0.5">↩</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {/* Eliminate dropdown */}
+                  <div className="flex gap-2">
+                    <select
+                      value={elimTeamCode}
+                      onChange={(e) => setElimTeamCode(e.target.value)}
+                      className="flex-1 bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white"
+                    >
+                      <option value="">Select team to eliminate…</option>
+                      {bracketStatus.teams.filter(t => !t.eliminated).sort((a, b) => a.name.localeCompare(b.name)).map(t => (
+                        <option key={t.id} value={String(t.id)}>{t.flag} {t.name}</option>
+                      ))}
+                    </select>
+                    <button
+                      disabled={!elimTeamCode}
+                      onClick={async () => {
+                        if (!elimTeamCode) return;
+                        setBracketMsg(null);
+                        const teamId = parseInt(elimTeamCode);
+                        const teamName = bracketStatus.teams.find(t => t.id === teamId)?.name ?? elimTeamCode;
+                        const res = await fetch("/api/admin/world-cup", {
+                          method: "POST", headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ action: "eliminateTeam", teamId }),
+                        });
+                        const d = await res.json();
+                        setBracketMsg(res.ok ? `Eliminated ${teamName}` : (d.error ?? "Error"));
+                        setElimTeamCode("");
+                        loadBracketStatus();
+                      }}
+                      className="px-3 py-1.5 rounded-lg bg-rose-500/20 border border-rose-500/30 text-rose-300 text-xs hover:bg-rose-500/30 transition-colors disabled:opacity-40 whitespace-nowrap"
+                    >
+                      Eliminate
+                    </button>
+                  </div>
                 </div>
 
                 {bracketMsg && (

@@ -12,6 +12,10 @@ export async function GET() {
   });
   if (!entry) return NextResponse.json({ error: "Not entered" }, { status: 404 });
 
+  if (entry.team.eliminated) {
+    return NextResponse.json({ eliminated: true, myTeam: entry.team });
+  }
+
   // Next scheduled match for this player's team
   const nextMatch = await prisma.worldCupMatch.findFirst({
     where: {
@@ -70,8 +74,9 @@ export async function POST(req: Request) {
   const { stake } = await req.json();
   const stakeNum = Math.max(0, Math.min(parseInt(stake) || 100, user.points));
 
-  const entry = await prisma.worldCupEntry.findUnique({ where: { userId: user.id } });
+  const entry = await prisma.worldCupEntry.findUnique({ where: { userId: user.id }, include: { team: true } });
   if (!entry) return NextResponse.json({ error: "Not entered" }, { status: 404 });
+  if (entry.team.eliminated) return NextResponse.json({ error: "Confidence wagers not available — your team was eliminated" }, { status: 403 });
 
   await prisma.worldCupEntry.update({
     where: { userId: user.id },

@@ -24,7 +24,7 @@ export async function GET() {
   const [config, teams, entry, takenEntries, preEntry] = await Promise.all([
     prisma.houseConfig.findUnique({ where: { id: 1 } }),
     prisma.worldCupTeam.findMany({ orderBy: [{ confederation: "asc" }, { name: "asc" }] }),
-    prisma.worldCupEntry.findUnique({ where: { userId: user.id }, include: { team: true } }),
+    prisma.worldCupEntry.findUnique({ where: { userId: user.id }, include: { team: true, proxyTeam: true } }),
     prisma.worldCupEntry.findMany({ select: { teamId: true } }),
     prisma.worldCupPreEntry.findUnique({ where: { userId: user.id }, select: { teamId: true } }),
   ]);
@@ -42,6 +42,8 @@ export async function GET() {
     teams,
     takenTeamIds: takenEntries.map((e) => e.teamId),
     entry: entry ? { teamId: entry.teamId, team: entry.team, createdAt: entry.createdAt } : null,
+    teamEliminated: entry?.team?.eliminated ?? false,
+    proxyTeam: entry?.proxyTeam ?? null,
     monitorCans: entry?.monitorCans ?? 0,
     preEntryTeamId: preEntry?.teamId ?? null,
   });

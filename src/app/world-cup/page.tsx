@@ -18,6 +18,8 @@ type WCStatus = {
   teams: Team[];
   takenTeamIds: number[];
   entry: Entry | null;
+  teamEliminated: boolean;
+  proxyTeam: { id: number; name: string; flag: string; code: string; confederation: string } | null;
   monitorCans: number;
   preEntryTeamId: number | null;
 };
@@ -115,17 +117,48 @@ export default function WorldCupPage() {
         </header>
 
         <div className="max-w-lg mx-auto px-4 pt-5 space-y-4">
-          {/* My team card */}
-          <div className="card bg-emerald-500/10 border-emerald-500/30 text-center space-y-1">
-            <p className="text-3xl">{team.flag}</p>
-            <p className="text-white font-bold text-lg">{team.name}</p>
-            <p className="text-xs text-emerald-400 font-mono uppercase tracking-widest">{team.confederation} · Your allegiance</p>
-          </div>
-
-          {/* Allegiance pool note */}
-          <div className="rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-xs text-slate-400 text-center">
-            Your 500 pts are in the allegiance pool. All entries split equally to players backing the World Cup champion.
-          </div>
+          {/* Eliminated notice + proxy */}
+          {status.teamEliminated ? (
+            <>
+              <div className="rounded-2xl bg-rose-500/10 border border-rose-500/30 px-4 py-3 text-center space-y-1">
+                <p className="text-3xl">{team.flag}</p>
+                <p className="text-white font-bold text-lg">{team.name}</p>
+                <p className="text-xs text-rose-400 font-mono uppercase tracking-widest">Eliminated · {team.confederation}</p>
+              </div>
+              {status.proxyTeam ? (
+                <Link href="/world-cup/proxy" className="card flex items-center gap-4 hover:border-violet-500/40 transition-colors bg-violet-500/5 border-violet-500/20">
+                  <span className="text-3xl">{status.proxyTeam.flag}</span>
+                  <div>
+                    <p className="font-semibold text-white">{status.proxyTeam.name} · Proxy</p>
+                    <p className="text-xs text-violet-400">Following for parlays · tap to change</p>
+                  </div>
+                  <span className="ml-auto text-slate-600">›</span>
+                </Link>
+              ) : (
+                <Link href="/world-cup/proxy" className="card flex items-center gap-4 hover:border-amber-500/40 transition-colors bg-amber-500/5 border-amber-500/20">
+                  <span className="text-3xl">🔄</span>
+                  <div>
+                    <p className="font-semibold text-white">Pick a Proxy Team</p>
+                    <p className="text-xs text-amber-400">Still earn from parlays · free to set</p>
+                  </div>
+                  <span className="ml-auto text-slate-600">›</span>
+                </Link>
+              )}
+            </>
+          ) : (
+            <>
+              {/* My team card */}
+              <div className="card bg-emerald-500/10 border-emerald-500/30 text-center space-y-1">
+                <p className="text-3xl">{team.flag}</p>
+                <p className="text-white font-bold text-lg">{team.name}</p>
+                <p className="text-xs text-emerald-400 font-mono uppercase tracking-widest">{team.confederation} · Your allegiance</p>
+              </div>
+              {/* Allegiance pool note */}
+              <div className="rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-xs text-slate-400 text-center">
+                Your 500 pts are in the allegiance pool. All entries split equally to players backing the World Cup champion.
+              </div>
+            </>
+          )}
 
           {/* Bracket */}
           <Link href="/world-cup/bracket" className="card flex items-center gap-4 hover:border-amber-500/40 transition-colors bg-amber-500/5 border-amber-500/20">
@@ -147,14 +180,25 @@ export default function WorldCupPage() {
             <span className="ml-auto text-slate-600">›</span>
           </Link>
 
-          <Link href="/world-cup/confidence" className="card flex items-center gap-4 hover:border-violet-500/40 transition-colors">
-            <span className="text-3xl">🤝</span>
-            <div>
-              <p className="font-semibold text-white">Confidence Wager</p>
-              <p className="text-xs text-slate-500">Head-to-head bets with players backing the opposing team</p>
+          {status.teamEliminated ? (
+            <div className="card flex items-center gap-4 opacity-40 cursor-not-allowed">
+              <span className="text-3xl">🤝</span>
+              <div>
+                <p className="font-semibold text-white">Confidence Wager</p>
+                <p className="text-xs text-slate-500">Not available — your team was eliminated</p>
+              </div>
+              <span className="ml-auto text-slate-600">✕</span>
             </div>
-            <span className="ml-auto text-slate-600">›</span>
-          </Link>
+          ) : (
+            <Link href="/world-cup/confidence" className="card flex items-center gap-4 hover:border-violet-500/40 transition-colors">
+              <span className="text-3xl">🤝</span>
+              <div>
+                <p className="font-semibold text-white">Confidence Wager</p>
+                <p className="text-xs text-slate-500">Head-to-head bets with players backing the opposing team</p>
+              </div>
+              <span className="ml-auto text-slate-600">›</span>
+            </Link>
+          )}
 
           <Link href="/world-cup/parlay" className="card flex items-center gap-4 hover:border-violet-500/40 transition-colors">
             <span className="text-3xl">🎰</span>

@@ -1,0 +1,2 @@
+ALTER TABLE "WorldCupTeam" ADD COLUMN "eliminated" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "WorldCupEntry" ADD COLUMN "proxyTeamId" INTEGER;

@@ -9,13 +9,14 @@ export async function GET() {
   const user = await getCurrentUser();
   if (!user?.isAdmin) return NextResponse.json({ error: "Admin only" }, { status: 403 });
 
-  const [config, slots, teams, entryCount, pickCounts, adminEntry] = await Promise.all([
+  const [config, slots, teams, entryCount, pickCounts, adminEntry, eliminatedCount] = await Promise.all([
     prisma.houseConfig.findUnique({ where: { id: 1 } }),
     prisma.bracketSlot.findMany({ orderBy: [{ round: "asc" }, { position: "asc" }] }),
-    prisma.worldCupTeam.findMany({ select: { code: true, name: true, flag: true } }),
+    prisma.worldCupTeam.findMany({ select: { id: true, code: true, name: true, flag: true, eliminated: true } }),
     prisma.worldCupEntry.count(),
     prisma.bracketPick.groupBy({ by: ["round"], _count: { id: true } }),
     prisma.worldCupEntry.findUnique({ where: { userId: user.id } }),
+    prisma.worldCupTeam.count({ where: { eliminated: true } }),
   ]);
 
   const now = new Date();
@@ -41,6 +42,7 @@ export async function GET() {
     pickerCount: pickerCount.length,
     byRound,
     teams,
+    eliminatedCount,
     adminHasEntry: !!adminEntry,
   });
 }
@@ -202,6 +204,22 @@ export async function POST(req: Request) {
     const entry = await prisma.worldCupEntry.findUnique({ where: { userId: user.id } });
     if (!entry) return NextResponse.json({ error: "No entry to remove" }, { status: 404 });
     await prisma.worldCupEntry.delete({ where: { userId: user.id } });
+    return NextResponse.json({ ok: true });
+  }
+
+  // Mark a team as eliminated (triggers proxy feature for that team's player)
+  if (action === "eliminateTeam") {
+    const { teamId: elimTeamId } = body;
+    if (!elimTeamId) return NextResponse.json({ error: "teamId required" }, { status: 400 });
+    await prisma.worldCupTeam.update({ where: { id: elimTeamId }, data: { eliminated: true } });
+    return NextResponse.json({ ok: true });
+  }
+
+  // Restore a team (undo elimination — e.g. admin error)
+  if (action === "restoreTeam") {
+    const { teamId: restoreTeamId } = body;
+    if (!restoreTeamId) return NextResponse.json({ error: "teamId required" }, { status: 400 });
+    await prisma.worldCupTeam.update({ where: { id: restoreTeamId }, data: { eliminated: false } });
     return NextResponse.json({ ok: true });
   }
 
