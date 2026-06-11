@@ -254,8 +254,8 @@ export default function WorldCupPage() {
           <Link href="/world-cup/standings" className="card flex items-center gap-4 hover:border-slate-500/40 transition-colors">
             <span className="text-3xl">📊</span>
             <div>
-              <p className="font-semibold text-white">Mini Game Standings</p>
-              <p className="text-xs text-slate-500">Shootout scores · Keeper save rates</p>
+              <p className="font-semibold text-white">Standings</p>
+              <p className="text-xs text-slate-500">Confidence W/L · Shootout · Keeper save rates</p>
             </div>
             <span className="ml-auto text-slate-600">›</span>
           </Link>

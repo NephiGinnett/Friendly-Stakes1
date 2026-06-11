@@ -7,12 +7,14 @@ import Navbar from "@/components/Navbar";
 
 type ShootoutRow = { username: string; flag: string; plays: number; bestScore: number; totalCans: number };
 type ReflexRow = { username: string; flag: string; plays: number; totalSaves: number; saveRate: number; totalCans: number };
+type ConfidenceRow = { username: string; flag: string; teamName: string; wins: number; losses: number; winRate: number; netPoints: number };
 
 export default function StandingsPage() {
   const router = useRouter();
   const [shootout, setShootout] = useState<ShootoutRow[]>([]);
   const [reflex, setReflex] = useState<ReflexRow[]>([]);
-  const [tab, setTab] = useState<"shootout" | "reflex">("shootout");
+  const [confidence, setConfidence] = useState<ConfidenceRow[]>([]);
+  const [tab, setTab] = useState<"confidence" | "shootout" | "reflex">("confidence");
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState("");
 
@@ -20,7 +22,7 @@ export default function StandingsPage() {
     fetch("/api/auth/me").then((r) => { if (!r.ok) router.push("/login"); });
     fetch("/api/world-cup/standings")
       .then((r) => r.ok ? r.json() : r.json().then((d: { error: string }) => { throw new Error(d.error); }))
-      .then((d) => { setShootout(d.shootout); setReflex(d.reflex); setLoaded(true); })
+      .then((d) => { setShootout(d.shootout); setReflex(d.reflex); setConfidence(d.confidence ?? []); setLoaded(true); })
       .catch((e) => setError(e.message));
   }, [router]);
 
@@ -43,7 +45,7 @@ export default function StandingsPage() {
       <header className="sticky top-0 z-40 bg-[rgb(15,15,22)]/90 backdrop-blur-lg border-b border-white/5">
         <div className="max-w-lg mx-auto px-4 py-3 flex items-center gap-3">
           <Link href="/world-cup" className="text-slate-400 hover:text-white text-sm">←</Link>
-          <h1 className="text-lg font-bold text-white">📊 Mini Game Standings</h1>
+          <h1 className="text-lg font-bold text-white">📊 Standings</h1>
         </div>
       </header>
 
@@ -51,18 +53,58 @@ export default function StandingsPage() {
         {/* Tabs */}
         <div className="flex gap-2">
           <button
+            onClick={() => setTab("confidence")}
+            className={`flex-1 py-2 rounded-xl text-sm font-medium transition-colors ${tab === "confidence" ? "bg-violet-600 text-white" : "bg-white/5 text-slate-400 hover:text-white"}`}
+          >
+            🤝 Confidence
+          </button>
+          <button
             onClick={() => setTab("shootout")}
             className={`flex-1 py-2 rounded-xl text-sm font-medium transition-colors ${tab === "shootout" ? "bg-violet-600 text-white" : "bg-white/5 text-slate-400 hover:text-white"}`}
           >
-            ⚽ Penalty Shootout
+            ⚽ Shootout
           </button>
           <button
             onClick={() => setTab("reflex")}
             className={`flex-1 py-2 rounded-xl text-sm font-medium transition-colors ${tab === "reflex" ? "bg-violet-600 text-white" : "bg-white/5 text-slate-400 hover:text-white"}`}
           >
-            🧤 Keeper&apos;s Reflex
+            🧤 Reflex
           </button>
         </div>
+
+        {tab === "confidence" && (
+          <div className="card space-y-0 divide-y divide-white/5">
+            {confidence.length === 0 && (
+              <p className="text-center text-slate-500 text-sm py-6">No confidence wagers settled yet</p>
+            )}
+            {confidence.length > 0 && (
+              <div className="grid grid-cols-4 py-2 px-1 text-xs font-mono text-slate-600 uppercase">
+                <span>Player</span>
+                <span className="text-center">W / L</span>
+                <span className="text-center">Rate</span>
+                <span className="text-right">Net pts</span>
+              </div>
+            )}
+            {confidence.map((row, i) => (
+              <div key={row.username} className="grid grid-cols-4 items-center py-3 px-1">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className={`text-xs font-mono font-bold w-4 shrink-0 ${RANK_COLORS[i] ?? "text-slate-500"}`}>{i + 1}</span>
+                  <span className="text-sm shrink-0">{row.flag}</span>
+                  <span className="text-sm text-white font-medium truncate">{row.username}</span>
+                </div>
+                <p className="text-center font-mono text-sm">
+                  <span className="text-emerald-400">{row.wins}</span>
+                  <span className="text-slate-600"> / </span>
+                  <span className="text-rose-400">{row.losses}</span>
+                </p>
+                <p className="text-center font-mono text-sm text-white">{row.winRate}%</p>
+                <p className={`text-right text-xs font-mono font-bold ${row.netPoints >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                  {row.netPoints >= 0 ? "+" : ""}{row.netPoints.toLocaleString()}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
 
         {tab === "shootout" && (
           <div className="card space-y-0 divide-y divide-white/5">

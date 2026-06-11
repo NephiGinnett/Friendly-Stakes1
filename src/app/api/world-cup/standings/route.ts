@@ -9,7 +9,7 @@ export async function GET() {
   const entry = await prisma.worldCupEntry.findUnique({ where: { userId: user.id } });
   if (!entry) return NextResponse.json({ error: "Not entered" }, { status: 404 });
 
-  const [shootoutLogs, reflexLogs, entries] = await Promise.all([
+  const [shootoutLogs, reflexLogs, entries, confidenceWagers] = await Promise.all([
     prisma.worldCupGameLog.findMany({
       where: { gameType: "shootout" },
       orderBy: { createdAt: "asc" },
@@ -21,6 +21,7 @@ export async function GET() {
     prisma.worldCupEntry.findMany({
       include: { user: true, team: true },
     }),
+    prisma.confidenceWager.findMany(),
   ]);
 
   const entryMap = new Map(entries.map((e) => [e.userId, e]));
@@ -75,5 +76,30 @@ export async function GET() {
     })
     .sort((a, b) => b.saveRate - a.saveRate || b.totalCans - a.totalCans);
 
-  return NextResponse.json({ shootout, reflex });
+  // Confidence wager standings
+  const cwByUser = new Map<number, { wins: number; losses: number; netPoints: number }>();
+  for (const cw of confidenceWagers) {
+    const w = cwByUser.get(cw.winnerId) ?? { wins: 0, losses: 0, netPoints: 0 };
+    cwByUser.set(cw.winnerId, { ...w, wins: w.wins + 1, netPoints: w.netPoints + (cw.winnerPayout - cw.winnerStake) });
+    const l = cwByUser.get(cw.loserId) ?? { wins: 0, losses: 0, netPoints: 0 };
+    cwByUser.set(cw.loserId, { ...l, losses: l.losses + 1, netPoints: l.netPoints - cw.loserStake });
+  }
+
+  const confidence = Array.from(cwByUser.entries())
+    .map(([userId, s]) => {
+      const e = entryMap.get(userId);
+      const total = s.wins + s.losses;
+      return {
+        username: e?.user.username ?? "?",
+        flag: e?.team.flag ?? "",
+        teamName: e?.team.name ?? "",
+        wins: s.wins,
+        losses: s.losses,
+        winRate: total > 0 ? Math.round((s.wins / total) * 100) : 0,
+        netPoints: s.netPoints,
+      };
+    })
+    .sort((a, b) => b.wins - a.wins || b.winRate - a.winRate || b.netPoints - a.netPoints);
+
+  return NextResponse.json({ shootout, reflex, confidence });
 }
