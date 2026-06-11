@@ -101,11 +101,13 @@ When the tournament ends and a champion is crowned, every player who backed the 
        Number of winners
 ```
 
-This means two things worth understanding:
+This means three things worth understanding:
 
 **First** — the fewer players who backed the champion, the larger each winner's share. Backing a favourite is comfortable. Backing a longshot pays better. The House does not tell you what to do with this information. It simply provides it.
 
-**Second** — proxy fees count. Every time a player pays to back a new team after elimination, that 250 points enters the pool. The pool grows whether your original pick is still standing or not. There will be more on that in Section VI.
+**Second** — original allegiance takes priority. If any players picked the winning team as their **first choice** at entry, the entire pool goes to them and proxy backers receive nothing. Proxies only split the pot if every single backer of the winning team arrived there via proxy — meaning no one called it from the start. The House finds this outcome unlikely. It has accounted for it anyway.
+
+**Third** — proxy fees count regardless of who wins. Every time a player pays to back a new team after elimination, that 250 points enters the pool. Even if that player never wins a penny, their money is already in there. There will be more on that in Section VI.
 
 ---
 
@@ -239,6 +241,7 @@ When your team is knocked out, you have a choice. You may:
   ║     (and can afford)                              ║
   ║   · Parlays are available with your proxy team    ║
   ║   · Confidence wagers remain closed               ║
+  ║   · Your confidence stake is locked at zero       ║
   ║   · If your proxy team is also eliminated,        ║
   ║     you may pick again — for another 250 pts      ║
   ║                                                   ║
