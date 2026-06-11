@@ -93,9 +93,9 @@ export async function POST(req: Request) {
     if (!winningTeamId) return NextResponse.json({ error: "winningTeamId required" }, { status: 400 });
 
     const winners = await prisma.worldCupEntry.findMany({ where: { teamId: winningTeamId } });
-    const allEntries = await prisma.worldCupEntry.count();
-    const totalPool = allEntries * 500;
     if (winners.length === 0) return NextResponse.json({ error: "No players backed that team" }, { status: 400 });
+    const poolSum = await prisma.worldCupEntry.aggregate({ _sum: { paid: true, proxyPaid: true } });
+    const totalPool = (poolSum._sum.paid ?? 0) + (poolSum._sum.proxyPaid ?? 0);
 
     const share = Math.floor(totalPool / winners.length);
     await prisma.$transaction(

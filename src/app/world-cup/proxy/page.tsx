@@ -14,9 +14,11 @@ export default function ProxyPage() {
   const [proxyTeam, setProxyTeam] = useState<Team | null>(null);
   const [availableTeams, setAvailableTeams] = useState<Team[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [proxyCost, setProxyCost] = useState(250);
   const [filter, setFilter] = useState("ALL");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [userPoints, setUserPoints] = useState<number | null>(null);
 
   useEffect(() => {
     fetch("/api/world-cup/proxy")
@@ -26,8 +28,10 @@ export default function ProxyPage() {
         setMyTeam(d.myTeam);
         setProxyTeam(d.proxyTeam);
         setAvailableTeams(d.availableTeams);
+        setProxyCost(d.proxyCost ?? 250);
         if (d.proxyTeam) setSelectedId(d.proxyTeam.id);
       });
+    fetch("/api/auth/me").then((r) => r.ok ? r.json() : null).then((u) => { if (u) setUserPoints(u.points); });
   }, [router]);
 
   const save = async () => {
@@ -62,6 +66,11 @@ export default function ProxyPage() {
           <p className="text-3xl">{myTeam.flag}</p>
           <p className="text-white font-bold">{myTeam.name} was eliminated</p>
           <p className="text-xs text-rose-400">Confidence wagers are no longer available. Pick a proxy team to keep doing parlays.</p>
+          {proxyCost > 0 ? (
+            <p className="text-xs text-amber-400 font-semibold">{proxyCost} pts · one-time fee · goes into the allegiance pool{userPoints !== null ? ` · you have ${userPoints.toLocaleString()} pts` : ""}</p>
+          ) : (
+            <p className="text-xs text-emerald-400 font-semibold">Already paid · change your proxy for free</p>
+          )}
         </div>
 
         {proxyTeam && selectedId !== proxyTeam.id && (
@@ -114,13 +123,18 @@ export default function ProxyPage() {
 
         <button
           onClick={save}
-          disabled={!selectedId || loading}
+          disabled={!selectedId || loading || (proxyCost > 0 && userPoints !== null && userPoints < proxyCost)}
           className="btn-primary w-full"
         >
           {loading ? "Saving..." : selectedId
-            ? `Follow ${availableTeams.find((t) => t.id === selectedId)?.name ?? "..."} as proxy`
+            ? proxyCost > 0
+              ? `Back ${availableTeams.find((t) => t.id === selectedId)?.name ?? "..."} as proxy — ${proxyCost} pts`
+              : `Switch proxy to ${availableTeams.find((t) => t.id === selectedId)?.name ?? "..."}`
             : "Select a team"}
         </button>
+        {proxyCost > 0 && userPoints !== null && userPoints < proxyCost && (
+          <p className="text-xs text-rose-400 text-center">You need at least {proxyCost} pts to pick a proxy.</p>
+        )}
       </div>
       <Navbar />
     </div>

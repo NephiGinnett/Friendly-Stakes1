@@ -139,7 +139,7 @@ export default function WorldCupPage() {
                   <span className="text-3xl">🔄</span>
                   <div>
                     <p className="font-semibold text-white">Pick a Proxy Team</p>
-                    <p className="text-xs text-amber-400">Still earn from parlays · free to set</p>
+                    <p className="text-xs text-amber-400">Still earn from parlays · 250 pts · goes into the allegiance pool</p>
                   </div>
                   <span className="ml-auto text-slate-600">›</span>
                 </Link>

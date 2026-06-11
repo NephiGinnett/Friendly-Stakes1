@@ -467,6 +467,7 @@ model WorldCupEntry {
   proxyTeamId      Int?
   proxyTeam        WorldCupTeam? @relation("ProxyTeam", fields: [proxyTeamId], references: [id])
   paid              Int          @default(500)
+  proxyPaid         Int          @default(0)
   confidenceStake   Int          @default(100)
   monitorCans       Int          @default(0) // 🥤 MONITOR event currency
   fanScore          Int          @default(0) // Fan Competition cumulative score
