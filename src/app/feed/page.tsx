@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
@@ -64,7 +64,7 @@ export default function FeedPage() {
   }, [router]);
 
   useEffect(() => {
-    const url = filter === "all" ? "/api/wagers" : `/api/wagers?status=${filter}`;
+    const url = filter === "available" ? "/api/wagers?status=open" : filter === "all" ? "/api/wagers" : `/api/wagers?status=${filter}`;
     fetch(url)
       .then((r) => r.json())
       .then(setWagers)
@@ -84,7 +84,7 @@ export default function FeedPage() {
 
   if (!user) return null;
 
-  const filters = ["all", "open", "started", "voting", "settled"];
+  const filters = ["all", "available", "open", "started", "voting", "settled"];
 
   return (
     <div className="min-h-screen pb-20">
@@ -150,7 +150,7 @@ export default function FeedPage() {
                   : "bg-white/5 text-slate-400 hover:text-white"
               }`}
             >
-              {f === "all" ? "All" : f.charAt(0).toUpperCase() + f.slice(1)}
+              {f === "all" ? "All" : f === "available" ? "Not Joined" : f.charAt(0).toUpperCase() + f.slice(1)}
             </button>
           ))}
         </div>
@@ -158,20 +158,30 @@ export default function FeedPage() {
         {/* Wager list */}
         {loading ? (
           <div className="text-center py-12 text-slate-500">Loading wagers...</div>
-        ) : wagers.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-slate-500 mb-3">No wagers yet</p>
-            <button onClick={() => router.push("/wagers/new")} className="btn-primary">
-              Create the first one
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {wagers.map((wager) => (
-              <WagerCard key={wager.id} wager={wager} />
-            ))}
-          </div>
-        )}
+        ) : ((): React.ReactNode => {
+          const displayed = filter === "available"
+            ? wagers.filter((w) => w.creator.id !== user.id && !w.entries.some((e) => e.user.id === user.id))
+            : wagers;
+          if (displayed.length === 0) {
+            return (
+              <div className="text-center py-12">
+                <p className="text-slate-500 mb-3">{filter === "available" ? "No open bets waiting for you" : "No wagers yet"}</p>
+                {filter !== "available" && (
+                  <button onClick={() => router.push("/wagers/new")} className="btn-primary">
+                    Create the first one
+                  </button>
+                )}
+              </div>
+            );
+          }
+          return (
+            <div className="space-y-3">
+              {displayed.map((wager) => (
+                <WagerCard key={wager.id} wager={wager} />
+              ))}
+            </div>
+          );
+        })()}
       </div>
 
       <Navbar />
