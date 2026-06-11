@@ -286,9 +286,20 @@ export default function WorldCupPage() {
       <div className="max-w-lg mx-auto px-4 pt-0 space-y-4">
 
         {/* ── Hero banner ─────────────────────────────────────────────────── */}
-        <div className="relative rounded-2xl overflow-hidden border border-emerald-900/40" style={{ minHeight: 180 }}>
+        <div className="relative rounded-2xl overflow-hidden border border-emerald-500/20" style={{ minHeight: 220 }}>
           <img src="/hero.jpg" alt="FIFA World Cup 2026" className="w-full h-full object-cover absolute inset-0" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+          {/* gradient darkens bottom so text pops */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/10" />
+          {/* ambient green glow top-left */}
+          <div className="absolute -top-8 -left-8 w-48 h-48 rounded-full bg-emerald-500/20 blur-3xl pointer-events-none" />
+          {/* content */}
+          <div className="absolute bottom-0 left-0 right-0 px-5 pb-4 pt-8">
+            <p className="text-xs font-mono text-emerald-400 uppercase tracking-widest mb-1">⚽ Official Event · Friendly Stakes</p>
+            <h2 className="text-white font-black text-2xl leading-tight tracking-tight drop-shadow-lg">
+              FIFA World Cup <span className="text-emerald-400">2026</span>
+            </h2>
+            <p className="text-slate-300 text-xs mt-1">June 11 — July 19 · USA · Canada · Mexico</p>
+          </div>
         </div>
 
         {/* ── Event explainer ──────────────────────────────────────────────── */}
