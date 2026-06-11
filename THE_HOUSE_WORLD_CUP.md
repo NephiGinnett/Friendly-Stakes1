@@ -154,7 +154,7 @@ Simple in concept. The House has added a wrinkle.
 ```
   ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
   ░                                                ░
-  ░   Z O E ' S   R U L E                          ░
+  ░   N E P H I ' S   R U L E                          ░
   ░                                                ░
   ░   When the lower stake is less than half       ░
   ░   of the higher stake, the wager becomes       ░
@@ -171,12 +171,12 @@ Simple in concept. The House has added a wrinkle.
   ░       (disappears from the pot entirely)       ░
   ░                                                ░
   ░   The House finds this rule elegant.           ░
-  ░   It did not design it. It respects it.        ░
+  ░   Nephi designed it. The House respects it.        ░
   ░                                                ░
   ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
 ```
 
-The logic: a large stake deserves protection against a small one. Committing 300 points against someone's 50 should not carry the same risk profile as a symmetric bet. Zoe's Rule corrects for that. Whether it corrects in your favour depends on which side you are on.
+The logic: a large stake deserves protection against a small one. Committing 300 points against someone's 50 should not carry the same risk profile as a symmetric bet. Nephi's Rule corrects for that. Whether it corrects in your favour depends on which side you are on.
 
 **Draws** — if the match ends level, both players receive their stakes back. No record is created. The House considers this the least interesting outcome, but allows it.
 
