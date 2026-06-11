@@ -25,6 +25,40 @@ type PageState =
   | { phase: "done"; opponent: Opponent; summary: KickSummary[]; saves: number; cansEarned: number }
   | { phase: "error"; message: string };
 
+function ZoneGrid({ onTap, activeZone, disabled }: {
+  onTap?: (z: Zone) => void;
+  activeZone?: Zone | null;
+  disabled?: boolean;
+}) {
+  return (
+    <div className="border-2 border-white/20 rounded-lg overflow-hidden">
+      {ZONE_GRID.map((row, ri) => (
+        <div key={ri} className={`grid grid-cols-3 ${ri === 0 ? "border-b border-white/10" : ""}`}>
+          {row.map((zone) => {
+            const isFlashing = activeZone === zone;
+            const base = "aspect-square flex items-center justify-center text-3xl font-bold transition-all select-none border-r last:border-r-0 border-white/10";
+            const color = isFlashing
+              ? "bg-rose-500/70 text-white scale-95 animate-pulse"
+              : onTap
+              ? "bg-white/5 hover:bg-violet-500/20 hover:text-violet-300 cursor-pointer active:scale-95 text-slate-400"
+              : "bg-white/5 text-slate-700";
+            return (
+              <button
+                key={zone}
+                onClick={() => onTap?.(zone)}
+                disabled={disabled}
+                className={`${base} ${color}`}
+              >
+                {ZONE_LABELS[zone]}
+              </button>
+            );
+          })}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function ReflexPage() {
   const router = useRouter();
   const [state, setState] = useState<PageState>({ phase: "loading" });
@@ -139,40 +173,6 @@ export default function ReflexPage() {
     answerRef.current = zone;
   };
 
-  function ZoneGrid({ onTap, activeZone, disabled }: {
-    onTap?: (z: Zone) => void;
-    activeZone?: Zone | null;
-    disabled?: boolean;
-  }) {
-    return (
-      <div className="border-2 border-white/20 rounded-lg overflow-hidden">
-        {ZONE_GRID.map((row, ri) => (
-          <div key={ri} className={`grid grid-cols-3 ${ri === 0 ? "border-b border-white/10" : ""}`}>
-            {row.map((zone) => {
-              const isFlashing = activeZone === zone;
-              const base = "aspect-square flex items-center justify-center text-3xl font-bold transition-all select-none border-r last:border-r-0 border-white/10";
-              const color = isFlashing
-                ? "bg-rose-500/70 text-white scale-95 animate-pulse"
-                : onTap
-                ? "bg-white/5 hover:bg-violet-500/20 hover:text-violet-300 cursor-pointer active:scale-95 text-slate-400"
-                : "bg-white/5 text-slate-700";
-              return (
-                <button
-                  key={zone}
-                  onClick={() => onTap?.(zone)}
-                  disabled={disabled}
-                  className={`${base} ${color}`}
-                >
-                  {ZONE_LABELS[zone]}
-                </button>
-              );
-            })}
-          </div>
-        ))}
-      </div>
-    );
-  }
-
   if (state.phase === "loading") return null;
 
   if (state.phase === "error") {
@@ -259,14 +259,14 @@ export default function ReflexPage() {
           {isHouse && (
             <div className="rounded-xl bg-amber-500/10 border border-amber-500/20 px-4 py-3 text-xs text-amber-300 space-y-1">
               <p className="font-bold">⚠️ The House Advantage</p>
-              <p>The House only kicks to corners — no centre shots. And the flash window is {flashMs}ms instead of 350ms. React faster.</p>
+              <p>The House only kicks to corners — no centre shots. And the flash window is {flashMs}ms instead of 900ms. React faster.</p>
             </div>
           )}
 
           <div className="card bg-white/5 border-white/10 text-xs text-slate-400 space-y-1.5">
             <p className="font-semibold text-slate-300">How to play</p>
             <p>A zone on the goal will flash briefly. Tap it to make the save.</p>
-            <p>3 saves = 1 🥤 · 4 saves = 2 🥤 · 5 saves = 3 🥤</p>
+            <p>3 saves = 4 🥤 · 4 saves = 6 🥤 · 5 saves = 10 🥤</p>
           </div>
 
           <button onClick={startCountdown} className="btn-primary w-full text-lg py-4">
