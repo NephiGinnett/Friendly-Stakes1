@@ -1200,8 +1200,29 @@ export default function AdminPage() {
                   </div>
                 </div>
 
+                {/* API diagnostic */}
+                <div className="space-y-2 pt-1 border-t border-white/5">
+                  <p className="text-xs text-slate-500 font-mono uppercase tracking-widest">Football-data.org diagnostic</p>
+                  <button
+                    onClick={async () => {
+                      setBracketMsg("Running diagnostic...");
+                      const res = await fetch("/api/admin/world-cup", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "diagnoseFd" }) });
+                      const d = await res.json();
+                      if (d.httpStatus === 200) {
+                        const count = Array.isArray((d.body as { matches?: unknown[] })?.matches) ? (d.body as { matches: unknown[] }).matches.length : "?";
+                        setBracketMsg(`✅ API OK — ${count} matches returned`);
+                      } else {
+                        setBracketMsg(`❌ API returned ${d.httpStatus}: ${JSON.stringify(d.body).slice(0, 120)}`);
+                      }
+                    }}
+                    className="text-xs px-3 py-1.5 rounded-lg bg-slate-700/40 border border-white/10 text-slate-300 hover:bg-slate-700/60 transition-colors"
+                  >
+                    Test API connection
+                  </button>
+                </div>
+
                 {bracketMsg && (
-                  <p className={`text-xs font-mono ${bracketMsg.includes("Error") || bracketMsg.includes("error") ? "text-rose-400" : "text-emerald-400"}`}>{bracketMsg}</p>
+                  <p className={`text-xs font-mono break-all ${bracketMsg.startsWith("❌") || bracketMsg.includes("error") ? "text-rose-400" : bracketMsg.startsWith("✅") ? "text-emerald-400" : "text-slate-400"}`}>{bracketMsg}</p>
                 )}
               </>
             )}

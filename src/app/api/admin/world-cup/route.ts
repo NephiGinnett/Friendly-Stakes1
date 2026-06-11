@@ -199,6 +199,20 @@ export async function POST(req: Request) {
     });
   }
 
+  // Diagnose football-data.org API — returns raw response for debugging
+  if (action === "diagnoseFd") {
+    const token = process.env.FOOTBALL_DATA_API_KEY;
+    if (!token) return NextResponse.json({ error: "FOOTBALL_DATA_API_KEY not set" }, { status: 500 });
+    const res = await fetch("https://api.football-data.org/v4/competitions/WC/matches", {
+      headers: { "X-Auth-Token": token },
+      cache: "no-store",
+    });
+    const text = await res.text();
+    let parsed: unknown;
+    try { parsed = JSON.parse(text); } catch { parsed = text; }
+    return NextResponse.json({ httpStatus: res.status, body: parsed });
+  }
+
   // Remove admin's own test entry so they can re-enter or clean up before launch
   if (action === "resetEntry") {
     const entry = await prisma.worldCupEntry.findUnique({ where: { userId: user.id } });

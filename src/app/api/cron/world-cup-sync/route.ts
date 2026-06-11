@@ -176,12 +176,17 @@ export async function POST(req: Request) {
     const matches: {
       id: number; status: string; stage: string; group: string | null;
       utcDate: string;
-      homeTeam: { name: string }; awayTeam: { name: string };
+      homeTeam: { name: string; shortName?: string }; awayTeam: { name: string; shortName?: string };
       score: { winner: string | null; fullTime: { home: number | null; away: number | null } };
     }[] = data.matches ?? [];
 
+    if (matches.length === 0) {
+      console.warn("[wc-sync] API returned 0 matches — competition may not be available yet or code may have changed");
+    }
+
     let upserted = 0;
     let settled = 0;
+    const matchErrors: string[] = [];
 
     // Accumulate knockout match data for bracket slot sync
     const knockoutRows: {
@@ -190,61 +195,68 @@ export async function POST(req: Request) {
     }[] = [];
 
     for (const m of matches) {
-      const homeTeam = await prisma.worldCupTeam.findFirst({
-        where: { name: { contains: m.homeTeam.name } },
-      });
-      const awayTeam = await prisma.worldCupTeam.findFirst({
-        where: { name: { contains: m.awayTeam.name } },
-      });
-
-      const dbMatch = await prisma.worldCupMatch.upsert({
-        where: { fdMatchId: m.id },
-        create: {
-          fdMatchId: m.id,
-          homeTeamId: homeTeam?.id ?? null,
-          awayTeamId: awayTeam?.id ?? null,
-          homeTeamName: m.homeTeam.name,
-          awayTeamName: m.awayTeam.name,
-          kickoff: new Date(m.utcDate),
-          stage: m.stage,
-          group: m.group ?? null,
-          homeScore: m.score.fullTime.home ?? null,
-          awayScore: m.score.fullTime.away ?? null,
-          status: m.status,
-          winner: m.score.winner ?? null,
-        },
-        update: {
-          homeTeamId: homeTeam?.id ?? null,
-          awayTeamId: awayTeam?.id ?? null,
-          homeScore: m.score.fullTime.home ?? null,
-          awayScore: m.score.fullTime.away ?? null,
-          status: m.status,
-          winner: m.score.winner ?? null,
-          group: m.group ?? null,
-          stage: m.stage,
-        },
-      });
-      upserted++;
-
-      if (m.status === "FINISHED" && !dbMatch.settled) {
-        const winnerTeamId = m.score.winner === "HOME_TEAM" ? (homeTeam?.id ?? null)
-          : m.score.winner === "AWAY_TEAM" ? (awayTeam?.id ?? null)
-          : null;
-        const count = await settleMatchConfidenceWagers(dbMatch.id, winnerTeamId);
-        settled += count;
-      }
-
-      if (STAGE_TO_ROUND[m.stage]) {
-        knockoutRows.push({
-          fdMatchId: m.id,
-          stage: m.stage,
-          kickoff: new Date(m.utcDate),
-          homeCode: homeTeam?.code ?? "",
-          awayCode: awayTeam?.code ?? "",
-          winnerCode: m.score.winner === "HOME_TEAM" ? (homeTeam?.code ?? "")
-            : m.score.winner === "AWAY_TEAM" ? (awayTeam?.code ?? "")
-            : "",
+      try {
+        // Try both full name and shortName for fuzzy team matching
+        const homeTeam = await prisma.worldCupTeam.findFirst({
+          where: { OR: [{ name: { contains: m.homeTeam.name } }, ...(m.homeTeam.shortName ? [{ name: { contains: m.homeTeam.shortName } }] : [])] },
         });
+        const awayTeam = await prisma.worldCupTeam.findFirst({
+          where: { OR: [{ name: { contains: m.awayTeam.name } }, ...(m.awayTeam.shortName ? [{ name: { contains: m.awayTeam.shortName } }] : [])] },
+        });
+
+        const dbMatch = await prisma.worldCupMatch.upsert({
+          where: { fdMatchId: m.id },
+          create: {
+            fdMatchId: m.id,
+            homeTeamId: homeTeam?.id ?? null,
+            awayTeamId: awayTeam?.id ?? null,
+            homeTeamName: m.homeTeam.name,
+            awayTeamName: m.awayTeam.name,
+            kickoff: new Date(m.utcDate),
+            stage: m.stage,
+            group: m.group ?? null,
+            homeScore: m.score.fullTime.home ?? null,
+            awayScore: m.score.fullTime.away ?? null,
+            status: m.status,
+            winner: m.score.winner ?? null,
+          },
+          update: {
+            homeTeamId: homeTeam?.id ?? null,
+            awayTeamId: awayTeam?.id ?? null,
+            homeScore: m.score.fullTime.home ?? null,
+            awayScore: m.score.fullTime.away ?? null,
+            status: m.status,
+            winner: m.score.winner ?? null,
+            group: m.group ?? null,
+            stage: m.stage,
+          },
+        });
+        upserted++;
+
+        if (m.status === "FINISHED" && !dbMatch.settled) {
+          const winnerTeamId = m.score.winner === "HOME_TEAM" ? (homeTeam?.id ?? null)
+            : m.score.winner === "AWAY_TEAM" ? (awayTeam?.id ?? null)
+            : null;
+          const count = await settleMatchConfidenceWagers(dbMatch.id, winnerTeamId);
+          settled += count;
+        }
+
+        if (STAGE_TO_ROUND[m.stage]) {
+          knockoutRows.push({
+            fdMatchId: m.id,
+            stage: m.stage,
+            kickoff: new Date(m.utcDate),
+            homeCode: homeTeam?.code ?? "",
+            awayCode: awayTeam?.code ?? "",
+            winnerCode: m.score.winner === "HOME_TEAM" ? (homeTeam?.code ?? "")
+              : m.score.winner === "AWAY_TEAM" ? (awayTeam?.code ?? "")
+              : "",
+          });
+        }
+      } catch (matchErr) {
+        const msg = matchErr instanceof Error ? matchErr.message : String(matchErr);
+        console.error(`[wc-sync] match ${m.id} (${m.homeTeam.name} vs ${m.awayTeam.name}) failed:`, msg);
+        matchErrors.push(`match ${m.id}: ${msg}`);
       }
     }
 
@@ -306,9 +318,10 @@ export async function POST(req: Request) {
       }
     }
 
-    return NextResponse.json({ ok: true, upserted, settled, bracketSlots });
+    return NextResponse.json({ ok: true, upserted, settled, bracketSlots, matchErrors });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Unknown error";
+    console.error("[wc-sync] fatal error:", e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
