@@ -90,8 +90,8 @@ export async function GET() {
   const ts = Math.floor(Date.now() / 1000);
   const token = signKicks(user.id, kicks, ts);
 
-  // The House uses a shorter flash window — harder to react
-  const flashMs = opponentBotSubtype === "house" ? 250 : 350;
+  // Flash window per bot — timer starts before render, so values are generous to account for mobile latency
+  const flashMs = opponentBotSubtype === "house" ? 500 : opponentBotSubtype === "shark" ? 650 : 900;
 
   return NextResponse.json({
     playsToday: 0,

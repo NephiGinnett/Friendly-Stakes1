@@ -89,10 +89,15 @@ export async function POST(req: Request) {
   }
 
   // Distribute allegiance pool to winners
+  // Original-pick players win solely; proxies only share if no original backers remain
   if (action === "distributePool") {
     if (!winningTeamId) return NextResponse.json({ error: "winningTeamId required" }, { status: 400 });
 
-    const winners = await prisma.worldCupEntry.findMany({ where: { teamId: winningTeamId } });
+    const originalWinners = await prisma.worldCupEntry.findMany({ where: { teamId: winningTeamId } });
+    const proxyWinners = await prisma.worldCupEntry.findMany({ where: { proxyTeamId: winningTeamId } });
+    const isProxyWin = originalWinners.length === 0;
+    const winners = isProxyWin ? proxyWinners : originalWinners;
+
     if (winners.length === 0) return NextResponse.json({ error: "No players backed that team" }, { status: 400 });
     const poolSum = await prisma.worldCupEntry.aggregate({ _sum: { paid: true, proxyPaid: true } });
     const totalPool = (poolSum._sum.paid ?? 0) + (poolSum._sum.proxyPaid ?? 0);
@@ -102,7 +107,7 @@ export async function POST(req: Request) {
       winners.map((w) => prisma.user.update({ where: { id: w.userId }, data: { points: { increment: share } } }))
     );
 
-    return NextResponse.json({ ok: true, totalPool, winners: winners.length, sharePerWinner: share });
+    return NextResponse.json({ ok: true, totalPool, winners: winners.length, sharePerWinner: share, isProxyWin });
   }
 
   // Declare tournament champion — grants group_stage_prophet + 3 bonus Monitor Cans
@@ -180,8 +185,8 @@ export async function POST(req: Request) {
     });
     if (top2.length === 0) return NextResponse.json({ error: "No fan scores recorded" }, { status: 400 });
 
-    const firstShare = Math.floor(pot / 2);
-    const secondShare = pot - firstShare; // catches odd-number rounding
+    const firstShare = Math.floor(pot * 0.65);
+    const secondShare = pot - firstShare;
 
     await prisma.$transaction(async (tx) => {
       await tx.user.update({ where: { id: top2[0].userId }, data: { points: { increment: firstShare } } });
@@ -221,11 +226,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true });
   }
 
-  // Mark a team as eliminated (triggers proxy feature for that team's player)
+  // Mark a team as eliminated — also zeroes confidence stakes for that team's players
   if (action === "eliminateTeam") {
     const { teamId: elimTeamId } = body;
     if (!elimTeamId) return NextResponse.json({ error: "teamId required" }, { status: 400 });
-    await prisma.worldCupTeam.update({ where: { id: elimTeamId }, data: { eliminated: true } });
+    await prisma.$transaction(async (tx) => {
+      await tx.worldCupTeam.update({ where: { id: elimTeamId }, data: { eliminated: true } });
+      await tx.worldCupEntry.updateMany({ where: { teamId: elimTeamId }, data: { confidenceStake: 0 } });
+    });
     return NextResponse.json({ ok: true });
   }
 
