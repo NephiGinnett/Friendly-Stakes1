@@ -90,8 +90,8 @@ export async function GET() {
   const ts = Math.floor(Date.now() / 1000);
   const token = signKicks(user.id, kicks, ts);
 
-  // Flash window per bot — timer starts before render, so values are generous to account for mobile latency
-  const flashMs = opponentBotSubtype === "house" ? 500 : opponentBotSubtype === "shark" ? 650 : 900;
+  // Flash window per bot — timer starts before render, so values include ~150ms buffer for mobile latency
+  const flashMs = opponentBotSubtype === "house" ? 300 : opponentBotSubtype === "shark" ? 400 : 500;
 
   return NextResponse.json({
     playsToday: 0,
