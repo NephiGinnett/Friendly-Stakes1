@@ -93,12 +93,12 @@ export default function FanCompetitionPage() {
           <div className="flex justify-center gap-6 pt-1">
             <div className="text-center">
               <p className="text-sm font-bold text-amber-300">1st place</p>
-              <p className="text-xs text-slate-400">{formatPoints(Math.floor(pot / 2))} pts</p>
+              <p className="text-xs text-slate-400">{formatPoints(Math.floor(pot * 0.65))} pts</p>
             </div>
             <div className="text-slate-700 self-center">·</div>
             <div className="text-center">
               <p className="text-sm font-bold text-slate-300">2nd place</p>
-              <p className="text-xs text-slate-400">{formatPoints(pot - Math.floor(pot / 2))} pts</p>
+              <p className="text-xs text-slate-400">{formatPoints(pot - Math.floor(pot * 0.65))} pts</p>
             </div>
           </div>
         </div>
