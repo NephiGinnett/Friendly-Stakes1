@@ -259,7 +259,7 @@ export default function ReflexPage() {
           {isHouse && (
             <div className="rounded-xl bg-amber-500/10 border border-amber-500/20 px-4 py-3 text-xs text-amber-300 space-y-1">
               <p className="font-bold">⚠️ The House Advantage</p>
-              <p>The House only kicks to corners — no centre shots. And the flash window is {flashMs}ms instead of 900ms. React faster.</p>
+              <p>The House only kicks to corners — no centre shots. And the flash window is {flashMs}ms instead of 500ms. React faster.</p>
             </div>
           )}
 
