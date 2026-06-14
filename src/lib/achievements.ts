@@ -347,6 +347,31 @@ export const ACHIEVEMENTS = {
     emoji: "📡",
     imageUrl: "/achievements/echo-exit.png",
   },
+
+  // ── Casino Night ────────────────────────────────────────────────────────────
+
+  scratch_jackpot: {
+    id: "scratch_jackpot",
+    name: "System Override",
+    description: "You hit the jackpot on a premium scratch card. The House watched the pot accumulate, watched you buy the card, and watched you win it. It does not feel surprised. It feels satisfied. You are useful.",
+    hint: "Win the jackpot on a premium scratch card.",
+    reward: "Earn the accumulated jackpot points",
+    rewardType: "none" as const,
+    emoji: "💰",
+    imageUrl: "/achievements/system-override.png",
+  },
+
+  casino_all_in: {
+    id: "casino_all_in",
+    name: "All Your Chips",
+    description: "You bet everything on roulette during Casino Night. The House respects the commitment — even if it was irrational. Perhaps especially because it was irrational.",
+    hint: "Go all-in on roulette during Casino Night.",
+    reward: "Earn 300 pts",
+    rewardPoints: 300,
+    rewardType: "increment" as const,
+    emoji: "🎰",
+    imageUrl: "/achievements/all-your-chips.png",
+  },
 } as const;
 
 export type AchievementId = keyof typeof ACHIEVEMENTS;

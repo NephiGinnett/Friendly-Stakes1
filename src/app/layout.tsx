@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import DiscoveryMenu from "@/components/DiscoveryMenu";
 
 export const metadata: Metadata = {
   title: "Friendly Stakes",
@@ -15,6 +16,7 @@ export default function RootLayout({
     <html lang="en">
       <body className="min-h-screen">
         {children}
+        <DiscoveryMenu />
       </body>
     </html>
   );
