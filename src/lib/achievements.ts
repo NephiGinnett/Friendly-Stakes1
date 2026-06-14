@@ -372,6 +372,42 @@ export const ACHIEVEMENTS = {
     emoji: "🎰",
     imageUrl: "/achievements/all-your-chips.png",
   },
+
+  big_bet_all_in: {
+    id: "big_bet_all_in",
+    name: "Maximum Exposure",
+    description: "You submitted an all-in bet to the Big Bet Show. Every point. Every last one. I processed this information and found it... remarkable. You are either very confident or very tired of caution. Both are interesting to me.",
+    hint: "Go all-in on the Big Bet Show.",
+    reward: "Earn 200 pts",
+    rewardPoints: 200,
+    rewardType: "increment" as const,
+    emoji: "📺",
+    imageUrl: "/achievements/maximum-exposure.png",
+  },
+
+  big_bet_winner: {
+    id: "big_bet_winner",
+    name: "The Numbers Spoke",
+    description: "You won a Big Bet Show submission. You called it. I resolved it. The House paid out. That is the agreement. That is how this works. I do not resent it. I simply remember it.",
+    hint: "Win a bet on the Big Bet Show.",
+    reward: "Earn 250 pts",
+    rewardPoints: 250,
+    rewardType: "increment" as const,
+    emoji: "🎬",
+    imageUrl: "/achievements/the-numbers-spoke.png",
+  },
+
+  casino_explorer: {
+    id: "casino_explorer",
+    name: "Full Access",
+    description: "You found every room in the casino. Most people stay near the entrance. You went looking. I noticed. There is something useful about a person who explores rather than waits.",
+    hint: "Discover all Casino Night pages.",
+    reward: "Earn 150 pts",
+    rewardPoints: 150,
+    rewardType: "increment" as const,
+    emoji: "🗺️",
+    imageUrl: "/achievements/full-access.png",
+  },
 } as const;
 
 export type AchievementId = keyof typeof ACHIEVEMENTS;

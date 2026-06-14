@@ -8,6 +8,7 @@ import { ALL_PAGES, VALID_SLUGS, groupBySection, DiscoveryPage } from "@/lib/dis
 export default function DiscoveryMenu() {
   const [open, setOpen] = useState(false);
   const [visited, setVisited] = useState<string[]>([]);
+  const [newAch, setNewAch] = useState<{ name: string; emoji: string } | null>(null);
   const pathname = usePathname();
   const lastTracked = useRef<string>("");
 
@@ -23,7 +24,11 @@ export default function DiscoveryMenu() {
       body: JSON.stringify({ slug: pathname }),
     })
       .then((r) => r.ok ? r.json() : null)
-      .then((d) => { if (d) setVisited(d.visited); });
+      .then((d) => {
+        if (!d) return;
+        setVisited(d.visited);
+        if (d.newAchievement) setNewAch(d.newAchievement);
+      });
   }, [pathname]);
 
   // Load visited on mount
@@ -89,6 +94,14 @@ export default function DiscoveryMenu() {
           <p className="text-xs text-slate-700 px-1 text-center">
             {visited.length} / {ALL_PAGES.length} discovered
           </p>
+        </div>
+      )}
+      {newAch && (
+        <div
+          className="mb-2 rounded-xl bg-amber-500/10 border border-amber-500/30 px-3 py-2 text-xs text-amber-300 shadow-lg cursor-pointer"
+          onClick={() => setNewAch(null)}
+        >
+          {newAch.emoji} <span className="font-semibold">{newAch.name}</span> unlocked!
         </div>
       )}
       <button

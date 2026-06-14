@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { logPoints } from "@/lib/pointLog";
+import { ACHIEVEMENTS } from "@/lib/achievements";
 
 const BASE_MULTIPLIER = 1.5;
 const ALL_IN_MULTIPLIER = 2.0;
@@ -95,6 +96,8 @@ export async function POST(req: Request) {
     ? (gameType as string)
     : "custom";
 
+  let newAchievement: string | null = null;
+
   await prisma.$transaction(async (tx) => {
     await tx.user.update({ where: { id: user.id }, data: { points: { decrement: stake } } });
     await logPoints(tx, user.id, -stake, `Big Bet Show — "${title.trim()}" escrowed (${isAllIn ? "ALL IN ×2.0" : "×1.5"})`);
@@ -109,7 +112,26 @@ export async function POST(req: Request) {
         isAllIn,
       },
     });
+
+    if (isAllIn) {
+      const existing = await tx.userAchievement.findUnique({
+        where: { userId_achievementId: { userId: user.id, achievementId: "big_bet_all_in" } },
+      });
+      if (!existing) {
+        await tx.userAchievement.create({ data: { userId: user.id, achievementId: "big_bet_all_in" } });
+        await tx.user.update({ where: { id: user.id }, data: { points: { increment: 200 } } });
+        await logPoints(tx, user.id, 200, `Achievement unlocked: Maximum Exposure`);
+        newAchievement = "big_bet_all_in";
+      }
+    }
   });
 
-  return NextResponse.json({ ok: true, multiplier, isAllIn });
+  return NextResponse.json({
+    ok: true,
+    multiplier,
+    isAllIn,
+    newAchievement: newAchievement
+      ? ACHIEVEMENTS[newAchievement as keyof typeof ACHIEVEMENTS]
+      : null,
+  });
 }

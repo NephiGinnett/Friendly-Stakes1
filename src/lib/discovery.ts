@@ -35,6 +35,8 @@ export const ALL_PAGES: DiscoveryPage[] = [
 
 export const VALID_SLUGS = new Set(ALL_PAGES.map((p) => p.slug));
 
+export const CASINO_PAGES = ALL_PAGES.filter((p) => p.section === "Casino Night");
+
 export function groupBySection(pages: DiscoveryPage[]): Record<string, DiscoveryPage[]> {
   const groups: Record<string, DiscoveryPage[]> = {};
   for (const p of pages) {

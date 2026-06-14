@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { logPoints } from "@/lib/pointLog";
+import { CASINO_PAGES } from "@/lib/discovery";
 
 export async function GET() {
   const user = await getCurrentUser();
@@ -87,7 +88,6 @@ export async function POST(req: Request) {
   }
 
   if (body.action === "reveal_all") {
-    // Mark all resolved bets as revealed and pay out winners
     const resolved = await prisma.bigBet.findMany({ where: { status: "resolved" } });
 
     await prisma.$transaction(async (tx) => {
@@ -107,6 +107,16 @@ export async function POST(req: Request) {
             bet.payout,
             `Big Bet Show WIN — "${bet.title}" (×${bet.multiplier})`
           );
+
+          // Achievement: first Big Bet Show win
+          const existing = await tx.userAchievement.findUnique({
+            where: { userId_achievementId: { userId: bet.userId, achievementId: "big_bet_winner" } },
+          });
+          if (!existing) {
+            await tx.userAchievement.create({ data: { userId: bet.userId, achievementId: "big_bet_winner" } });
+            await tx.user.update({ where: { id: bet.userId }, data: { points: { increment: 250 } } });
+            await logPoints(tx, bet.userId, 250, `Achievement unlocked: The Numbers Spoke`);
+          }
         }
       }
     });
