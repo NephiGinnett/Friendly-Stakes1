@@ -652,8 +652,10 @@ model BigBet {
   user         User     @relation(fields: [userId], references: [id])
   title        String
   description  String
+  gameType     String   @default("custom") // "roulette" | "blackjack" | "custom"
   stake        Int
   multiplier   Float    @default(1.5)
+  isAllIn      Boolean  @default(false)
   outcome      String   @default("") // "win" | "loss" (set at resolution, hidden until reveal)
   resolvedAt   DateTime?
   revealAt     DateTime?

@@ -3,13 +3,15 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { logPoints } from "@/lib/pointLog";
 
+const BASE_MULTIPLIER = 1.5;
+const ALL_IN_MULTIPLIER = 2.0;
+
 export async function GET() {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const config = await prisma.houseConfig.findUnique({ where: { id: 1 } });
 
-  // Only show revealed bets to players; pending/resolved are hidden until reveal time
   const now = new Date();
   const revealAt = config?.bigBetRevealAt;
   const showRevealed = revealAt && now >= revealAt;
@@ -30,7 +32,11 @@ export async function GET() {
     showRevealed,
     myPoints: user.points,
     myPendingBet: myBet
-      ? { id: myBet.id, title: myBet.title, description: myBet.description, stake: myBet.stake }
+      ? {
+          id: myBet.id, title: myBet.title, description: myBet.description,
+          stake: myBet.stake, gameType: myBet.gameType, isAllIn: myBet.isAllIn,
+          multiplier: myBet.multiplier,
+        }
       : null,
     bets: bets.map((b) => ({
       id: b.id,
@@ -38,8 +44,10 @@ export async function GET() {
       isMe: b.userId === user.id,
       title: b.title,
       description: b.description,
+      gameType: b.gameType,
       stake: b.stake,
       multiplier: b.multiplier,
+      isAllIn: b.isAllIn,
       outcome: showRevealed ? b.outcome : null,
       payout: showRevealed ? b.payout : null,
       status: b.status,
@@ -57,10 +65,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Casino Night is not active" }, { status: 403 });
   }
 
-  const { title, description, stake } = await req.json() as {
+  const { title, description, stake, gameType } = await req.json() as {
     title: string;
     description: string;
     stake: number;
+    gameType?: string;
   };
 
   if (!title?.trim() || !description?.trim()) {
@@ -73,7 +82,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Not enough points" }, { status: 400 });
   }
 
-  // One pending bet per player at a time
   const existing = await prisma.bigBet.findFirst({
     where: { userId: user.id, status: "pending" },
   });
@@ -81,19 +89,27 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "You already have a pending bet for tonight's show" }, { status: 409 });
   }
 
+  const isAllIn = stake === user.points;
+  const multiplier = isAllIn ? ALL_IN_MULTIPLIER : BASE_MULTIPLIER;
+  const resolvedGameType = ["roulette", "blackjack", "custom"].includes(gameType ?? "")
+    ? (gameType as string)
+    : "custom";
+
   await prisma.$transaction(async (tx) => {
     await tx.user.update({ where: { id: user.id }, data: { points: { decrement: stake } } });
-    await logPoints(tx, user.id, -stake, `Big Bet Show — "${title}" (escrowed)`);
+    await logPoints(tx, user.id, -stake, `Big Bet Show — "${title.trim()}" escrowed (${isAllIn ? "ALL IN ×2.0" : "×1.5"})`);
     await tx.bigBet.create({
       data: {
         userId: user.id,
         title: title.trim(),
         description: description.trim(),
+        gameType: resolvedGameType,
         stake,
-        multiplier: 1.5,
+        multiplier,
+        isAllIn,
       },
     });
   });
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, multiplier, isAllIn });
 }

@@ -35,12 +35,6 @@ export default function CasinoNightPage() {
           .then((r) => r.json())
           .then((d) => setStatus({ casinoActive: d.casinoActive, jackpot: d.jackpot, myPoints: d.myPoints }));
       });
-    // Track page visit
-    fetch("/api/casino/pages", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ slug: "/casino-night" }),
-    });
   }, [router]);
 
   if (!status) return null;

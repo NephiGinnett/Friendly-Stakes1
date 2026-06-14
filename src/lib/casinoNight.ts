@@ -152,17 +152,3 @@ export function rouletteColor(n: number): "red" | "black" | "green" {
   return RED_NUMBERS.has(n) ? "red" : "black";
 }
 
-// ── Page Discovery ────────────────────────────────────────────────────────────
-
-export type DiscoveryPage = {
-  slug: string;
-  label: string;
-  emoji: string;
-};
-
-export const CASINO_PAGES: DiscoveryPage[] = [
-  { slug: "/casino-night", label: "Casino Night", emoji: "🎰" },
-  { slug: "/casino-night/scratch", label: "Scratch Cards", emoji: "🃏" },
-  { slug: "/casino-night/big-bet", label: "Big Bet Show", emoji: "📺" },
-  { slug: "/casino-night/roulette", label: "Roulette", emoji: "🎡" },
-];

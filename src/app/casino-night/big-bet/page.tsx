@@ -7,14 +7,18 @@ import Navbar from "@/components/Navbar";
 import PointsBadge from "@/components/PointsBadge";
 import { formatPoints } from "@/lib/utils";
 
+type GameType = "roulette" | "blackjack" | "custom";
+
 type BigBetEntry = {
   id: number;
   username: string;
   isMe: boolean;
   title: string;
   description: string;
+  gameType: GameType;
   stake: number;
   multiplier: number;
+  isAllIn: boolean;
   outcome: "win" | "loss" | null;
   payout: number | null;
   status: string;
@@ -26,8 +30,29 @@ type BigBetStatus = {
   revealAt: string | null;
   showRevealed: boolean;
   myPoints: number;
-  myPendingBet: { id: number; title: string; description: string; stake: number } | null;
+  myPendingBet: {
+    id: number; title: string; description: string;
+    stake: number; gameType: GameType; isAllIn: boolean; multiplier: number;
+  } | null;
   bets: BigBetEntry[];
+};
+
+const GAME_ICONS: Record<GameType, string> = {
+  roulette: "🎡",
+  blackjack: "🃏",
+  custom: "🎲",
+};
+
+const GAME_LABELS: Record<GameType, string> = {
+  roulette: "Roulette",
+  blackjack: "Blackjack",
+  custom: "Custom",
+};
+
+const GAME_HINTS: Record<GameType, string> = {
+  roulette: "Describe your roulette bet — e.g. 'Red on the first spin of the night'",
+  blackjack: "Describe your blackjack wager — e.g. 'I'll win the hand with a natural 21'",
+  custom: "Describe anything you predict will happen during Casino Night",
 };
 
 const SHODAN_REVEAL_LINES = [
@@ -43,6 +68,7 @@ export default function BigBetPage() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [stake, setStake] = useState("");
+  const [gameType, setGameType] = useState<GameType>("roulette");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [revealIndex, setRevealIndex] = useState(0);
@@ -58,16 +84,16 @@ export default function BigBetPage() {
     fetch("/api/auth/me")
       .then((r) => { if (!r.ok) router.push("/login"); return r.ok ? r.json() : null; })
       .then((u) => { if (u) load(); });
-    fetch("/api/casino/pages", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ slug: "/casino-night/big-bet" }),
-    });
   }, [router, load]);
 
+  const stakeNum = parseInt(stake) || 0;
+  const isAllIn = status ? stakeNum === status.myPoints : false;
+  const multiplier = isAllIn ? 2.0 : 1.5;
+
+  const allIn = () => { if (status) setStake(String(status.myPoints)); };
+
   const submit = async () => {
-    const amt = parseInt(stake);
-    if (!title.trim() || !description.trim() || !amt) {
+    if (!title.trim() || !description.trim() || !stakeNum) {
       setError("Fill in all fields");
       return;
     }
@@ -76,7 +102,7 @@ export default function BigBetPage() {
     const res = await fetch("/api/casino/big-bet", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: title.trim(), description: description.trim(), stake: amt }),
+      body: JSON.stringify({ title: title.trim(), description: description.trim(), stake: stakeNum, gameType }),
     });
     const d = await res.json();
     setSubmitting(false);
@@ -126,15 +152,19 @@ export default function BigBetPage() {
             ) : (
               <div className="space-y-4">
                 {currentReveal && (
-                  <div className={`rounded-2xl border p-5 text-center space-y-3 transition-all ${
+                  <div className={`rounded-2xl border p-5 text-center space-y-3 ${
                     currentReveal.outcome === "win"
                       ? "bg-emerald-500/10 border-emerald-500/40"
                       : "bg-rose-500/10 border-rose-500/40"
                   }`}>
                     <p className="text-xs font-mono text-slate-500 uppercase tracking-widest">
-                      Bet {revealIndex + 1} of {revealBets.length}
+                      {GAME_ICONS[currentReveal.gameType]} {GAME_LABELS[currentReveal.gameType]}
+                      {" · "}Bet {revealIndex + 1} of {revealBets.length}
                     </p>
                     <p className="text-xl font-bold text-white">{currentReveal.username}</p>
+                    {currentReveal.isAllIn && (
+                      <p className="text-xs font-mono text-rose-400 uppercase tracking-widest">🔥 All In — ×{currentReveal.multiplier}</p>
+                    )}
                     <p className="text-lg text-slate-200">"{currentReveal.title}"</p>
                     <p className="text-sm text-slate-400">{currentReveal.description}</p>
                     <p className="text-sm text-slate-400">Stake: {formatPoints(currentReveal.stake)} pts</p>
@@ -142,8 +172,10 @@ export default function BigBetPage() {
                       {currentReveal.outcome === "win" ? (
                         <>
                           <p className="text-3xl font-black text-emerald-400">WIN</p>
-                          <p className="text-lg text-white font-bold">+{formatPoints((currentReveal.payout ?? 0) - currentReveal.stake)} pts profit</p>
-                          <p className="text-xs text-slate-500">{formatPoints(currentReveal.payout ?? 0)} pts returned</p>
+                          <p className="text-lg text-white font-bold">
+                            +{formatPoints((currentReveal.payout ?? 0) - currentReveal.stake)} pts profit
+                          </p>
+                          <p className="text-xs text-slate-500">{formatPoints(currentReveal.payout ?? 0)} pts returned · ×{currentReveal.multiplier}</p>
                         </>
                       ) : (
                         <>
@@ -174,7 +206,7 @@ export default function BigBetPage() {
               </div>
             )}
 
-            {/* Summary after show */}
+            {/* Summary */}
             {!showingReveal && (
               <div className="space-y-2">
                 <p className="text-xs font-mono text-slate-500 uppercase tracking-widest">Results</p>
@@ -183,14 +215,18 @@ export default function BigBetPage() {
                     b.outcome === "win" ? "bg-emerald-500/10 border-emerald-500/30" : "bg-rose-500/10 border-rose-500/30"
                   }`}>
                     <div>
-                      <p className="text-sm font-semibold text-white">{b.username}</p>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-sm">{GAME_ICONS[b.gameType]}</span>
+                        <p className="text-sm font-semibold text-white">{b.username}</p>
+                        {b.isAllIn && <span className="text-xs text-rose-400">ALL IN</span>}
+                      </div>
                       <p className="text-xs text-slate-400">{b.title}</p>
                     </div>
                     <div className="text-right">
                       <p className={`text-sm font-bold ${b.outcome === "win" ? "text-emerald-400" : "text-rose-400"}`}>
                         {b.outcome === "win" ? `+${formatPoints((b.payout ?? 0) - b.stake)}` : `-${formatPoints(b.stake)}`}
                       </p>
-                      <p className="text-xs text-slate-600">{b.outcome}</p>
+                      <p className="text-xs text-slate-600">×{b.multiplier}</p>
                     </div>
                   </div>
                 ))}
@@ -208,60 +244,114 @@ export default function BigBetPage() {
                 <p className="text-sm text-white font-semibold">
                   {new Date(revealAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                 </p>
-                <p className="text-xs text-slate-600">Submit before then. Once The House resolves, it waits for no one.</p>
+                <p className="text-xs text-slate-600">Submit before then. Once The House resolves it, it waits for no one.</p>
               </div>
             )}
 
             {myPendingBet ? (
               <div className="rounded-2xl bg-violet-500/10 border border-violet-500/30 px-4 py-4 space-y-2">
                 <p className="text-xs font-mono text-violet-400 uppercase tracking-widest">Your Submission</p>
-                <p className="text-sm font-bold text-white">{myPendingBet.title}</p>
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">{GAME_ICONS[myPendingBet.gameType]}</span>
+                  <p className="text-sm font-bold text-white">{myPendingBet.title}</p>
+                </div>
                 <p className="text-xs text-slate-400">{myPendingBet.description}</p>
-                <p className="text-xs text-slate-500">{formatPoints(myPendingBet.stake)} pts escrowed · 1.5× if you win</p>
+                <p className="text-xs text-slate-500">
+                  {formatPoints(myPendingBet.stake)} pts escrowed
+                  {" · "}
+                  {myPendingBet.isAllIn
+                    ? <span className="text-rose-400 font-semibold">ALL IN × {myPendingBet.multiplier}</span>
+                    : <span>×{myPendingBet.multiplier} if you win</span>
+                  }
+                </p>
               </div>
             ) : (
-              <div className="rounded-2xl bg-white/5 border border-white/10 px-4 py-4 space-y-3">
+              <div className="rounded-2xl bg-white/5 border border-white/10 px-4 py-4 space-y-4">
                 <p className="text-xs font-mono text-slate-500 uppercase tracking-widest">Submit a Bet</p>
-                <p className="text-xs text-slate-500">
-                  Describe something you predict will happen. The House resolves it. If you win, you get 1.5× your stake back.
-                </p>
+
+                {/* Game type */}
+                <div className="space-y-2">
+                  <p className="text-xs text-slate-500">Game</p>
+                  <div className="flex gap-2">
+                    {(["roulette", "blackjack", "custom"] as GameType[]).map((g) => (
+                      <button
+                        key={g}
+                        onClick={() => setGameType(g)}
+                        className={`flex-1 rounded-xl border py-2 text-sm transition-colors ${
+                          gameType === g
+                            ? "bg-violet-500/20 border-violet-500/50 text-white"
+                            : "bg-white/5 border-white/10 text-slate-400"
+                        }`}
+                      >
+                        {GAME_ICONS[g]} {GAME_LABELS[g]}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-slate-600">{GAME_HINTS[gameType]}</p>
+                </div>
+
                 <input
                   type="text"
-                  placeholder="Title (e.g. 'I will finish a puzzle in under 10 minutes')"
+                  placeholder="Title — short summary of the bet"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-violet-500/50"
                 />
                 <textarea
-                  placeholder="Describe the bet in detail..."
+                  placeholder="Description — spell out the exact terms..."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   rows={3}
                   className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-violet-500/50 resize-none"
                 />
-                <div className="flex gap-2">
-                  <input
-                    type="number"
-                    min="50"
-                    max={myPoints}
-                    placeholder="Stake (min 50)"
-                    value={stake}
-                    onChange={(e) => setStake(e.target.value)}
-                    className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-violet-500/50"
-                  />
-                  <button
-                    onClick={submit}
-                    disabled={submitting || !title.trim() || !description.trim() || !parseInt(stake)}
-                    className="btn-primary px-4 disabled:opacity-40"
-                  >
-                    {submitting ? "..." : "Submit"}
-                  </button>
+
+                {/* Stake + all-in */}
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <input
+                      type="number"
+                      min="50"
+                      max={myPoints}
+                      placeholder="Stake (min 50 pts)"
+                      value={stake}
+                      onChange={(e) => setStake(e.target.value)}
+                      className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-violet-500/50"
+                    />
+                    <button
+                      onClick={allIn}
+                      className="rounded-xl border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-rose-400 text-sm hover:bg-rose-500/20 transition-colors"
+                    >
+                      All In
+                    </button>
+                  </div>
+
+                  {stakeNum > 0 && (
+                    <div className={`rounded-xl border px-3 py-2 text-xs space-y-0.5 ${
+                      isAllIn ? "bg-rose-500/10 border-rose-500/30" : "bg-white/3 border-white/5"
+                    }`}>
+                      {isAllIn ? (
+                        <>
+                          <p className="text-rose-400 font-semibold">🔥 ALL IN — ×2.0 multiplier</p>
+                          <p className="text-slate-400">Win: +{formatPoints(stakeNum)} pts profit ({formatPoints(stakeNum * 2)} returned)</p>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-slate-400">×1.5 multiplier</p>
+                          <p className="text-slate-400">Win: +{formatPoints(Math.floor(stakeNum * 0.5))} pts profit ({formatPoints(Math.floor(stakeNum * 1.5))} returned)</p>
+                          <p className="text-slate-600">Stake all {formatPoints(myPoints)} pts for ×2.0</p>
+                        </>
+                      )}
+                    </div>
+                  )}
                 </div>
-                {parseInt(stake) > 0 && (
-                  <p className="text-xs text-slate-400">
-                    Win: +{formatPoints(Math.floor(parseInt(stake) * 0.5))} pts profit ({formatPoints(Math.floor(parseInt(stake) * 1.5))} returned)
-                  </p>
-                )}
+
+                <button
+                  onClick={submit}
+                  disabled={submitting || !title.trim() || !description.trim() || stakeNum < 50}
+                  className="w-full btn-primary disabled:opacity-40"
+                >
+                  {submitting ? "Submitting..." : "Submit to the Show"}
+                </button>
                 {error && <p className="text-xs text-rose-400">{error}</p>}
               </div>
             )}
@@ -276,11 +366,19 @@ export default function BigBetPage() {
                   }`}>
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <p className="text-sm font-semibold text-white">{b.username} {b.isMe && <span className="text-violet-400 text-xs">(you)</span>}</p>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-base">{GAME_ICONS[b.gameType]}</span>
+                          <p className="text-sm font-semibold text-white">{b.username}</p>
+                          {b.isMe && <span className="text-violet-400 text-xs">(you)</span>}
+                          {b.isAllIn && <span className="text-xs text-rose-400 font-semibold">ALL IN</span>}
+                        </div>
                         <p className="text-xs text-slate-300 mt-0.5">"{b.title}"</p>
-                        <p className="text-xs text-slate-500 mt-0.5">{b.description}</p>
+                        <p className="text-xs text-slate-500">{b.description}</p>
                       </div>
-                      <p className="text-xs text-slate-400 font-mono shrink-0">{formatPoints(b.stake)} pts</p>
+                      <div className="text-right shrink-0">
+                        <p className="text-xs text-slate-400 font-mono">{formatPoints(b.stake)}</p>
+                        <p className="text-xs text-slate-600">×{b.multiplier}</p>
+                      </div>
                     </div>
                   </div>
                 ))}

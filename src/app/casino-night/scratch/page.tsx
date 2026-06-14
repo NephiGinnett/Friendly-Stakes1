@@ -68,11 +68,6 @@ export default function ScratchPage() {
     fetch("/api/auth/me")
       .then((r) => { if (!r.ok) router.push("/login"); return r.ok ? r.json() : null; })
       .then((u) => { if (u) load(); });
-    fetch("/api/casino/pages", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ slug: "/casino-night/scratch" }),
-    });
   }, [router, load]);
 
   const buy = async () => {
