@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import PointsBadge from "@/components/PointsBadge";
+import TeamBadges from "@/components/TeamBadges";
 import { formatPoints } from "@/lib/utils";
 
 type User = { id: number; username: string; points: number; isAdmin: boolean };
@@ -109,9 +110,12 @@ export default function WorldCupPage() {
       <div className="min-h-screen pb-20">
         <header className="sticky top-0 z-40 bg-[rgb(15,15,22)]/90 backdrop-blur-lg border-b border-white/5">
           <div className="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
-            <div>
-              <h1 className="text-lg font-bold text-white">⚽ World Cup 2026</h1>
-              <p className="text-xs text-slate-500">FIFA World Cup · June 11 — July 19</p>
+            <div className="flex items-center gap-3">
+              <TeamBadges />
+              <div>
+                <h1 className="text-lg font-bold text-white">⚽ World Cup 2026</h1>
+                <p className="text-xs text-slate-500">FIFA World Cup · June 11 — July 19</p>
+              </div>
             </div>
             <PointsBadge points={user.points} />
           </div>

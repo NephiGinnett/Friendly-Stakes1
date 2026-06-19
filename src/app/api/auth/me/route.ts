@@ -13,5 +13,7 @@ export async function GET() {
     points: user.points,
     isAdmin: user.isAdmin,
     avatarAchievementId: user.avatarAchievementId ?? null,
+    siteTheme: user.siteTheme ?? "",
+    ownedThemes: user.ownedThemes ?? "[]",
   });
 }

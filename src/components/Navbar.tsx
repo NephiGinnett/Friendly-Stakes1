@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getDisplayVersion } from "@/lib/version";
+import TeamBadges from "@/components/TeamBadges";
 
 type User = { id: number; username: string; points: number; isAdmin: boolean };
 type HouseStatus = { worldCupAdminAt: string | null; worldCupPlayerAt: string | null };
@@ -88,7 +89,7 @@ export default function Navbar() {
     (user.isAdmin && now >= wcAdminAt) || now >= wcPlayerAt
   );
 
-  const navItems: { href: string; label: string; dotKey?: keyof typeof dotMap }[] = [
+  const navItems: { href: string; label: string; dotKey?: keyof typeof dotMap; isWc?: boolean }[] = [
     { href: "/feed", label: "Feed", dotKey: "feed" },
     { href: "/wagers/new", label: "+" },
     { href: "/shop", label: "Shop" },
@@ -97,7 +98,7 @@ export default function Navbar() {
     { href: "/bingo", label: "🎱", dotKey: "bingo" },
     { href: "/games", label: "🎮" },
     { href: "/house", label: "🎰", dotKey: "house" },
-    ...(showWorldCup ? [{ href: "/world-cup", label: "⚽" }] : []),
+    ...(showWorldCup ? [{ href: "/world-cup", label: "⚽", isWc: true }] : []),
     { href: "/profile", label: user.username },
   ];
 
@@ -122,6 +123,8 @@ export default function Navbar() {
           >
             {item.label === "+" ? (
               <span className="text-xl leading-none">+</span>
+            ) : item.isWc ? (
+              <TeamBadges />
             ) : (
               <span>{item.label}</span>
             )}

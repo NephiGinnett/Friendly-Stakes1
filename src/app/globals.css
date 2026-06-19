@@ -2,9 +2,37 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --bg-base: 15, 15, 22;
+  --bg-surface: 30, 30, 40;
+  --accent-primary: 139, 92, 246;
+  --accent-primary-rgb: 139, 92, 246;
+  --accent-secondary: 139, 92, 246;
+  --border-subtle: 255, 255, 255, 0.05;
+  --text-muted: 148, 163, 184;
+}
+
 body {
-  background-color: rgb(15 15 22);
+  background-color: rgb(var(--bg-base));
   color: rgb(226 232 240);
+}
+
+[data-theme] body::before,
+body:has([data-theme])::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: var(--theme-overlay, none);
+  opacity: 0.5;
+}
+
+[data-theme] .btn-primary {
+  background-color: rgb(var(--accent-primary));
+}
+[data-theme] .btn-primary:hover {
+  filter: brightness(1.15);
 }
 
 @layer components {

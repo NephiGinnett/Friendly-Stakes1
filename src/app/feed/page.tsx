@@ -30,7 +30,7 @@ export default function FeedPage() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [wagers, setWagers] = useState<Wager[]>([]);
-  const [filter, setFilter] = useState<string>("all");
+  const [filter, setFilter] = useState<string>("available");
   const [loading, setLoading] = useState(true);
   const [distributions, setDistributions] = useState<Distribution[]>([]);
   const [claiming, setClaiming] = useState<number | null>(null);
@@ -64,7 +64,10 @@ export default function FeedPage() {
   }, [router]);
 
   useEffect(() => {
-    const url = filter === "available" ? "/api/wagers?status=open" : filter === "all" ? "/api/wagers" : `/api/wagers?status=${filter}`;
+    const url = filter === "available" ? "/api/wagers?status=open"
+      : filter === "world-cup" ? "/api/wagers?tag=world-cup"
+      : filter === "all" ? "/api/wagers"
+      : `/api/wagers?status=${filter}`;
     fetch(url)
       .then((r) => r.json())
       .then(setWagers)
@@ -84,7 +87,7 @@ export default function FeedPage() {
 
   if (!user) return null;
 
-  const filters = ["all", "available", "open", "started", "voting", "settled"];
+  const filters = ["available", "all", "world-cup", "open", "started", "voting", "settled"];
 
   return (
     <div className="min-h-screen pb-20">
@@ -150,7 +153,7 @@ export default function FeedPage() {
                   : "bg-white/5 text-slate-400 hover:text-white"
               }`}
             >
-              {f === "all" ? "All" : f === "available" ? "Not Joined" : f.charAt(0).toUpperCase() + f.slice(1)}
+              {f === "all" ? "All" : f === "available" ? "Not Joined" : f === "world-cup" ? "⚽ World Cup" : f.charAt(0).toUpperCase() + f.slice(1)}
             </button>
           ))}
         </div>
@@ -165,7 +168,7 @@ export default function FeedPage() {
           if (displayed.length === 0) {
             return (
               <div className="text-center py-12">
-                <p className="text-slate-500 mb-3">{filter === "available" ? "No open bets waiting for you" : "No wagers yet"}</p>
+                <p className="text-slate-500 mb-3">{filter === "available" ? "No open bets waiting for you" : filter === "world-cup" ? "No World Cup bets yet" : "No wagers yet"}</p>
                 {filter !== "available" && (
                   <button onClick={() => router.push("/wagers/new")} className="btn-primary">
                     Create the first one

@@ -11,8 +11,11 @@ export async function GET(req: Request) {
 
   const { searchParams } = new URL(req.url);
   const status = searchParams.get("status");
+  const tag = searchParams.get("tag");
 
-  const where = status ? { status } : {};
+  const where: Record<string, unknown> = {};
+  if (status) where.status = status;
+  if (tag === "world-cup") where.wcBet = true;
 
   const wagers = await prisma.wager.findMany({
     where,

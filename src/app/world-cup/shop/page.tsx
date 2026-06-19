@@ -7,7 +7,7 @@ import Navbar from "@/components/Navbar";
 import PointsBadge from "@/components/PointsBadge";
 
 type User = { id: number; username: string; points: number; isAdmin: boolean };
-type ShopData = { monitorCans: number; tradeRate: { cans: number; points: number } };
+type ShopData = { monitorCans: number; tradeRate: { cans: number; points: number }; themeCost: number; ownsWcTheme: boolean };
 type AchievementData = { id: string; unlocked: boolean; name: string; emoji: string; imageUrl: string | null };
 
 const WC_ACHIEVEMENT_IDS = [
@@ -26,6 +26,7 @@ export default function WorldCupShopPage() {
   const [batches, setBatches] = useState("1");
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const [loading, setLoading] = useState(false);
+  const [buyingTheme, setBuyingTheme] = useState(false);
 
   const loadShop = () =>
     fetch("/api/world-cup/shop")
@@ -135,6 +136,49 @@ export default function WorldCupShopPage() {
           >
             {loading ? "Trading..." : canAfford ? `Trade ${cansNeeded} cans → ${ptsPreview} pts` : "Not enough cans"}
           </button>
+        </div>
+
+        {/* World Cup Site Theme */}
+        <div className="card space-y-3">
+          <div className="flex items-center gap-3">
+            <span className="text-3xl">🏟️</span>
+            <div>
+              <p className="font-semibold text-white">World Cup Site Theme</p>
+              <p className="text-xs text-slate-500">Green pitch & golden accents overlay</p>
+            </div>
+          </div>
+          <p className="text-xs text-slate-400">
+            Applies automatically to World Cup pages. Select it in your profile to use across the whole site.
+          </p>
+          {shop.ownsWcTheme ? (
+            <div className="flex items-center gap-2 py-2">
+              <span className="text-emerald-400 text-sm font-semibold">✓ Owned</span>
+              <span className="text-xs text-slate-500">Go to Profile → Settings to equip</span>
+            </div>
+          ) : (
+            <button
+              onClick={async () => {
+                setBuyingTheme(true); setMsg(null);
+                const res = await fetch("/api/world-cup/shop", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ action: "buy-theme" }),
+                });
+                const d = await res.json();
+                setBuyingTheme(false);
+                if (res.ok) {
+                  setMsg({ text: "✓ World Cup theme unlocked! Check your profile to equip.", ok: true });
+                  setShop((s) => s ? { ...s, monitorCans: d.monitorCans, ownsWcTheme: true } : s);
+                } else {
+                  setMsg({ text: d.error ?? "Something went wrong", ok: false });
+                }
+              }}
+              disabled={buyingTheme || shop.monitorCans < shop.themeCost}
+              className="btn-primary w-full"
+            >
+              {buyingTheme ? "Purchasing..." : `Buy for ${shop.themeCost} 🥤 cans`}
+            </button>
+          )}
         </div>
 
         {/* How to earn */}
