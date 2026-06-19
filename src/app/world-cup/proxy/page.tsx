@@ -19,14 +19,16 @@ export default function ProxyPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [userPoints, setUserPoints] = useState<number | null>(null);
+  const [eliminated, setEliminated] = useState(false);
 
   useEffect(() => {
     fetch("/api/world-cup/proxy")
       .then((r) => r.ok ? r.json() : null)
       .then((d) => {
-        if (!d || !d.eliminated) { router.push("/world-cup"); return; }
+        if (!d) { router.push("/world-cup"); return; }
         setMyTeam(d.myTeam);
         setProxyTeam(d.proxyTeam);
+        setEliminated(d.eliminated);
         setAvailableTeams(d.availableTeams);
         setProxyCost(d.proxyCost ?? 250);
         if (d.proxyTeam) setSelectedId(d.proxyTeam.id);
@@ -61,13 +63,22 @@ export default function ProxyPage() {
       </header>
 
       <div className="max-w-lg mx-auto px-4 pt-5 space-y-4">
-        {/* Eliminated notice */}
-        <div className="rounded-2xl bg-rose-500/10 border border-rose-500/30 px-4 py-3 text-center space-y-1">
-          <p className="text-3xl">{myTeam.flag}</p>
-          <p className="text-white font-bold">{myTeam.name} was eliminated</p>
-          <p className="text-xs text-rose-400">Confidence wagers are no longer available. Pick a proxy team to keep doing parlays.</p>
-          <p className="text-xs text-amber-400 font-semibold">{proxyCost} pts each time · goes into the allegiance pool{userPoints !== null ? ` · you have ${userPoints.toLocaleString()} pts` : ""}</p>
-        </div>
+        {/* Team status notice */}
+        {eliminated ? (
+          <div className="rounded-2xl bg-rose-500/10 border border-rose-500/30 px-4 py-3 text-center space-y-1">
+            <p className="text-3xl">{myTeam.flag}</p>
+            <p className="text-white font-bold">{myTeam.name} was eliminated</p>
+            <p className="text-xs text-rose-400">Confidence wagers are no longer available. Pick a proxy team to keep doing parlays.</p>
+            <p className="text-xs text-amber-400 font-semibold">{proxyCost} pts each time · goes into the allegiance pool{userPoints !== null ? ` · you have ${userPoints.toLocaleString()} pts` : ""}</p>
+          </div>
+        ) : (
+          <div className="rounded-2xl bg-violet-500/10 border border-violet-500/30 px-4 py-3 text-center space-y-1">
+            <p className="text-3xl">{myTeam.flag}</p>
+            <p className="text-white font-bold">{myTeam.name}</p>
+            <p className="text-xs text-violet-400">Pick a second team to follow alongside your allegiance.</p>
+            <p className="text-xs text-amber-400 font-semibold">{proxyCost} pts · goes into the allegiance pool{userPoints !== null ? ` · you have ${userPoints.toLocaleString()} pts` : ""}</p>
+          </div>
+        )}
 
         {proxyTeam && selectedId !== proxyTeam.id && (
           <div className="rounded-xl bg-violet-500/10 border border-violet-500/30 px-4 py-2 text-center text-xs text-violet-300">

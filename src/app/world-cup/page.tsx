@@ -160,6 +160,28 @@ export default function WorldCupPage() {
                 <p className="text-white font-bold text-lg">{team.name}</p>
                 <p className="text-xs text-emerald-400 font-mono uppercase tracking-widest">{team.confederation} · Your allegiance</p>
               </div>
+              {/* Proxy team */}
+              {status.proxyTeam && !status.proxyTeamEliminated ? (
+                <Link href="/world-cup/proxy" className="card flex items-center gap-4 hover:border-violet-500/40 transition-colors bg-violet-500/5 border-violet-500/20">
+                  <span className="text-3xl">{status.proxyTeam.flag}</span>
+                  <div>
+                    <p className="font-semibold text-white">{status.proxyTeam.name} · Proxy</p>
+                    <p className="text-xs text-violet-400">Following alongside your team · tap to change · 250 pts</p>
+                  </div>
+                  <span className="ml-auto text-slate-600">›</span>
+                </Link>
+              ) : (
+                <Link href="/world-cup/proxy" className="card flex items-center gap-4 hover:border-violet-500/40 transition-colors bg-white/[0.03] border-white/10">
+                  <span className="text-3xl">🔄</span>
+                  <div>
+                    <p className="font-semibold text-white">
+                      {status.proxyTeamEliminated ? `${status.proxyTeam?.name} was knocked out — pick a new proxy` : "Pick a Proxy Team"}
+                    </p>
+                    <p className="text-xs text-slate-500">Follow a second team · 250 pts · goes into the allegiance pool</p>
+                  </div>
+                  <span className="ml-auto text-slate-600">›</span>
+                </Link>
+              )}
               {/* Allegiance pool note */}
               <div className="rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-xs text-slate-400 text-center">
                 Your 500 pts are in the allegiance pool. All entries split equally to players backing the World Cup champion.

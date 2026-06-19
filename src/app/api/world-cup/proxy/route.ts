@@ -41,7 +41,6 @@ export async function POST(req: Request) {
     include: { team: true },
   });
   if (!entry) return NextResponse.json({ error: "Not entered" }, { status: 404 });
-  if (!entry.team.eliminated) return NextResponse.json({ error: "Your team hasn't been eliminated" }, { status: 400 });
 
   let proxyTeamName = "proxy team";
   if (teamId) {
