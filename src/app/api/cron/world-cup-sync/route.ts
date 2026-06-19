@@ -121,7 +121,9 @@ async function settleMatchConfidenceWagers(matchId: number, winnerTeamId: number
 
   // Award 3 Monitor Cans to every player backing the winning team
   if (winnerTeamId !== null) {
-    const winnerEntries = await prisma.worldCupEntry.findMany({ where: { teamId: winnerTeamId } });
+    const winnerEntries = await prisma.worldCupEntry.findMany({
+      where: { OR: [{ teamId: winnerTeamId }, { proxyTeamId: winnerTeamId }] },
+    });
     const teamWins = await prisma.worldCupMatch.count({
       where: {
         status: "FINISHED",
