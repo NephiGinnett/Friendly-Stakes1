@@ -18,6 +18,7 @@ type WagerCardProps = {
     creatorStake: number;
     deadline: string;
     status: string;
+    wcBet?: boolean;
     creator: { id: number; username: string };
     entries: WagerEntry[];
   };
@@ -37,17 +38,26 @@ export default function WagerCard({ wager }: WagerCardProps) {
     1 + wager.entries.filter((e) => e.side === "for").length;
   const againstCount = wager.entries.filter((e) => e.side === "against").length;
 
+  const isWc = !!wager.wcBet;
+
   return (
-    <Link href={`/wagers/${wager.id}`} className="card block hover:border-white/10 transition-colors">
+    <Link href={`/wagers/${wager.id}`} className={`card block transition-colors ${
+      isWc
+        ? "border-emerald-500/20 hover:border-emerald-500/30 bg-emerald-950/20"
+        : "hover:border-white/10"
+    }`}>
       <div className="flex items-start justify-between gap-3 mb-3">
-        <h3 className="font-semibold text-white leading-snug">{wager.title}</h3>
+        <h3 className="font-semibold text-white leading-snug">
+          {isWc && <span className="mr-1.5">⚽</span>}
+          {wager.title}
+        </h3>
         <span className={`shrink-0 text-xs px-2 py-0.5 rounded-full font-medium ${getStatusBg(wager.status)}`}>
           {wager.status}
         </span>
       </div>
 
       <p className="text-sm text-slate-400 mb-3">
-        <span className="text-violet-400 font-medium">{wager.creator.username}</span> says:{" "}
+        <span className={`font-medium ${isWc ? "text-emerald-400" : "text-violet-400"}`}>{wager.creator.username}</span> says:{" "}
         <span className="text-slate-200">{wager.creatorPosition}</span>
       </p>
 
@@ -64,7 +74,7 @@ export default function WagerCard({ wager }: WagerCardProps) {
         )}
       </div>
 
-      <div className="flex items-center justify-between text-xs text-slate-500">
+      <div className={`flex items-center justify-between text-xs ${isWc ? "text-emerald-600" : "text-slate-500"}`}>
         <span>Pool: {formatPoints(totalPool)} pts</span>
         <span>{timeUntil(wager.deadline)}</span>
       </div>

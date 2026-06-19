@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { getDisplayVersion } from "@/lib/version";
 import TeamBadges from "@/components/TeamBadges";
 
-type User = { id: number; username: string; points: number; isAdmin: boolean };
+type User = { id: number; username: string; points: number; isAdmin: boolean; siteTheme?: string };
 type HouseStatus = { worldCupAdminAt: string | null; worldCupPlayerAt: string | null };
 type Notifs = {
   challenges: number;
@@ -70,6 +70,8 @@ export default function Navbar() {
 
   if (!user) return null;
 
+  const isWcTheme = pathname.startsWith("/world-cup") || user.siteTheme === "world-cup";
+
   const dotMap = {
     feed: notifs.wagers > 0 || notifs.distributions > 0,
     challenges: notifs.challenges > 0,
@@ -107,7 +109,18 @@ export default function Navbar() {
   }
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-surface border-t border-white/10 z-50">
+    <nav className={`fixed bottom-0 left-0 right-0 bg-surface border-t z-50 ${
+      isWcTheme ? "border-white/30" : "border-white/10"
+    }`}>
+      {isWcTheme && (
+        <>
+          <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-white/90 rounded-tr-sm" />
+          <div className="absolute right-0 top-0 bottom-0 w-1.5 bg-white/90 rounded-tl-sm" />
+          <div className="absolute left-0 right-0 top-0 h-1 bg-white/90" />
+          <div className="absolute left-0 w-3 h-3 top-0 border-l-2 border-t-2 border-white/90" />
+          <div className="absolute right-0 w-3 h-3 top-0 border-r-2 border-t-2 border-white/90" />
+        </>
+      )}
       <div className="max-w-lg mx-auto flex items-center justify-around py-2 relative">
         {navItems.map((item) => (
           <Link

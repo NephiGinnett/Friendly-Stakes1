@@ -22,6 +22,7 @@ type Wager = {
   creatorStake: number;
   deadline: string;
   status: string;
+  wcBet?: boolean;
   creator: { id: number; username: string };
   entries: WagerEntry[];
 };
