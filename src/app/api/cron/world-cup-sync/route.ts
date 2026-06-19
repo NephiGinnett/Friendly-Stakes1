@@ -27,31 +27,51 @@ async function settleMatchConfidenceWagers(matchId: number, winnerTeamId: number
   const match = await prisma.worldCupMatch.findUnique({ where: { id: matchId } });
   if (!match || match.settled) return 0;
 
-  const homeEntries = await prisma.worldCupEntry.findMany({
+  // Gather entries: primary team backers + proxy team backers
+  const homePrimary = await prisma.worldCupEntry.findMany({
     where: { teamId: match.homeTeamId ?? -1 },
     include: { user: true },
   });
-  const awayEntries = await prisma.worldCupEntry.findMany({
+  const homeProxy = await prisma.worldCupEntry.findMany({
+    where: { proxyTeamId: match.homeTeamId ?? -1, teamId: { not: match.homeTeamId ?? -1 } },
+    include: { user: true },
+  });
+  const awayPrimary = await prisma.worldCupEntry.findMany({
     where: { teamId: match.awayTeamId ?? -1 },
     include: { user: true },
   });
+  const awayProxy = await prisma.worldCupEntry.findMany({
+    where: { proxyTeamId: match.awayTeamId ?? -1, teamId: { not: match.awayTeamId ?? -1 } },
+    include: { user: true },
+  });
+
+  type EntryWithStake = typeof homePrimary[number] & { effectiveStake: number };
+  const homeEntries: EntryWithStake[] = [
+    ...homePrimary.map((e) => ({ ...e, effectiveStake: e.confidenceStake })),
+    ...homeProxy.map((e) => ({ ...e, effectiveStake: e.proxyConfidenceStake })),
+  ];
+  const awayEntries: EntryWithStake[] = [
+    ...awayPrimary.map((e) => ({ ...e, effectiveStake: e.confidenceStake })),
+    ...awayProxy.map((e) => ({ ...e, effectiveStake: e.proxyConfidenceStake })),
+  ];
 
   let settled = 0;
 
   for (const home of homeEntries) {
     for (const away of awayEntries) {
+      if (home.userId === away.userId) continue;
+
       const homeWon = winnerTeamId === match.homeTeamId;
       const awayWon = winnerTeamId === match.awayTeamId;
 
-      // Draw — both get their stakes back, no record created
       if (!homeWon && !awayWon) {
         continue;
       }
 
       const winner = homeWon ? home : away;
       const loser = homeWon ? away : home;
-      const winnerStake = winner.confidenceStake;
-      const loserStake = loser.confidenceStake;
+      const winnerStake = winner.effectiveStake;
+      const loserStake = loser.effectiveStake;
       const totalEscrowed = winnerStake + loserStake;
       const high = Math.max(winnerStake, loserStake);
       const low = Math.min(winnerStake, loserStake);
