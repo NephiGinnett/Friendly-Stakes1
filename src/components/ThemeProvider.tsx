@@ -7,26 +7,18 @@ import { getTheme } from "@/lib/themes";
 export default function ThemeProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [themeId, setThemeId] = useState<string>("");
-  const [ownsWcTheme, setOwnsWcTheme] = useState(false);
 
   useEffect(() => {
     fetch("/api/auth/me")
       .then((r) => (r.ok ? r.json() : null))
       .then((u) => {
-        if (!u) return;
-        setThemeId(u.siteTheme ?? "");
-        try {
-          const owned: string[] = JSON.parse(u.ownedThemes || "[]");
-          setOwnsWcTheme(owned.includes("world-cup"));
-        } catch {
-          setOwnsWcTheme(false);
-        }
+        if (u) setThemeId(u.siteTheme ?? "");
       })
       .catch(() => {});
   }, []);
 
   const isWcPage = pathname.startsWith("/world-cup");
-  const activeTheme = isWcPage && ownsWcTheme ? "world-cup" : themeId;
+  const activeTheme = isWcPage ? "world-cup" : themeId;
   const theme = getTheme(activeTheme);
 
   useEffect(() => {

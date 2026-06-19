@@ -148,7 +148,7 @@ export default function WorldCupShopPage() {
             </div>
           </div>
           <p className="text-xs text-slate-400">
-            Applies automatically to World Cup pages. Select it in your profile to use across the whole site.
+            Already active on World Cup pages. Purchase to apply it across the whole site. Manage in Profile → Settings.
           </p>
           {shop.ownsWcTheme ? (
             <div className="flex items-center gap-2 py-2">

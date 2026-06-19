@@ -52,7 +52,10 @@ export async function POST(req: Request) {
       });
       await tx.user.update({
         where: { id: user.id },
-        data: { ownedThemes: JSON.stringify(ownedThemes) },
+        data: {
+          ownedThemes: JSON.stringify(ownedThemes),
+          siteTheme: "world-cup",
+        },
       });
     });
 
