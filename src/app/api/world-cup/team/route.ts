@@ -13,7 +13,7 @@ function buildTeamData(matches: Array<{ status: string; homeTeamId: number | nul
   const losses = finished.length - wins - draws;
   return {
     record: { played: finished.length, wins, draws, losses },
-    upcoming: sorted.filter((m) => m.status === "SCHEDULED").slice(0, 3),
+    upcoming: sorted.filter((m) => m.status === "SCHEDULED" || m.status === "TIMED").slice(0, 3),
     recent: finished.slice(-5),
     allMatches: sorted,
   };

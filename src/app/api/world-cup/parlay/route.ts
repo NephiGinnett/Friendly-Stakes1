@@ -21,7 +21,7 @@ export async function GET() {
   // Next match for this player's effective team
   const nextMatch = await prisma.worldCupMatch.findFirst({
     where: {
-      status: "SCHEDULED",
+      status: { in: ["SCHEDULED", "TIMED"] },
       OR: [{ homeTeamId: effectiveTeamId }, { awayTeamId: effectiveTeamId }],
     },
     orderBy: { kickoff: "asc" },

@@ -19,11 +19,57 @@ type HistoryEntry = {
   winner: { username: string }; loser: { username: string };
   match: { homeTeamName: string; awayTeamName: string; stage: string; kickoff: string };
 };
+type ProxyData = { team: Team; nextMatch: Match | null; opponents: Opponent[] };
 type PageData = {
   myTeam: Team; confidenceStake: number; nextMatch: Match | null;
   opponents: Opponent[]; history: HistoryEntry[];
+  proxy?: ProxyData | null;
   eliminated?: boolean;
 };
+
+function MatchSection({ team, nextMatch, opponents, stakeNum }: {
+  team: Team; nextMatch: Match | null; opponents: Opponent[]; stakeNum: number;
+}) {
+  return (
+    <>
+      {nextMatch ? (
+        <div className="card space-y-3">
+          <p className="text-xs font-mono text-slate-500 uppercase tracking-widest">Next match</p>
+          <div>
+            <p className="text-white font-medium">{nextMatch.homeTeamName} <span className="text-slate-500">vs</span> {nextMatch.awayTeamName}</p>
+            <p className="text-xs text-slate-500">{nextMatch.stage} · {new Date(nextMatch.kickoff).toLocaleDateString()}</p>
+          </div>
+
+          {opponents.length > 0 ? (
+            <div className="space-y-1">
+              <p className="text-xs text-slate-500">Players you&apos;ll face:</p>
+              {opponents.map((o) => {
+                const myS = stakeNum; const theirS = o.confidenceStake;
+                const high = Math.max(myS, theirS); const low = Math.min(myS, theirS);
+                const asymmetric = high > 0 && low < high / 2;
+                return (
+                  <div key={o.username} className="flex items-center justify-between bg-white/5 rounded-xl px-3 py-2">
+                    <span className="text-sm text-slate-300">{o.flag} {o.username}</span>
+                    <div className="text-right">
+                      <span className="text-xs font-mono text-slate-400">{formatPoints(o.confidenceStake)} pts</span>
+                      {asymmetric && <span className="ml-2 text-xs text-amber-400">⚡ asymmetric</span>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-xs text-slate-500">No players are backing the opposing team yet.</p>
+          )}
+        </div>
+      ) : (
+        <div className="text-center text-slate-500 text-sm py-8">
+          No upcoming matches scheduled for {team.name} yet.
+        </div>
+      )}
+    </>
+  );
+}
 
 export default function ConfidencePage() {
   const router = useRouter();
@@ -33,6 +79,7 @@ export default function ConfidencePage() {
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState("");
   const [error, setError] = useState("");
+  const [tab, setTab] = useState<"primary" | "proxy">("primary");
 
   const fetchAll = () => {
     fetch("/api/world-cup/confidence").then((r) => r.ok ? r.json() : null).then((d) => {
@@ -73,7 +120,6 @@ export default function ConfidencePage() {
   }
   if (!data || !user) return null;
 
-  // Eliminated players cannot use confidence wagers
   if (data.eliminated) {
     return (
       <div className="min-h-screen pb-20">
@@ -100,8 +146,11 @@ export default function ConfidencePage() {
     );
   }
 
-  const { myTeam, confidenceStake, nextMatch, opponents, history } = data;
+  const { myTeam, confidenceStake, history } = data;
   const stakeNum = parseInt(stake) || 0;
+  const activeTeam = tab === "proxy" && data.proxy ? data.proxy.team : myTeam;
+  const activeMatch = tab === "proxy" && data.proxy ? data.proxy.nextMatch : data.nextMatch;
+  const activeOpponents = tab === "proxy" && data.proxy ? data.proxy.opponents : data.opponents;
 
   return (
     <div className="min-h-screen pb-20">
@@ -110,7 +159,7 @@ export default function ConfidencePage() {
           <Link href="/world-cup" className="text-slate-400 hover:text-white text-sm">←</Link>
           <div>
             <h1 className="text-lg font-bold text-white">🤝 Confidence Wager</h1>
-            <p className="text-xs text-slate-500">{myTeam.flag} {myTeam.name}</p>
+            <p className="text-xs text-slate-500">{activeTeam.flag} {activeTeam.name}{tab === "proxy" ? " · proxy" : ""}</p>
           </div>
         </div>
       </header>
@@ -118,6 +167,35 @@ export default function ConfidencePage() {
       <div className="max-w-lg mx-auto px-4 pt-5 space-y-5">
         {msg && <div className="rounded-xl bg-emerald-500/10 border border-emerald-500/30 px-4 py-2 text-sm text-emerald-400 text-center">{msg}</div>}
         {error && <div className="rounded-xl bg-rose-500/10 border border-rose-500/30 px-4 py-2 text-sm text-rose-400 text-center">{error}</div>}
+
+        {/* Team toggle */}
+        {data.proxy && (
+          <div className="flex gap-2">
+            <button
+              onClick={() => setTab("primary")}
+              className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
+                tab === "primary"
+                  ? "bg-amber-500/20 border border-amber-500/40 text-amber-300"
+                  : "bg-white/5 border border-white/10 text-slate-400 hover:text-white"
+              }`}
+            >
+              <span>{myTeam.flag}</span>
+              <span>{myTeam.name}</span>
+            </button>
+            <button
+              onClick={() => setTab("proxy")}
+              className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
+                tab === "proxy"
+                  ? "bg-violet-500/20 border border-violet-500/40 text-violet-300"
+                  : "bg-white/5 border border-white/10 text-slate-400 hover:text-white"
+              }`}
+            >
+              <span>{data.proxy.team.flag}</span>
+              <span>{data.proxy.team.name}</span>
+              <span className="text-xs opacity-60">proxy</span>
+            </button>
+          </div>
+        )}
 
         {/* How it works */}
         <div className="rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-xs text-slate-400 space-y-1">
@@ -161,43 +239,7 @@ export default function ConfidencePage() {
         </div>
 
         {/* Next match & opponents */}
-        {nextMatch && (
-          <div className="card space-y-3">
-            <p className="text-xs font-mono text-slate-500 uppercase tracking-widest">Next match</p>
-            <div>
-              <p className="text-white font-medium">{nextMatch.homeTeamName} <span className="text-slate-500">vs</span> {nextMatch.awayTeamName}</p>
-              <p className="text-xs text-slate-500">{nextMatch.stage} · {new Date(nextMatch.kickoff).toLocaleDateString()}</p>
-            </div>
-
-            {opponents.length > 0 ? (
-              <div className="space-y-1">
-                <p className="text-xs text-slate-500">Players you&apos;ll face:</p>
-                {opponents.map((o) => {
-                  const myS = stakeNum; const theirS = o.confidenceStake;
-                  const high = Math.max(myS, theirS); const low = Math.min(myS, theirS);
-                  const asymmetric = high > 0 && low < high / 2;
-                  return (
-                    <div key={o.username} className="flex items-center justify-between bg-white/5 rounded-xl px-3 py-2">
-                      <span className="text-sm text-slate-300">{o.flag} {o.username}</span>
-                      <div className="text-right">
-                        <span className="text-xs font-mono text-slate-400">{formatPoints(o.confidenceStake)} pts</span>
-                        {asymmetric && <span className="ml-2 text-xs text-amber-400">⚡ asymmetric</span>}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <p className="text-xs text-slate-500">No players are backing the opposing team yet.</p>
-            )}
-          </div>
-        )}
-
-        {!nextMatch && (
-          <div className="text-center text-slate-500 text-sm py-8">
-            No upcoming matches scheduled yet.
-          </div>
-        )}
+        <MatchSection team={activeTeam} nextMatch={activeMatch} opponents={activeOpponents} stakeNum={stakeNum} />
 
         {/* History */}
         {history.length > 0 && (

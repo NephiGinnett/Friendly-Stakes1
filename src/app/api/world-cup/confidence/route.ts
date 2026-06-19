@@ -2,13 +2,15 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 
+const UPCOMING_STATUSES = ["SCHEDULED", "TIMED"];
+
 export async function GET() {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const entry = await prisma.worldCupEntry.findUnique({
     where: { userId: user.id },
-    include: { team: true },
+    include: { team: true, proxyTeam: true },
   });
   if (!entry) return NextResponse.json({ error: "Not entered" }, { status: 404 });
 
@@ -16,33 +18,42 @@ export async function GET() {
     return NextResponse.json({ eliminated: true, myTeam: entry.team });
   }
 
-  // Next scheduled match for this player's team
-  const nextMatch = await prisma.worldCupMatch.findFirst({
-    where: {
-      status: "SCHEDULED",
-      OR: [{ homeTeamId: entry.teamId }, { awayTeamId: entry.teamId }],
-    },
-    orderBy: { kickoff: "asc" },
-    include: { homeTeam: true, awayTeam: true },
-  });
+  async function getTeamData(teamId: number) {
+    const nextMatch = await prisma.worldCupMatch.findFirst({
+      where: {
+        status: { in: UPCOMING_STATUSES },
+        OR: [{ homeTeamId: teamId }, { awayTeamId: teamId }],
+      },
+      orderBy: { kickoff: "asc" },
+      include: { homeTeam: true, awayTeam: true },
+    });
 
-  // Players backing the opposing team in that match
-  let opponents: { username: string; flag: string; confidenceStake: number }[] = [];
-  if (nextMatch) {
-    const opposingTeamId = nextMatch.homeTeamId === entry.teamId
-      ? nextMatch.awayTeamId
-      : nextMatch.homeTeamId;
-    if (opposingTeamId) {
-      const opponentEntries = await prisma.worldCupEntry.findMany({
-        where: { teamId: opposingTeamId },
-        include: { user: { select: { username: true } }, team: true },
-      });
-      opponents = opponentEntries.map((e) => ({
-        username: e.user.username,
-        flag: e.team.flag,
-        confidenceStake: e.confidenceStake,
-      }));
+    let opponents: { username: string; flag: string; confidenceStake: number }[] = [];
+    if (nextMatch) {
+      const opposingTeamId = nextMatch.homeTeamId === teamId
+        ? nextMatch.awayTeamId
+        : nextMatch.homeTeamId;
+      if (opposingTeamId) {
+        const opponentEntries = await prisma.worldCupEntry.findMany({
+          where: { OR: [{ teamId: opposingTeamId }, { proxyTeamId: opposingTeamId }] },
+          include: { user: { select: { username: true } }, team: true },
+        });
+        opponents = opponentEntries.map((e) => ({
+          username: e.user.username,
+          flag: e.team.flag,
+          confidenceStake: e.confidenceStake,
+        }));
+      }
     }
+    return { nextMatch, opponents };
+  }
+
+  const primary = await getTeamData(entry.teamId);
+
+  let proxy = null;
+  if (entry.proxyTeam && entry.proxyTeamId && !entry.proxyTeam.eliminated) {
+    const proxyData = await getTeamData(entry.proxyTeamId);
+    proxy = { team: entry.proxyTeam, ...proxyData };
   }
 
   // Past settled wagers
@@ -60,8 +71,9 @@ export async function GET() {
   return NextResponse.json({
     myTeam: entry.team,
     confidenceStake: entry.confidenceStake,
-    nextMatch,
-    opponents,
+    nextMatch: primary.nextMatch,
+    opponents: primary.opponents,
+    proxy,
     history,
   });
 }
