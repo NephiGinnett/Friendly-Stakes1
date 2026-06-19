@@ -35,6 +35,34 @@ body:has([data-theme])::before {
   filter: brightness(1.15);
 }
 
+/* Goal-post header/footer styling for World Cup theme */
+[data-theme="world-cup"] header.sticky {
+  border-bottom-color: rgba(255,255,255,0.3);
+  position: relative;
+}
+[data-theme="world-cup"] header.sticky::before,
+[data-theme="world-cup"] header.sticky::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 5px;
+  background: rgba(255,255,255,0.85);
+}
+[data-theme="world-cup"] header.sticky::before { left: 0; }
+[data-theme="world-cup"] header.sticky::after { right: 0; }
+
+[data-theme="world-cup"] header.sticky > div {
+  border-left: 2px solid rgba(255,255,255,0.15);
+  border-right: 2px solid rgba(255,255,255,0.15);
+}
+
+/* Goal net pattern on header bottom */
+[data-theme="world-cup"] header.sticky {
+  border-bottom: 2px solid rgba(255,255,255,0.6);
+  box-shadow: 0 2px 8px rgba(34,197,94,0.15);
+}
+
 @layer components {
   .btn {
     @apply px-4 py-2.5 rounded-xl font-medium text-sm transition-all active:scale-95 disabled:opacity-50 disabled:active:scale-100;
