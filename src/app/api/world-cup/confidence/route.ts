@@ -71,6 +71,7 @@ export async function GET() {
   return NextResponse.json({
     myTeam: entry.team,
     confidenceStake: entry.confidenceStake,
+    proxyConfidenceStake: entry.proxyConfidenceStake,
     nextMatch: primary.nextMatch,
     opponents: primary.opponents,
     proxy,
@@ -83,11 +84,23 @@ export async function POST(req: Request) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { stake } = await req.json();
-  const stakeNum = Math.max(0, Math.min(parseInt(stake) || 100, user.points));
+  const { stake, target } = await req.json();
+  const stakeNum = Math.max(0, Math.min(parseInt(stake) || 0, user.points));
+  const isProxy = target === "proxy";
 
-  const entry = await prisma.worldCupEntry.findUnique({ where: { userId: user.id }, include: { team: true } });
+  const entry = await prisma.worldCupEntry.findUnique({ where: { userId: user.id }, include: { team: true, proxyTeam: true } });
   if (!entry) return NextResponse.json({ error: "Not entered" }, { status: 404 });
+
+  if (isProxy) {
+    if (!entry.proxyTeamId) return NextResponse.json({ error: "No proxy team selected" }, { status: 400 });
+    if (entry.proxyTeam?.eliminated) return NextResponse.json({ error: "Your proxy team was eliminated" }, { status: 403 });
+    await prisma.worldCupEntry.update({
+      where: { userId: user.id },
+      data: { proxyConfidenceStake: stakeNum },
+    });
+    return NextResponse.json({ ok: true, proxyConfidenceStake: stakeNum });
+  }
+
   if (entry.team.eliminated) return NextResponse.json({ error: "Confidence wagers not available — your team was eliminated" }, { status: 403 });
 
   await prisma.worldCupEntry.update({

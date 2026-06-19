@@ -21,7 +21,8 @@ type HistoryEntry = {
 };
 type ProxyData = { team: Team; nextMatch: Match | null; opponents: Opponent[] };
 type PageData = {
-  myTeam: Team; confidenceStake: number; nextMatch: Match | null;
+  myTeam: Team; confidenceStake: number; proxyConfidenceStake: number;
+  nextMatch: Match | null;
   opponents: Opponent[]; history: HistoryEntry[];
   proxy?: ProxyData | null;
   eliminated?: boolean;
@@ -75,7 +76,8 @@ export default function ConfidencePage() {
   const router = useRouter();
   const [user, setUser] = useState<{ id: number; points: number; username: string } | null>(null);
   const [data, setData] = useState<PageData | null>(null);
-  const [stake, setStake] = useState("");
+  const [primaryStake, setPrimaryStake] = useState("");
+  const [proxyStake, setProxyStake] = useState("");
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState("");
   const [error, setError] = useState("");
@@ -83,7 +85,7 @@ export default function ConfidencePage() {
 
   const fetchAll = () => {
     fetch("/api/world-cup/confidence").then((r) => r.ok ? r.json() : null).then((d) => {
-      if (d) { setData(d); setStake(String(d.confidenceStake)); }
+      if (d) { setData(d); setPrimaryStake(String(d.confidenceStake)); setProxyStake(String(d.proxyConfidenceStake)); }
     });
     fetch("/api/auth/me").then((r) => r.ok ? r.json() : null).then(setUser);
   };
@@ -92,21 +94,26 @@ export default function ConfidencePage() {
     fetch("/api/auth/me").then((r) => { if (!r.ok) { router.push("/login"); return null; } return r.json(); }).then(setUser);
     fetch("/api/world-cup/confidence")
       .then((r) => r.ok ? r.json() : r.json().then((d: { error: string }) => { throw new Error(d.error); }))
-      .then((d) => { setData(d); setStake(String(d.confidenceStake)); })
+      .then((d) => { setData(d); setPrimaryStake(String(d.confidenceStake)); setProxyStake(String(d.proxyConfidenceStake)); })
       .catch((e) => setError(e.message));
   }, [router]);
 
   const saveStake = async () => {
+    const isProxy = tab === "proxy";
+    const stakeValue = isProxy ? proxyStake : primaryStake;
     setLoading(true); setMsg(""); setError("");
     const res = await fetch("/api/world-cup/confidence", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ stake: parseInt(stake) || 0 }),
+      body: JSON.stringify({ stake: parseInt(stakeValue) || 0, target: isProxy ? "proxy" : "primary" }),
     });
     const d = await res.json();
     setLoading(false);
-    if (res.ok) { setMsg(`Confidence stake set to ${formatPoints(d.confidenceStake)} pts.`); fetchAll(); }
-    else setError(d.error ?? "Something went wrong");
+    if (res.ok) {
+      const saved = isProxy ? d.proxyConfidenceStake : d.confidenceStake;
+      setMsg(`${isProxy ? "Proxy confidence" : "Confidence"} stake set to ${formatPoints(saved)} pts.`);
+      fetchAll();
+    } else setError(d.error ?? "Something went wrong");
   };
 
   if (error && !data) {
@@ -146,11 +153,15 @@ export default function ConfidencePage() {
     );
   }
 
-  const { myTeam, confidenceStake, history } = data;
+  const { myTeam, confidenceStake, proxyConfidenceStake, history } = data;
+  const isProxyTab = tab === "proxy" && !!data.proxy;
+  const stake = isProxyTab ? proxyStake : primaryStake;
+  const setStake = isProxyTab ? setProxyStake : setPrimaryStake;
+  const currentStake = isProxyTab ? proxyConfidenceStake : confidenceStake;
   const stakeNum = parseInt(stake) || 0;
-  const activeTeam = tab === "proxy" && data.proxy ? data.proxy.team : myTeam;
-  const activeMatch = tab === "proxy" && data.proxy ? data.proxy.nextMatch : data.nextMatch;
-  const activeOpponents = tab === "proxy" && data.proxy ? data.proxy.opponents : data.opponents;
+  const activeTeam = isProxyTab ? data.proxy!.team : myTeam;
+  const activeMatch = isProxyTab ? data.proxy!.nextMatch : data.nextMatch;
+  const activeOpponents = isProxyTab ? data.proxy!.opponents : data.opponents;
 
   return (
     <div className="min-h-screen pb-20">
@@ -209,10 +220,10 @@ export default function ConfidencePage() {
         {/* Stake setter */}
         <div className="card space-y-3">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-white">Your confidence stake</p>
-            <p className="text-xs text-slate-500 font-mono">Currently {formatPoints(confidenceStake)} pts</p>
+            <p className="text-sm font-medium text-white">{isProxyTab ? "Proxy confidence stake" : "Your confidence stake"}</p>
+            <p className="text-xs text-slate-500 font-mono">Currently {formatPoints(currentStake)} pts</p>
           </div>
-          <p className="text-xs text-slate-400">Applied to every match your team plays. You have {formatPoints(user.points)} pts.</p>
+          <p className="text-xs text-slate-400">Applied to every match {activeTeam.name} plays. You have {formatPoints(user.points)} pts.</p>
           <div className="flex gap-2">
             <input
               type="number" min={0} max={user.points}
@@ -222,7 +233,7 @@ export default function ConfidencePage() {
             />
             <button
               onClick={saveStake}
-              disabled={loading || stakeNum === confidenceStake}
+              disabled={loading || stakeNum === currentStake}
               className="btn-primary"
             >
               {loading ? "..." : "Save"}
