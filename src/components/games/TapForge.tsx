@@ -9,7 +9,7 @@ type Upgrade = {
   description: string;
   baseCost: number;
   costScale: number;
-  effect: "tap" | "auto" | "multi";
+  effect: "tap" | "auto" | "multi" | "autocombine";
   baseValue: number;
 };
 
@@ -19,6 +19,7 @@ const UPGRADES: Upgrade[] = [
   { id: "bellows", name: "Bellows", emoji: "🌬️", description: "+1/sec auto", baseCost: 100, costScale: 1.7, effect: "auto", baseValue: 1 },
   { id: "apprentice", name: "Apprentice", emoji: "👤", description: "+3/sec auto", baseCost: 500, costScale: 1.8, effect: "auto", baseValue: 3 },
   { id: "enchant", name: "Enchantment", emoji: "✨", description: "×2 multiplier", baseCost: 2000, costScale: 2.5, effect: "multi", baseValue: 2 },
+  { id: "autocombine", name: "Auto-Combine", emoji: "⚙️", description: "Auto-buys cheapest upgrade", baseCost: 3500, costScale: 3.0, effect: "autocombine", baseValue: 1 },
 ];
 
 const PRESTIGE_THRESHOLD = 10000;
@@ -37,6 +38,7 @@ export default function TapForge({ onGameOver }: { onGameOver: (p: GameOverPaylo
   const [forgedItem, setForgedItem] = useState<string | null>(null);
   const [gameOver, setGameOver] = useState(false);
   const autoRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const combineRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const totalRef = useRef(0);
 
   const tapPower = useCallback(() => {
