@@ -21,15 +21,19 @@ type FanStatus = {
   myScore: number;
   myRank: number | null;
   myPoints: number;
+  myCans: number;
   hasEntry: boolean;
   leaderboard: LeaderboardEntry[];
 };
+
+type DonationType = "points" | "cans";
 
 export default function FanCompetitionPage() {
   const router = useRouter();
   const [userId, setUserId] = useState<number | null>(null);
   const [status, setStatus] = useState<FanStatus | null>(null);
   const [donateAmount, setDonateAmount] = useState("");
+  const [donateType, setDonateType] = useState<DonationType>("points");
   const [donating, setDonating] = useState(false);
   const [error, setError] = useState("");
   const [lastGain, setLastGain] = useState<number | null>(null);
@@ -53,7 +57,7 @@ export default function FanCompetitionPage() {
     const res = await fetch("/api/world-cup/fan-competition", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ amount: amt }),
+      body: JSON.stringify({ amount: amt, type: donateType }),
     });
     const d = await res.json();
     setDonating(false);
@@ -68,9 +72,10 @@ export default function FanCompetitionPage() {
 
   if (!status) return null;
 
-  const { pot, myScore, myRank, myPoints, leaderboard, hasEntry } = status;
+  const { pot, myScore, myRank, myPoints, myCans, leaderboard, hasEntry } = status;
   const donateNum = parseInt(donateAmount) || 0;
-  const previewScore = Math.floor(donateNum * 0.5);
+  const previewScore = donateType === "cans" ? donateNum * 20 : Math.floor(donateNum * 0.5);
+  const maxDonate = donateType === "cans" ? myCans : myPoints;
 
   return (
     <div className="min-h-screen pb-20">
@@ -119,8 +124,12 @@ export default function FanCompetitionPage() {
               <span>💰 Direct point donation</span>
               <span className="text-amber-400 font-mono">×0.5</span>
             </div>
+            <div className="flex justify-between">
+              <span>🥤 Monitor can donation</span>
+              <span className="text-emerald-400 font-mono">×1.0</span>
+            </div>
           </div>
-          <p className="text-xs text-slate-600 pt-1">10% of activity net profits are skimmed into the pot automatically.</p>
+          <p className="text-xs text-slate-600 pt-1">10% of activity net profits are skimmed into the pot automatically. 1 🥤 = 20 fan score.</p>
         </div>
 
         {/* My score */}
@@ -140,21 +149,51 @@ export default function FanCompetitionPage() {
         {/* Donate */}
         {hasEntry && (
           <div className="rounded-2xl bg-white/5 border border-white/10 px-4 py-4 space-y-3">
-            <p className="text-sm font-semibold text-white">Donate points to the pot</p>
-            <p className="text-xs text-slate-500">You keep skin in the game — donations count at 50% toward your fan score.</p>
+            <p className="text-sm font-semibold text-white">Donate to the pot</p>
+
+            {/* Toggle between points and cans */}
+            <div className="flex gap-2">
+              <button
+                onClick={() => { setDonateType("points"); setDonateAmount(""); setError(""); }}
+                className={`flex-1 rounded-xl border py-2 text-sm transition-colors ${
+                  donateType === "points"
+                    ? "bg-violet-500/20 border-violet-500/50 text-white"
+                    : "bg-white/5 border-white/10 text-slate-400"
+                }`}
+              >
+                💰 Points ({formatPoints(myPoints)})
+              </button>
+              <button
+                onClick={() => { setDonateType("cans"); setDonateAmount(""); setError(""); }}
+                className={`flex-1 rounded-xl border py-2 text-sm transition-colors ${
+                  donateType === "cans"
+                    ? "bg-emerald-500/20 border-emerald-500/50 text-white"
+                    : "bg-white/5 border-white/10 text-slate-400"
+                }`}
+              >
+                🥤 Cans ({myCans})
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-500">
+              {donateType === "points"
+                ? "Point donations count at 50% toward your fan score."
+                : "Each can is worth 20 fan score at full value (100%)."}
+            </p>
+
             <div className="flex gap-2">
               <input
                 type="number"
                 min="1"
-                max={myPoints}
+                max={maxDonate}
                 value={donateAmount}
                 onChange={(e) => setDonateAmount(e.target.value)}
-                placeholder="Amount..."
+                placeholder={donateType === "cans" ? "Cans..." : "Points..."}
                 className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-violet-500/50"
               />
               <button
                 onClick={donate}
-                disabled={donating || donateNum < 1 || donateNum > myPoints}
+                disabled={donating || donateNum < 1 || donateNum > maxDonate}
                 className="btn-primary px-4 disabled:opacity-40"
               >
                 {donating ? "..." : "Donate"}
@@ -162,7 +201,9 @@ export default function FanCompetitionPage() {
             </div>
             {donateNum > 0 && (
               <p className="text-xs text-slate-400">
-                {formatPoints(donateNum)} pts → pot grows by {formatPoints(donateNum)}, your score +{formatPoints(previewScore)}
+                {donateType === "cans"
+                  ? `${donateNum} 🥤 → pot grows by ${formatPoints(donateNum * 20)}, your score +${formatPoints(previewScore)}`
+                  : `${formatPoints(donateNum)} pts → pot grows by ${formatPoints(donateNum)}, your score +${formatPoints(previewScore)}`}
               </p>
             )}
             {lastGain !== null && (
