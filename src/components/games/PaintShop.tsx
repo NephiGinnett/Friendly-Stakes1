@@ -30,7 +30,7 @@ const ZONES: Record<ZoneKey, { x: number; y: number; w: number; h: number }> = {
   mistint:    { x: 12, y: 11, w: 3, h: 2 },
 };
 
-const ORDERS: Order[] = [
+const BASE_ORDERS: Order[] = [
   { name: "Ocean Teal",    r: 0,   g: 160, b: 170 },
   { name: "Sunset Orange", r: 230, g: 100, b: 20  },
   { name: "Lavender",      r: 150, g: 80,  b: 210 },
@@ -41,6 +41,31 @@ const ORDERS: Order[] = [
   { name: "Coral",         r: 240, g: 110, b: 90  },
   { name: "Forest Green",  r: 30,  g: 110, b: 50  },
   { name: "Deep Purple",   r: 100, g: 10,  b: 160 },
+];
+
+const EXTRA_ORDERS: Order[] = [
+  { name: "Burnt Sienna",  r: 170, g: 80,  b: 30  },
+  { name: "Mint",          r: 60,  g: 220, b: 170 },
+  { name: "Marigold",      r: 240, g: 180, b: 20  },
+  { name: "Dusty Rose",    r: 190, g: 110, b: 130 },
+  { name: "Teal Black",    r: 20,  g: 70,  b: 80  },
+  { name: "Electric Blue",  r: 30,  g: 90,  b: 255 },
+  { name: "Olive Drab",    r: 100, g: 120, b: 40  },
+  { name: "Plum",          r: 140, g: 30,  b: 100 },
+  { name: "Rust",          r: 180, g: 50,  b: 10  },
+  { name: "Seafoam",       r: 90,  g: 200, b: 160 },
+];
+
+type ShopUpgrade = {
+  id: string; name: string; emoji: string; description: string;
+  cost: number; maxLevel: number;
+};
+
+const SHOP_UPGRADES: ShopUpgrade[] = [
+  { id: "skates", name: "Roller Skates", emoji: "⛸️", description: "Move faster", cost: 30, maxLevel: 3 },
+  { id: "customers", name: "Customer Variety", emoji: "👥", description: "Unlock new colors", cost: 40, maxLevel: 2 },
+  { id: "employee", name: "Employee", emoji: "🧑‍🔧", description: "Faster shaking", cost: 60, maxLevel: 2 },
+  { id: "tips", name: "Tip Jar", emoji: "💰", description: "+15% pay bonus", cost: 80, maxLevel: 2 },
 ];
 
 function rgbStr({ r, g, b }: RGB) { return `rgb(${r},${g},${b})`; }
@@ -197,6 +222,31 @@ export default function PaintShop({ onGameOver }: Props) {
   const [orderHistory, setOrderHistory] = useState<HistoryItem[]>([]);
   const [perfectMatch, setPerfectMatch] = useState(false);
   const [, setClockTick] = useState(0);
+  const [upgradeLevels, setUpgradeLevels] = useState<Record<string, number>>({});
+  const [showShop, setShowShop] = useState(false);
+
+  const skatesLevel = upgradeLevels["skates"] ?? 0;
+  const customerLevel = upgradeLevels["customers"] ?? 0;
+  const employeeLevel = upgradeLevels["employee"] ?? 0;
+  const tipsLevel = upgradeLevels["tips"] ?? 0;
+
+  const currentSpeed = SPEED + skatesLevel * 1.2;
+  const currentShakeDuration = Math.max(1, SHAKE_DURATION - employeeLevel);
+  const tipBonus = 1 + tipsLevel * 0.15;
+  const orderPool = customerLevel === 0
+    ? BASE_ORDERS
+    : customerLevel === 1
+      ? [...BASE_ORDERS, ...EXTRA_ORDERS.slice(0, 5)]
+      : [...BASE_ORDERS, ...EXTRA_ORDERS];
+
+  const speedRef = useRef(currentSpeed);
+  useEffect(() => { speedRef.current = currentSpeed; }, [currentSpeed]);
+  const orderPoolRef = useRef(orderPool);
+  useEffect(() => { orderPoolRef.current = orderPool; }, [orderPool]);
+  const shakeDurRef = useRef(currentShakeDuration);
+  useEffect(() => { shakeDurRef.current = currentShakeDuration; }, [currentShakeDuration]);
+  const tipBonusRef = useRef(tipBonus);
+  useEffect(() => { tipBonusRef.current = tipBonus; }, [tipBonus]);
 
   // Refs so dayOver effect can read latest values
   const totalRef = useRef(0);
@@ -226,11 +276,12 @@ export default function PaintShop({ onGameOver }: Props) {
         const tx = targetRef.current.x, ty = targetRef.current.y;
         const dx = tx - prev.x, dy = ty - prev.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist < SPEED) { setWalking(false); return { x: tx, y: ty }; }
+        const spd = speedRef.current;
+        if (dist < spd) { setWalking(false); return { x: tx, y: ty }; }
         setWalking(true);
         if (Math.abs(dx) > Math.abs(dy)) setFacing(dx > 0 ? "right" : "left");
         else setFacing(dy > 0 ? "down" : "up");
-        return { x: prev.x + (dx / dist) * SPEED, y: prev.y + (dy / dist) * SPEED };
+        return { x: prev.x + (dx / dist) * spd, y: prev.y + (dy / dist) * spd };
       });
       animRef.current = requestAnimationFrame(loop);
     };
@@ -311,7 +362,8 @@ export default function PaintShop({ onGameOver }: Props) {
 
     if (zone === "counter") {
       if (p === "idle") {
-        const o = ORDERS[Math.floor(Math.random() * ORDERS.length)];
+        const pool = orderPoolRef.current;
+        const o = pool[Math.floor(Math.random() * pool.length)];
         setOrder(o); setHasPaint(false); setPaintTinted(false); setPaintShaken(false);
         setMixColor({ r: 128, g: 128, b: 128 });
         const now = Date.now(); setOrderStartTime(now); setElapsed(0);
@@ -330,7 +382,7 @@ export default function PaintShop({ onGameOver }: Props) {
       setMessage("Set your RGB values, then lock in the tint.");
     }
     if (zone === "shaker" && p === "tinted" && pt && !ps) {
-      setPhase("shaking"); setShakeTimeLeft(SHAKE_DURATION);
+      setPhase("shaking"); setShakeTimeLeft(shakeDurRef.current);
       setMessage("Shaking… wait for it!");
     }
     if (zone === "colorcheck") {
@@ -367,10 +419,10 @@ export default function PaintShop({ onGameOver }: Props) {
     const score = matchScore(dist);
     const base = basePay(score);
     const mult = speedMultiplier(elapsedNow);
-    const pay = Math.round(base * mult);
+    const pay = Math.round(base * mult * tipBonusRef.current);
     if (score === 100) setPerfectMatch(true);
     setTotal(t => t + pay); setCompletedOrders(c => c + 1);
-    setLastResult({ score, pay, base, mult, dist: Math.round(dist), elapsed: elapsedNow });
+    setLastResult({ score, pay, base, mult: mult * tipBonusRef.current, dist: Math.round(dist), elapsed: elapsedNow });
     setOrderHistory(h => [...h, { name: order!.name, score, pay, elapsed: elapsedNow }]);
     setOrder(null); setHasPaint(false); setPaintTinted(false); setPaintShaken(false);
     setMixColor({ r: 128, g: 128, b: 128 });
@@ -454,7 +506,61 @@ export default function PaintShop({ onGameOver }: Props) {
             padding: "2px 8px", cursor: "pointer", fontSize: 11, borderRadius: 3 }}>
           {showInstructions ? "Hide" : "Help"}
         </button>
+        <button onClick={() => setShowShop(v => !v)}
+          style={{ background: "#3a1a00", border: "1px solid #80cfff", color: "#80cfff",
+            padding: "2px 8px", cursor: "pointer", fontSize: 11, borderRadius: 3 }}>
+          {showShop ? "Close" : "🛒 Shop"}
+        </button>
       </div>
+
+      {showShop && (
+        <div style={{ background: "#0a0a1aee", border: "2px solid #80cfff", borderRadius: 8,
+          padding: "12px 16px", marginBottom: 8, color: "#f5e8c0",
+          maxWidth: scaledW, fontSize: 12, boxSizing: "border-box" }}>
+          <div style={{ color: "#80cfff", fontWeight: "bold", fontSize: 13, letterSpacing: 2, textAlign: "center", marginBottom: 10 }}>
+            🛒 UPGRADES
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {SHOP_UPGRADES.map(u => {
+              const lvl = upgradeLevels[u.id] ?? 0;
+              const maxed = lvl >= u.maxLevel;
+              const canBuy = !maxed && total >= u.cost;
+              return (
+                <div key={u.id} style={{ display: "flex", alignItems: "center", gap: 8,
+                  padding: "6px 10px", borderRadius: 6, border: "1px solid #333",
+                  background: canBuy ? "#1a2a3a" : "#111" }}>
+                  <span style={{ fontSize: 18 }}>{u.emoji}</span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ color: "#fff", fontSize: 12, fontWeight: "bold" }}>
+                      {u.name} <span style={{ color: maxed ? "#50ff50" : "#888", fontSize: 10 }}>
+                        {maxed ? "MAX" : `Lv.${lvl}/${u.maxLevel}`}
+                      </span>
+                    </div>
+                    <div style={{ color: "#888", fontSize: 10 }}>{u.description}</div>
+                  </div>
+                  {!maxed && (
+                    <button
+                      onClick={() => {
+                        if (!canBuy) return;
+                        setTotal(t => t - u.cost);
+                        setUpgradeLevels(l => ({ ...l, [u.id]: (l[u.id] ?? 0) + 1 }));
+                      }}
+                      disabled={!canBuy}
+                      style={{ background: canBuy ? "#80cfff" : "#333", color: canBuy ? "#000" : "#666",
+                        border: "none", padding: "4px 12px", cursor: canBuy ? "pointer" : "default",
+                        fontWeight: "bold", fontSize: 11, borderRadius: 4, whiteSpace: "nowrap" }}>
+                      ${u.cost}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ color: "#666", fontSize: 10, textAlign: "center", marginTop: 8 }}>
+            Spend your earnings on upgrades!
+          </div>
+        </div>
+      )}
 
       {showInstructions && (
         <div style={{ background: "#1a0a00ee", border: "2px solid #f5c840", borderRadius: 8,
@@ -465,7 +571,7 @@ export default function PaintShop({ onGameOver }: Props) {
           1️⃣ <strong style={{ color: "#ffcc80" }}>Counter</strong> — take a color order (timer starts!)<br />
           2️⃣ <strong style={{ color: "#ccaaff" }}>Shelf</strong> — grab a paint can<br />
           3️⃣ <strong style={{ color: "#80ffcc" }}>Tint Station</strong> — set RGB sliders &amp; lock in<br />
-          4️⃣ <strong style={{ color: "#ffee88" }}>Shaker</strong> — shake for {SHAKE_DURATION}s<br />
+          4️⃣ <strong style={{ color: "#ffee88" }}>Shaker</strong> — shake for {currentShakeDuration}s<br />
           5️⃣ <strong style={{ color: "#50ccff" }}>Color Check</strong> — compare your tint to the target<br />
           6️⃣ <strong style={{ color: "#ffcc80" }}>Counter</strong> — return for payment!<br />
           <span style={{ color: "#ff8060" }}>🗑 Mistint Pile — dump &amp; restart if you messed up<br /></span>
@@ -612,7 +718,7 @@ export default function PaintShop({ onGameOver }: Props) {
               </span>
             </div>
             {phase === "shaking" && (
-              <ShakerClock zone={ZONES.shaker} timeLeft={shakeTimeLeft} total={SHAKE_DURATION} />
+              <ShakerClock zone={ZONES.shaker} timeLeft={shakeTimeLeft} total={currentShakeDuration} />
             )}
 
             {/* Day Over overlay on map */}

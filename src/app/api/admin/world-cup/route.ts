@@ -112,6 +112,7 @@ export async function POST(req: Request) {
   }
 
   // Declare tournament champion — grants group_stage_prophet + 3 bonus Monitor Cans
+  // Also awards wc_gold_badge to winners and wc_bronze_badge to all other participants
   if (action === "declareChampion") {
     if (!winningTeamId) return NextResponse.json({ error: "winningTeamId required" }, { status: 400 });
 
@@ -135,7 +136,35 @@ export async function POST(req: Request) {
       }
     }
 
-    return NextResponse.json({ ok: true, championsFound: winners.length, rewarded });
+    // Award gold badge to winners, bronze badge to all other participants
+    let goldAwarded = 0;
+    let bronzeAwarded = 0;
+
+    for (const entry of winners) {
+      const exists = await prisma.userAchievement.findUnique({
+        where: { userId_achievementId: { userId: entry.userId, achievementId: "wc_gold_badge" } },
+      });
+      if (!exists) {
+        await prisma.userAchievement.create({ data: { userId: entry.userId, achievementId: "wc_gold_badge" } });
+        goldAwarded++;
+      }
+    }
+
+    const winnerUserIds = winners.map(w => w.userId);
+    const nonWinners = await prisma.worldCupEntry.findMany({
+      where: { userId: { notIn: winnerUserIds } },
+    });
+    for (const entry of nonWinners) {
+      const exists = await prisma.userAchievement.findUnique({
+        where: { userId_achievementId: { userId: entry.userId, achievementId: "wc_bronze_badge" } },
+      });
+      if (!exists) {
+        await prisma.userAchievement.create({ data: { userId: entry.userId, achievementId: "wc_bronze_badge" } });
+        bronzeAwarded++;
+      }
+    }
+
+    return NextResponse.json({ ok: true, championsFound: winners.length, rewarded, goldAwarded, bronzeAwarded });
   }
 
   // Lock bracket immediately
