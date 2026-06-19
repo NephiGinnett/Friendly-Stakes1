@@ -37,7 +37,7 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
-    const { title, description, creatorPosition, creatorStake, deadline, useVpn, isPublic } = await req.json();
+    const { title, description, creatorPosition, creatorStake, deadline, useVpn, isPublic, wcBet } = await req.json();
 
     if (!title || !creatorPosition || !creatorStake || !deadline) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -78,6 +78,7 @@ export async function POST(req: Request) {
           vpnActive,
           vpnSeed,
           isPublic: !!isPublic,
+          wcBet: wcBet !== false,
         },
       }),
       prisma.user.update({
