@@ -83,6 +83,8 @@ export default function AdminPage() {
   const [seedForm, setSeedForm] = useState({ round: "R32", position: "0", team1Code: "", team2Code: "" });
   const [seeding, setSeeding] = useState(false);
   const [elimTeamCode, setElimTeamCode] = useState("");
+  const [syncErrors, setSyncErrors] = useState<string[]>([]);
+  const [showSyncErrors, setShowSyncErrors] = useState(false);
 
   const loadBracketStatus = () =>
     fetch("/api/admin/world-cup").then((r) => r.ok ? r.json() : null).then(setBracketStatus);
@@ -1246,10 +1248,12 @@ export default function AdminPage() {
                     <button
                       onClick={async () => {
                         setBracketMsg("Syncing matches...");
+                        setSyncErrors([]); setShowSyncErrors(false);
                         const res = await fetch("/api/admin/world-cup", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "syncMatches" }) });
                         const d = await res.json();
                         if (res.ok) {
                           setBracketMsg(`✅ Synced ${d.upserted} matches (${d.fetched} fetched)${d.errors?.length ? ` · ${d.errors.length} errors` : ""}`);
+                          if (d.errors?.length) { setSyncErrors(d.errors); setShowSyncErrors(true); }
                         } else {
                           setBracketMsg(`❌ ${d.error}`);
                         }
@@ -1264,6 +1268,24 @@ export default function AdminPage() {
 
                 {bracketMsg && (
                   <p className={`text-xs font-mono break-all ${bracketMsg.startsWith("❌") || bracketMsg.includes("error") ? "text-rose-400" : bracketMsg.startsWith("✅") ? "text-emerald-400" : "text-slate-400"}`}>{bracketMsg}</p>
+                )}
+
+                {syncErrors.length > 0 && (
+                  <div className="space-y-1">
+                    <button
+                      onClick={() => setShowSyncErrors(!showSyncErrors)}
+                      className="text-xs text-amber-400 hover:text-amber-300 transition-colors"
+                    >
+                      {showSyncErrors ? "▲ Hide" : "▼ Show"} {syncErrors.length} sync error{syncErrors.length !== 1 ? "s" : ""}
+                    </button>
+                    {showSyncErrors && (
+                      <div className="max-h-48 overflow-y-auto rounded-lg bg-black/30 border border-white/5 p-2 space-y-0.5">
+                        {syncErrors.map((err, i) => (
+                          <p key={i} className="text-xs font-mono text-rose-300/80">{err}</p>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 )}
               </>
             )}
