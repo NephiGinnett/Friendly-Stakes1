@@ -45,7 +45,7 @@ async function settleMatchConfidenceWagers(matchId: number, winnerTeamId: number
     include: { user: true },
   });
 
-  type EntryWithStake = typeof homePrimary[number] & { effectiveStake: number };
+  type EntryWithStake = typeof homePrimary[number] & { effectiveStake: number; isBot?: boolean };
   const homeEntries: EntryWithStake[] = [
     ...homePrimary.map((e) => ({ ...e, effectiveStake: e.confidenceStake })),
     ...homeProxy.map((e) => ({ ...e, effectiveStake: e.proxyConfidenceStake })),
@@ -54,6 +54,15 @@ async function settleMatchConfidenceWagers(matchId: number, winnerTeamId: number
     ...awayPrimary.map((e) => ({ ...e, effectiveStake: e.confidenceStake })),
     ...awayProxy.map((e) => ({ ...e, effectiveStake: e.proxyConfidenceStake })),
   ];
+
+  // Bot backfill: if one side has no backers, inject a phantom 100-pt bot entry
+  // so the other side's players still earn from confidence wagers
+  const BOT_STAKE = 100;
+  if (homeEntries.length === 0 && awayEntries.length > 0) {
+    homeEntries.push({ userId: -1, isBot: true, effectiveStake: BOT_STAKE, user: { username: "Auto-Opponent" } } as unknown as EntryWithStake);
+  } else if (awayEntries.length === 0 && homeEntries.length > 0) {
+    awayEntries.push({ userId: -1, isBot: true, effectiveStake: BOT_STAKE, user: { username: "Auto-Opponent" } } as unknown as EntryWithStake);
+  }
 
   let settled = 0;
 
@@ -79,48 +88,66 @@ async function settleMatchConfidenceWagers(matchId: number, winnerTeamId: number
       const bonusAmount = isAsymmetric ? Math.floor(high * 0.33) : 0;
       const highIsWinner = winnerStake >= loserStake;
 
-      // High wins → winner gets pot + 33% bonus from system (e.g. 300+50+99 = 449)
-      // Low wins  → winner gets pot - 33% of high stake (e.g. 50+300-99 = 251)
-      // The 33% either comes from the system or disappears from the pot respectively
       const winnerPayout = isAsymmetric
         ? highIsWinner
           ? totalEscrowed + bonusAmount
           : totalEscrowed - bonusAmount
         : totalEscrowed;
 
-      // Fan Competition: 10% skim of net profit goes to pot; full net added to fan score
       const netProfit = Math.max(0, winnerPayout - winnerStake);
       const fanSkim = Math.floor(netProfit * 0.10);
       const effectivePayout = winnerPayout - fanSkim;
 
+      const winnerIsBot = !!(winner as EntryWithStake).isBot;
+      const loserIsBot = !!(loser as EntryWithStake).isBot;
+
+      // Bot lost — real player wins system-funded points; bot won — player loses stake
       await prisma.$transaction(async (tx) => {
-        // Deduct stakes from both players
-        if (winnerStake > 0) {
+        // Deduct stakes from real players only
+        if (winnerStake > 0 && !winnerIsBot) {
           await tx.user.update({ where: { id: winner.userId }, data: { points: { decrement: winnerStake } } });
           await logPoints(tx, winner.userId, -winnerStake, `Confidence wager stake — vs ${loser.user.username}`);
         }
-        if (loserStake > 0) {
+        if (loserStake > 0 && !loserIsBot) {
           await tx.user.update({ where: { id: loser.userId }, data: { points: { decrement: loserStake } } });
           await logPoints(tx, loser.userId, -loserStake, `Confidence wager stake — vs ${winner.user.username}`);
         }
-        // Pay out winner (minus fan skim)
-        await tx.user.update({ where: { id: winner.userId }, data: { points: { increment: effectivePayout } } });
-        await logPoints(tx, winner.userId, effectivePayout, `Confidence wager won vs ${loser.user.username}${bonusAmount > 0 ? ` (+${bonusAmount} bonus)` : ""}${fanSkim > 0 ? ` (−${fanSkim} fan pot)` : ""}`);
-        // Create settlement record
-        await tx.confidenceWager.create({
-          data: {
-            matchId,
-            winnerId: winner.userId,
-            loserId: loser.userId,
-            winnerStake,
-            loserStake,
-            winnerPayout: effectivePayout,
-            bonusApplied: isAsymmetric,
-            bonusAmount,
-          },
-        });
+        // Pay out winner (skip if bot won)
+        if (!winnerIsBot) {
+          await tx.user.update({ where: { id: winner.userId }, data: { points: { increment: effectivePayout } } });
+          await logPoints(tx, winner.userId, effectivePayout, `Confidence wager won vs ${loser.user.username}${bonusAmount > 0 ? ` (+${bonusAmount} bonus)` : ""}${fanSkim > 0 ? ` (−${fanSkim} fan pot)` : ""}`);
+        }
+        // Create settlement record (only for real winners)
+        if (!winnerIsBot && !loserIsBot) {
+          await tx.confidenceWager.create({
+            data: {
+              matchId,
+              winnerId: winner.userId,
+              loserId: loser.userId,
+              winnerStake,
+              loserStake,
+              winnerPayout: effectivePayout,
+              bonusApplied: isAsymmetric,
+              bonusAmount,
+            },
+          });
+        } else if (!winnerIsBot) {
+          // Bot opponent — record with winnerId only, loserId = winnerId as placeholder
+          await tx.confidenceWager.create({
+            data: {
+              matchId,
+              winnerId: winner.userId,
+              loserId: winner.userId,
+              winnerStake,
+              loserStake: BOT_STAKE,
+              winnerPayout: effectivePayout,
+              bonusApplied: isAsymmetric,
+              bonusAmount,
+            },
+          });
+        }
         // Fan Competition — update winner's score and add skim to pot
-        if (netProfit > 0) {
+        if (netProfit > 0 && !winnerIsBot) {
           await tx.worldCupEntry.update({
             where: { userId: winner.userId },
             data: { fanScore: { increment: netProfit } },
