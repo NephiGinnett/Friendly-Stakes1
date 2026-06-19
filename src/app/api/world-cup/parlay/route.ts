@@ -6,7 +6,7 @@ import { logPoints } from "@/lib/pointLog";
 const MULTIPLIERS = [2, 3, 5, 8, 13]; // indexed by (activeLegCount - 1)
 const MONITOR_PER_LEG = { 100: 1, 200: 2, 300: 3 } as Record<number, number>;
 
-export async function GET() {
+export async function GET(req: Request) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -16,15 +16,18 @@ export async function GET() {
   });
   if (!entry) return NextResponse.json({ error: "Not entered" }, { status: 404 });
 
-  const effectiveTeamId = entry.proxyTeamId ?? entry.teamId;
-  const isProxy = effectiveTeamId === entry.proxyTeamId;
-  const myEffectiveStake = isProxy ? entry.proxyConfidenceStake : entry.confidenceStake;
+  const { searchParams } = new URL(req.url);
+  const target = searchParams.get("target");
+  const useProxy = target === "proxy" && !!entry.proxyTeamId;
 
-  // Next match for this player's effective team
+  const teamId = useProxy ? entry.proxyTeamId! : entry.teamId;
+  const team = useProxy ? entry.proxyTeam! : entry.team;
+  const myStake = useProxy ? entry.proxyConfidenceStake : entry.confidenceStake;
+
   const nextMatch = await prisma.worldCupMatch.findFirst({
     where: {
       status: { in: ["SCHEDULED", "TIMED"] },
-      OR: [{ homeTeamId: effectiveTeamId }, { awayTeamId: effectiveTeamId }],
+      OR: [{ homeTeamId: teamId }, { awayTeamId: teamId }],
     },
     orderBy: { kickoff: "asc" },
     include: { homeTeam: true, awayTeam: true },
@@ -38,9 +41,8 @@ export async function GET() {
     ? new Date(new Date(nextMatch.kickoff).getTime() - 1 * 60 * 60 * 1000)
     : null;
 
-  // Find the opposing team's player with the highest confidence stake
   const opposingTeamId = nextMatch
-    ? nextMatch.homeTeamId === effectiveTeamId ? nextMatch.awayTeamId : nextMatch.homeTeamId
+    ? nextMatch.homeTeamId === teamId ? nextMatch.awayTeamId : nextMatch.homeTeamId
     : null;
 
   let opponent: { userId: number; username: string; confidenceStake: number } | null = null;
@@ -61,16 +63,14 @@ export async function GET() {
     }
   }
 
-  // Determine if this player can propose (higher confidence stake, within proposal window)
   const canPropose = !!(
     nextMatch &&
     opponent &&
-    myEffectiveStake > opponent.confidenceStake &&
+    myStake > opponent.confidenceStake &&
     twoHoursBefore && now >= twoHoursBefore &&
     oneHourBefore && now < oneHourBefore
   );
 
-  // Existing parlay for this match (as proposer or opponent)
   const existingParlay = nextMatch
     ? await prisma.parlay.findFirst({
         where: {
@@ -86,7 +86,6 @@ export async function GET() {
       })
     : null;
 
-  // Past parlays
   const history = await prisma.parlay.findMany({
     where: {
       OR: [{ proposerId: user.id }, { opponentId: user.id }],
@@ -103,9 +102,11 @@ export async function GET() {
   });
 
   return NextResponse.json({
-    myTeam: entry.proxyTeam ?? entry.team,
-    isProxy: !!entry.proxyTeamId,
-    confidenceStake: myEffectiveStake,
+    myTeam: team,
+    primaryTeam: entry.team,
+    proxyTeam: entry.proxyTeam ?? null,
+    isProxy: useProxy,
+    confidenceStake: myStake,
     monitorCans: entry.monitorCans,
     nextMatch,
     opponent,
@@ -121,7 +122,7 @@ export async function POST(req: Request) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { matchId, costPerLeg, legs } = await req.json();
+  const { matchId, costPerLeg, legs, target } = await req.json();
   // legs: { order: number; description: string }[]
 
   if (![100, 200, 300].includes(costPerLeg)) {
@@ -136,11 +137,12 @@ export async function POST(req: Request) {
 
   const entry = await prisma.worldCupEntry.findUnique({
     where: { userId: user.id },
-    include: { team: true },
+    include: { team: true, proxyTeam: true },
   });
   if (!entry) return NextResponse.json({ error: "Not entered" }, { status: 404 });
 
-  const effectiveTeamId = entry.proxyTeamId ?? entry.teamId;
+  const useProxy = target === "proxy" && !!entry.proxyTeamId;
+  const effectiveTeamId = useProxy ? entry.proxyTeamId! : entry.teamId;
 
   const match = await prisma.worldCupMatch.findUnique({ where: { id: matchId } });
   if (!match || !["SCHEDULED", "TIMED"].includes(match.status)) {
@@ -166,8 +168,7 @@ export async function POST(req: Request) {
     include: { user: { select: { id: true } } },
   });
   if (oppEntries.length === 0) return NextResponse.json({ error: "No opponent backing the other team" }, { status: 400 });
-  const postIsProxy = effectiveTeamId === entry.proxyTeamId;
-  const postMyStake = postIsProxy ? entry.proxyConfidenceStake : entry.confidenceStake;
+  const postMyStake = useProxy ? entry.proxyConfidenceStake : entry.confidenceStake;
   const oppsRanked = oppEntries.map(e => ({
     ...e,
     effectiveStake: e.teamId === opposingTeamId ? e.confidenceStake : e.proxyConfidenceStake,
