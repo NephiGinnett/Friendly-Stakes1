@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { GameOverPayload } from "./LearnToFly";
+import type { GameOverPayload } from "./types";
 
 // ── Map ────────────────────────────────────────────────────────────────────────
 // 0=open 1=wall 2=bug 3=spawn 4=exit

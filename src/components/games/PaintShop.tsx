@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useRef, useCallback } from "react";
-import type { GameOverPayload } from "./LearnToFly";
+import type { GameOverPayload } from "./types";
 
 const TILE = 48;
 const COLS = 16;

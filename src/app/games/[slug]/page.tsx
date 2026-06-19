@@ -5,21 +5,21 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import dynamic from "next/dynamic";
 import Navbar from "@/components/Navbar";
 import { GAME_REGISTRY } from "@/lib/gameRegistry";
-import type { GameOverPayload } from "@/components/games/LearnToFly";
+import type { GameOverPayload } from "@/components/games/types";
 
 type GameProps = { onGameOver: (payload: GameOverPayload) => void };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const GAME_COMPONENTS: Record<string, React.ComponentType<any>> = {
-  "learn-to-fly": dynamic<GameProps>(() => import("@/components/games/LearnToFly"), { ssr: false }),
   "echolocate": dynamic<GameProps>(() => import("@/components/games/Echolocate"), { ssr: false }),
   "paint-shop": dynamic<GameProps>(() => import("@/components/games/PaintShop"), { ssr: false }),
+  "tap-forge": dynamic<GameProps>(() => import("@/components/games/TapForge"), { ssr: false }),
 };
 
 const ACHIEVEMENT_NAMES: Record<string, string> = {
-  "learn-to-fly": "Full Send",
   "echolocate": "Night Hunter",
   "paint-shop": "Exact Science",
+  "tap-forge": "Master Smith",
 };
 
 type Phase = "pending" | "submitting" | "submitted";
@@ -188,24 +188,12 @@ export default function GamePage() {
             {overlayPhase === "pending" && pendingResult && (
               <div className="bg-white/5 border border-white/10 rounded-2xl p-5 space-y-3">
                 <div className="text-center text-slate-300 font-semibold">
-                  {slug === "learn-to-fly" ? "Flight complete! 🐧" :
-                   slug === "echolocate" ? (pendingResult.metadata?.completed ? "Level cleared! 🦇" : "You died! 🦇") :
+                  {slug === "echolocate" ? (pendingResult.metadata?.completed ? "Level cleared! 🦇" : "You died! 🦇") :
                    slug === "paint-shop" ? "Day complete! 🌅" :
+                   slug === "tap-forge" ? "Forge closed! 🔨" :
                    `${game.emoji} Game over!`}
                 </div>
                 <div className="space-y-2 text-sm">
-                  {slug === "learn-to-fly" && (
-                    <>
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">Distance</span>
-                        <span className="text-white font-semibold">{pendingResult.distance.toLocaleString()}m</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">Coins earned</span>
-                        <span className="text-yellow-400 font-semibold">🪙 {pendingResult.coinsEarned}</span>
-                      </div>
-                    </>
-                  )}
                   {slug === "echolocate" && (
                     <div className="flex justify-between">
                       <span className="text-slate-400">Final score</span>
@@ -216,6 +204,12 @@ export default function GamePage() {
                     <div className="flex justify-between">
                       <span className="text-slate-400">Earned this shift</span>
                       <span className="text-green-400 font-semibold">${pendingResult.coinsEarned}</span>
+                    </div>
+                  )}
+                  {slug === "tap-forge" && (
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Coins forged</span>
+                      <span className="text-amber-400 font-semibold">🪙 {pendingResult.coinsEarned.toLocaleString()}</span>
                     </div>
                   )}
                   <div className="flex justify-between border-t border-white/10 pt-2">
