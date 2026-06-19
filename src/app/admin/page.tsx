@@ -1223,25 +1223,43 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                {/* API diagnostic */}
+                {/* API diagnostic + sync */}
                 <div className="space-y-2 pt-1 border-t border-white/5">
-                  <p className="text-xs text-slate-500 font-mono uppercase tracking-widest">Football-data.org diagnostic</p>
-                  <button
-                    onClick={async () => {
-                      setBracketMsg("Running diagnostic...");
-                      const res = await fetch("/api/admin/world-cup", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "diagnoseFd" }) });
-                      const d = await res.json();
-                      if (d.httpStatus === 200) {
-                        const count = Array.isArray((d.body as { matches?: unknown[] })?.matches) ? (d.body as { matches: unknown[] }).matches.length : "?";
-                        setBracketMsg(`✅ API OK — ${count} matches returned`);
-                      } else {
-                        setBracketMsg(`❌ API returned ${d.httpStatus}: ${JSON.stringify(d.body).slice(0, 120)}`);
-                      }
-                    }}
-                    className="text-xs px-3 py-1.5 rounded-lg bg-slate-700/40 border border-white/10 text-slate-300 hover:bg-slate-700/60 transition-colors"
-                  >
-                    Test API connection
-                  </button>
+                  <p className="text-xs text-slate-500 font-mono uppercase tracking-widest">Football-data.org</p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={async () => {
+                        setBracketMsg("Running diagnostic...");
+                        const res = await fetch("/api/admin/world-cup", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "diagnoseFd" }) });
+                        const d = await res.json();
+                        if (d.httpStatus === 200) {
+                          const count = Array.isArray((d.body as { matches?: unknown[] })?.matches) ? (d.body as { matches: unknown[] }).matches.length : "?";
+                          setBracketMsg(`✅ API OK — ${count} matches returned`);
+                        } else {
+                          setBracketMsg(`❌ API returned ${d.httpStatus}: ${JSON.stringify(d.body).slice(0, 120)}`);
+                        }
+                      }}
+                      className="flex-1 text-xs px-3 py-1.5 rounded-lg bg-slate-700/40 border border-white/10 text-slate-300 hover:bg-slate-700/60 transition-colors"
+                    >
+                      Test API
+                    </button>
+                    <button
+                      onClick={async () => {
+                        setBracketMsg("Syncing matches...");
+                        const res = await fetch("/api/admin/world-cup", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "syncMatches" }) });
+                        const d = await res.json();
+                        if (res.ok) {
+                          setBracketMsg(`✅ Synced ${d.upserted} matches (${d.fetched} fetched)${d.errors?.length ? ` · ${d.errors.length} errors` : ""}`);
+                        } else {
+                          setBracketMsg(`❌ ${d.error}`);
+                        }
+                      }}
+                      className="flex-1 text-xs px-3 py-2.5 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/25 transition-colors font-medium"
+                    >
+                      ⚽ Sync Matches
+                    </button>
+                  </div>
+                  <p className="text-xs text-slate-600">Fetches all matches from football-data.org and populates the match table (group stage, R32, etc.)</p>
                 </div>
 
                 {bracketMsg && (
