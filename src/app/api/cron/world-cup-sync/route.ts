@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { logPoints } from "@/lib/pointLog";
+import { fetchFdMatches, upsertMatches } from "@/lib/wcSync";
 
 const FD_BASE = "https://api.football-data.org/v4";
 const FD_TOKEN = process.env.FOOTBALL_DATA_API_KEY;

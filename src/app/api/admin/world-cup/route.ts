@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import { fetchFdMatches, upsertMatches } from "@/lib/wcSync";
 
 const ROUND_EXPECTED: Record<string, number> = { R32: 16, R16: 8, QF: 4, SF: 2, FINAL: 1 };
 const ROUNDS = ["R32", "R16", "QF", "SF", "FINAL"];
@@ -202,6 +203,19 @@ export async function POST(req: Request) {
       first: { username: top2[0].user.username, fanScore: top2[0].fanScore, payout: firstShare },
       second: top2[1] ? { username: top2[1].user.username, fanScore: top2[1].fanScore, payout: secondShare } : null,
     });
+  }
+
+  // Sync matches from football-data.org — populates the match table
+  if (action === "syncMatches") {
+    const token = process.env.FOOTBALL_DATA_API_KEY;
+    if (!token) return NextResponse.json({ error: "FOOTBALL_DATA_API_KEY not set" }, { status: 500 });
+    try {
+      const matches = await fetchFdMatches(token);
+      const { upserted, errors } = await upsertMatches(matches);
+      return NextResponse.json({ ok: true, fetched: matches.length, upserted, errors });
+    } catch (e) {
+      return NextResponse.json({ error: e instanceof Error ? e.message : "Sync failed" }, { status: 500 });
+    }
   }
 
   // Diagnose football-data.org API — returns raw response for debugging
