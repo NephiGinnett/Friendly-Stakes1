@@ -21,7 +21,7 @@ type ParlayData = {
   match?: { homeTeamName: string; awayTeamName: string; stage: string };
 };
 type PageData = {
-  myTeam: Team; confidenceStake: number; monitorCans: number;
+  myTeam: Team; isProxy: boolean; confidenceStake: number; monitorCans: number;
   nextMatch: Match | null; opponent: Opponent | null;
   canPropose: boolean; proposalDeadline: string | null;
   existingParlay: ParlayData | null;
@@ -139,7 +139,7 @@ export default function ParlayPage() {
   }
   if (!data || !user) return null;
 
-  const { myTeam, monitorCans, nextMatch, opponent, canPropose, proposalDeadline, existingParlay, history } = data;
+  const { myTeam, isProxy, monitorCans, nextMatch, opponent, canPropose, proposalDeadline, existingParlay, history } = data;
   const isProposer = existingParlay?.proposer.id === user.id;
   const isOpponent = existingParlay?.opponent.id === user.id;
   const activeLegCount2 = existingParlay ? existingParlay.legs.filter((l) => l.accepted === true).length : 0;
@@ -154,7 +154,7 @@ export default function ParlayPage() {
           <Link href="/world-cup" className="text-slate-400 hover:text-white text-sm">←</Link>
           <div>
             <h1 className="text-lg font-bold text-white">🎰 Parlay</h1>
-            <p className="text-xs text-slate-500">{myTeam.flag} {myTeam.name}</p>
+            <p className="text-xs text-slate-500">{myTeam.flag} {myTeam.name}{isProxy ? " · proxy" : ""}</p>
           </div>
           <div className="ml-auto flex items-center gap-1 bg-white/5 rounded-xl px-3 py-1.5">
             <span className="text-sm">🥤</span>
