@@ -26,12 +26,15 @@ export async function upsertMatches(matches: FdMatch[]): Promise<{ upserted: num
 
   for (const m of matches) {
     try {
-      const homeTeam = await prisma.worldCupTeam.findFirst({
+      // Skip matches where teams aren't determined yet (knockout TBD)
+      if (!m.homeTeam?.name && !m.awayTeam?.name) continue;
+
+      const homeTeam = m.homeTeam?.name ? await prisma.worldCupTeam.findFirst({
         where: { OR: [{ name: { contains: m.homeTeam.name } }, ...(m.homeTeam.shortName ? [{ name: { contains: m.homeTeam.shortName } }] : [])] },
-      });
-      const awayTeam = await prisma.worldCupTeam.findFirst({
+      }) : null;
+      const awayTeam = m.awayTeam?.name ? await prisma.worldCupTeam.findFirst({
         where: { OR: [{ name: { contains: m.awayTeam.name } }, ...(m.awayTeam.shortName ? [{ name: { contains: m.awayTeam.shortName } }] : [])] },
-      });
+      }) : null;
 
       await prisma.worldCupMatch.upsert({
         where: { fdMatchId: m.id },
@@ -39,8 +42,8 @@ export async function upsertMatches(matches: FdMatch[]): Promise<{ upserted: num
           fdMatchId: m.id,
           homeTeamId: homeTeam?.id ?? null,
           awayTeamId: awayTeam?.id ?? null,
-          homeTeamName: m.homeTeam.name,
-          awayTeamName: m.awayTeam.name,
+          homeTeamName: m.homeTeam?.name ?? "TBD",
+          awayTeamName: m.awayTeam?.name ?? "TBD",
           kickoff: new Date(m.utcDate),
           stage: m.stage,
           group: m.group ?? null,
