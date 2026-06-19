@@ -101,7 +101,7 @@ export default function AdminPage() {
   const [scanMsg, setScanMsg] = useState<string | null>(null);
 
   // Wager management state
-  type AdminWager = { id: number; title: string; status: string; creatorStake: number; deadline: string; entryCount: number; totalPool: number };
+  type AdminWager = { id: number; title: string; status: string; creatorStake: number; deadline: string; entryCount: number; totalPool: number; wcBet: boolean };
   const [wagers, setWagers] = useState<AdminWager[]>([]);
   const [wagerMsg, setWagerMsg] = useState<string | null>(null);
   const [cancellingWager, setCancellingWager] = useState<number | null>(null);
@@ -354,6 +354,18 @@ export default function AdminPage() {
     else setDistMsg(d.error);
   };
 
+  const toggleWcBet = async (id: number, current: boolean) => {
+    const res = await fetch("/api/admin/wagers", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, wcBet: !current }),
+    });
+    if (res.ok) {
+      setWagers((prev) => prev.map((w) => w.id === id ? { ...w, wcBet: !current } : w));
+      setWagerMsg(!current ? `Wager #${id} tagged as World Cup bet` : `Wager #${id} untagged`);
+    }
+  };
+
   const cancelWager = async (id: number) => {
     setCancellingWager(id);
     setWagerMsg(null);
@@ -437,6 +449,17 @@ export default function AdminPage() {
                       {new Date(w.deadline) < new Date() && w.status !== "settled" && w.status !== "cancelled" ? "overdue" : w.status}
                     </span>
                   </div>
+
+                  <button
+                    onClick={() => toggleWcBet(w.id, w.wcBet)}
+                    className={`w-full py-1.5 rounded-xl text-xs font-medium transition-colors ${
+                      w.wcBet
+                        ? "bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25"
+                        : "bg-white/5 text-slate-400 hover:text-emerald-300 hover:bg-emerald-500/10"
+                    }`}
+                  >
+                    {w.wcBet ? "⚽ World Cup bet ✓" : "⚽ Tag as World Cup bet"}
+                  </button>
 
                   {w.status !== "settled" && w.status !== "cancelled" && (
                     confirmCancelId === w.id ? (

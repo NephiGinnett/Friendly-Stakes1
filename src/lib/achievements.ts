@@ -347,6 +347,27 @@ export const ACHIEVEMENTS = {
     emoji: "📡",
     imageUrl: "/achievements/echo-exit.png",
   },
+  wc_gold_badge: {
+    id: "wc_gold_badge",
+    name: "Golden Allegiance",
+    description: "You backed the winning team from the start. The World Cup champion carried your name — and your 500 pts. The House acknowledges loyalty that pays off.",
+    hint: "Back the World Cup champion.",
+    reward: "Gold profile badge",
+    rewardType: "none" as const,
+    emoji: "🥇",
+    imageUrl: "/achievements/wc-gold-badge.png",
+  },
+
+  wc_bronze_badge: {
+    id: "wc_bronze_badge",
+    name: "World Cup Veteran",
+    description: "You entered the World Cup and saw it through to the end. Your team didn't win it all, but you were there. The House respects attendance.",
+    hint: "Compete in the World Cup event.",
+    reward: "Bronze profile badge",
+    rewardType: "none" as const,
+    emoji: "🥉",
+    imageUrl: "/achievements/wc-bronze-badge.png",
+  },
 } as const;
 
 export type AchievementId = keyof typeof ACHIEVEMENTS;

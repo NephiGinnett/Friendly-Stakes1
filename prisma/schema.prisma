@@ -65,6 +65,8 @@ model User {
   arQuizCompletions  ArQuizCompletion[]
   userBookmarks      UserBookmark[]
   avatarAchievementId     String?
+  siteTheme               String    @default("")
+  ownedThemes             String    @default("[]")
   worldCupEntry           WorldCupEntry?
   worldCupPreEntry        WorldCupPreEntry?
   worldCupGameLogs        WorldCupGameLog[]
@@ -103,6 +105,7 @@ model Wager {
   vpnSeed    Int      @default(0)
 
   isPublic            Boolean @default(false)
+  wcBet               Boolean @default(false)
   creatorLockedPayout Int     @default(0)
 
   publicFavorForVotes      Int @default(0)

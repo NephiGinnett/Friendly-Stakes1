@@ -7,6 +7,7 @@ import PointsBadge from "@/components/PointsBadge";
 import { formatPoints, formatDate } from "@/lib/utils";
 import { getDisplayVersion } from "@/lib/version";
 import { ACHIEVEMENTS } from "@/lib/achievements";
+import { THEMES } from "@/lib/themes";
 
 type User = { id: number; username: string; points: number; isAdmin: boolean; avatarAchievementId: string | null };
 type WagerEntry = { userId: number; side: string; stake: number };
@@ -35,6 +36,9 @@ export default function ProfilePage() {
   const [discordInput, setDiscordInput] = useState("");
   const [discordMsg, setDiscordMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const [discordLoading, setDiscordLoading] = useState(false);
+  const [activeTheme, setActiveTheme] = useState("");
+  const [ownedThemes, setOwnedThemes] = useState<string[]>([]);
+  const [themeSaving, setThemeSaving] = useState(false);
 
   // Load notification preference
   useEffect(() => {
@@ -48,7 +52,13 @@ export default function ProfilePage() {
   useEffect(() => {
     fetch("/api/auth/me")
       .then((r) => { if (!r.ok) { router.push("/login"); return null; } return r.json(); })
-      .then(setUser);
+      .then((u) => {
+        setUser(u);
+        if (u) {
+          setActiveTheme(u.siteTheme ?? "");
+          try { setOwnedThemes(JSON.parse(u.ownedThemes || "[]")); } catch { /* */ }
+        }
+      });
     fetch("/api/users")
       .then((r) => r.ok ? r.json() : [])
       .then(setAllUsers);
@@ -275,6 +285,79 @@ export default function ProfilePage() {
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {isSelf && ownedThemes.length > 0 && (
+          <div className="card space-y-3">
+            <div className="flex items-center gap-2">
+              <span className="text-lg">🎨</span>
+              <div>
+                <p className="text-sm font-medium text-white">Site Theme</p>
+                <p className="text-xs text-slate-500 mt-0.5">Change the look of Friendly Stakes</p>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <button
+                onClick={async () => {
+                  setThemeSaving(true);
+                  await fetch("/api/settings/theme", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ themeId: "" }),
+                  });
+                  setActiveTheme("");
+                  setThemeSaving(false);
+                  window.location.reload();
+                }}
+                disabled={themeSaving}
+                className={`w-full flex items-center gap-3 rounded-xl border px-4 py-3 transition-colors text-left ${
+                  activeTheme === ""
+                    ? "bg-violet-500/20 border-violet-500/50"
+                    : "bg-white/5 border-white/10 hover:border-white/20"
+                }`}
+              >
+                <span className="text-lg">🟣</span>
+                <div>
+                  <p className="text-sm font-medium text-white">Default</p>
+                  <p className="text-xs text-slate-500">Classic purple tones</p>
+                </div>
+                {activeTheme === "" && <span className="ml-auto text-violet-400 text-xs font-semibold">Active</span>}
+              </button>
+              {ownedThemes.map((tid) => {
+                const t = THEMES[tid];
+                if (!t) return null;
+                return (
+                  <button
+                    key={tid}
+                    onClick={async () => {
+                      setThemeSaving(true);
+                      await fetch("/api/settings/theme", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ themeId: tid }),
+                      });
+                      setActiveTheme(tid);
+                      setThemeSaving(false);
+                      window.location.reload();
+                    }}
+                    disabled={themeSaving}
+                    className={`w-full flex items-center gap-3 rounded-xl border px-4 py-3 transition-colors text-left ${
+                      activeTheme === tid
+                        ? "bg-violet-500/20 border-violet-500/50"
+                        : "bg-white/5 border-white/10 hover:border-white/20"
+                    }`}
+                  >
+                    <span className="text-lg">{t.preview}</span>
+                    <div>
+                      <p className="text-sm font-medium text-white">{t.name}</p>
+                      <p className="text-xs text-slate-500">{t.description}</p>
+                    </div>
+                    {activeTheme === tid && <span className="ml-auto text-violet-400 text-xs font-semibold">Active</span>}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         )}
 
