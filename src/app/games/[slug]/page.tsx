@@ -5,6 +5,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import dynamic from "next/dynamic";
 import Navbar from "@/components/Navbar";
 import { GAME_REGISTRY } from "@/lib/gameRegistry";
+import { formatPoints } from "@/lib/utils";
 import type { GameOverPayload } from "@/components/games/types";
 
 type GameProps = { onGameOver: (payload: GameOverPayload) => void };
@@ -38,6 +39,10 @@ export default function GamePage() {
   const [submitResult, setSubmitResult] = useState<SubmitResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [replayAchievement, setReplayAchievement] = useState(false);
+  const [showSenders, setShowSenders] = useState(false);
+  const [senders, setSenders] = useState<{ id: number; score: number; royalty: number; user: { id: number; username: string } }[]>([]);
+  const [senderMsg, setSenderMsg] = useState("");
+  const [senderLoading, setSenderLoading] = useState(false);
 
   const sessionIdRef = useRef<number | null>(null);
 
@@ -56,13 +61,20 @@ export default function GamePage() {
     }
   }, [slug]);
 
+  const loadSenders = useCallback(() => {
+    fetch(`/api/games/score-sender?gameId=${slug}`).then(r => r.ok ? r.json() : null).then(d => {
+      if (d) setSenders(d.senders ?? []);
+    });
+  }, [slug]);
+
   useEffect(() => {
     fetch("/api/auth/me").then((r) => {
       if (!r.ok) { router.push("/login"); return; }
       if (!game) { router.push("/games"); return; }
       startSession().then(() => setReady(true));
+      loadSenders();
     });
-  }, [router, game, startSession]);
+  }, [router, game, startSession, loadSenders]);
 
   // Heartbeat
   useEffect(() => {
@@ -277,6 +289,53 @@ export default function GamePage() {
                 Play Again
               </button>
             </div>
+          </div>
+        )}
+
+        {/* Score Sender section */}
+        {senders.length > 0 && (
+          <div className="mt-4">
+            <button
+              onClick={() => setShowSenders(v => !v)}
+              className="w-full flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10 text-sm text-slate-400 hover:text-white transition-colors"
+            >
+              <span>📡 Score Senders ({senders.length})</span>
+              <span>{showSenders ? "▲" : "▼"}</span>
+            </button>
+            {showSenders && (
+              <div className="mt-2 space-y-2">
+                {senderMsg && <p className="text-xs text-emerald-400 text-center">{senderMsg}</p>}
+                {senders.map(s => {
+                  const playerPts = Math.floor(s.score * (100 - s.royalty) / 100);
+                  return (
+                    <div key={s.id} className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10">
+                      <div>
+                        <p className="text-sm text-white font-medium">{s.user.username}</p>
+                        <p className="text-xs text-slate-500">{formatPoints(s.score)} pts · {s.royalty}% royalty</p>
+                      </div>
+                      <button
+                        onClick={async () => {
+                          setSenderLoading(true); setSenderMsg("");
+                          const res = await fetch("/api/games/score-sender", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ action: "use", senderId: s.id }),
+                          });
+                          const d = await res.json();
+                          setSenderLoading(false);
+                          if (res.ok) setSenderMsg(`+${d.pointsEarned} pts (${d.royaltyPaid} royalty to ${s.user.username})`);
+                          else setSenderMsg(d.error ?? "Failed");
+                        }}
+                        disabled={senderLoading}
+                        className="px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-xs font-medium transition-colors disabled:opacity-50"
+                      >
+                        Use → +{formatPoints(playerPts)} pts
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
       </div>

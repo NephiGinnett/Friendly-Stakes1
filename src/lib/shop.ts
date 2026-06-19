@@ -88,6 +88,14 @@ export const SHOP_ITEMS = {
     maxUses: 1,
     emoji: "📋",
   },
+  score_sender: {
+    id: "score_sender",
+    name: "Score Sender",
+    description: "Publish your high score in a game. Other players can pay your royalty to auto-submit that score instead of playing. Set your own royalty rate (10–90%).",
+    price: 1000,
+    maxUses: 1,
+    emoji: "📡",
+  },
 } as const;
 
 export type ItemType = keyof typeof SHOP_ITEMS;

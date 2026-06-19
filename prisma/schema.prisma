@@ -76,6 +76,7 @@ model User {
   parlaysOpposed          Parlay[]          @relation("ParlayOpponent")
   parlayVoteLogs          ParlayVoteLog[]
   gameSessions            GameSession[]
+  scoreSenders            ScoreSender[]
   bracketPicks            BracketPick[]
 }
 
@@ -626,4 +627,17 @@ model GameSession {
   metadata     String    @default("") // JSON: { coinsEarned, distance, … }
   pointsEarned Int       @default(0)
   dailyDate    String    @default("") // "YYYY-MM-DD" for daily cap
+}
+
+model ScoreSender {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id])
+  gameId      String
+  score       Int
+  royalty     Int      @default(50)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  @@unique([userId, gameId])
 }
