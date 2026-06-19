@@ -21,7 +21,8 @@ type ParlayData = {
   match?: { homeTeamName: string; awayTeamName: string; stage: string };
 };
 type PageData = {
-  myTeam: Team; isProxy: boolean; confidenceStake: number; monitorCans: number;
+  myTeam: Team; primaryTeam: Team; proxyTeam: Team | null;
+  isProxy: boolean; confidenceStake: number; monitorCans: number;
   nextMatch: Match | null; opponent: Opponent | null;
   canPropose: boolean; proposalDeadline: string | null;
   existingParlay: ParlayData | null;
@@ -50,18 +51,22 @@ export default function ParlayPage() {
   // Vote state
   const [votes, setVotes] = useState<Record<number, boolean>>({});
 
-  const fetchAll = () => {
-    fetch("/api/world-cup/parlay").then((r) => r.ok ? r.json() : null).then((d) => { if (d) setData(d); });
+  // Team toggle
+  const [tab, setTab] = useState<"primary" | "proxy">("primary");
+
+  const fetchAll = (target?: string) => {
+    const t = target ?? tab;
+    fetch(`/api/world-cup/parlay?target=${t}`).then((r) => r.ok ? r.json() : null).then((d) => { if (d) setData(d); });
     fetch("/api/auth/me").then((r) => r.ok ? r.json() : null).then(setUser);
   };
 
   useEffect(() => {
     fetch("/api/auth/me").then((r) => { if (!r.ok) { router.push("/login"); return null; } return r.json(); }).then(setUser);
-    fetch("/api/world-cup/parlay")
+    fetch(`/api/world-cup/parlay?target=${tab}`)
       .then((r) => r.ok ? r.json() : r.json().then((d: { error: string }) => { throw new Error(d.error); }))
       .then(setData)
       .catch((e) => setError(e.message));
-  }, [router]);
+  }, [router, tab]);
 
   const propose = async () => {
     if (!data?.nextMatch) return;
@@ -71,7 +76,7 @@ export default function ParlayPage() {
     const res = await fetch("/api/world-cup/parlay", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ matchId: data.nextMatch.id, costPerLeg, legs: usedLegs }),
+      body: JSON.stringify({ matchId: data.nextMatch.id, costPerLeg, legs: usedLegs, target: tab }),
     });
     const d = await res.json();
     setLoading("");
@@ -139,7 +144,7 @@ export default function ParlayPage() {
   }
   if (!data || !user) return null;
 
-  const { myTeam, isProxy, monitorCans, nextMatch, opponent, canPropose, proposalDeadline, existingParlay, history } = data;
+  const { myTeam, primaryTeam, proxyTeam, monitorCans, nextMatch, opponent, canPropose, proposalDeadline, existingParlay, history } = data;
   const isProposer = existingParlay?.proposer.id === user.id;
   const isOpponent = existingParlay?.opponent.id === user.id;
   const activeLegCount2 = existingParlay ? existingParlay.legs.filter((l) => l.accepted === true).length : 0;
@@ -154,7 +159,7 @@ export default function ParlayPage() {
           <Link href="/world-cup" className="text-slate-400 hover:text-white text-sm">←</Link>
           <div>
             <h1 className="text-lg font-bold text-white">🎰 Parlay</h1>
-            <p className="text-xs text-slate-500">{myTeam.flag} {myTeam.name}{isProxy ? " · proxy" : ""}</p>
+            <p className="text-xs text-slate-500">{myTeam.flag} {myTeam.name}{tab === "proxy" ? " · proxy" : ""}</p>
           </div>
           <div className="ml-auto flex items-center gap-1 bg-white/5 rounded-xl px-3 py-1.5">
             <span className="text-sm">🥤</span>
@@ -167,6 +172,35 @@ export default function ParlayPage() {
       <div className="max-w-lg mx-auto px-4 pt-5 space-y-5">
         {msg && <div className="rounded-xl bg-emerald-500/10 border border-emerald-500/30 px-4 py-2 text-sm text-emerald-400 text-center">{msg}</div>}
         {error && <div className="rounded-xl bg-rose-500/10 border border-rose-500/30 px-4 py-2 text-sm text-rose-400 text-center">{error}</div>}
+
+        {/* Team toggle */}
+        {proxyTeam && (
+          <div className="flex gap-2">
+            <button
+              onClick={() => { setTab("primary"); fetchAll("primary"); }}
+              className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
+                tab === "primary"
+                  ? "bg-amber-500/20 border border-amber-500/40 text-amber-300"
+                  : "bg-white/5 border border-white/10 text-slate-400 hover:text-white"
+              }`}
+            >
+              <span>{primaryTeam.flag}</span>
+              <span>{primaryTeam.name}</span>
+            </button>
+            <button
+              onClick={() => { setTab("proxy"); fetchAll("proxy"); }}
+              className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
+                tab === "proxy"
+                  ? "bg-violet-500/20 border border-violet-500/40 text-violet-300"
+                  : "bg-white/5 border border-white/10 text-slate-400 hover:text-white"
+              }`}
+            >
+              <span>{proxyTeam.flag}</span>
+              <span>{proxyTeam.name}</span>
+              <span className="text-xs opacity-60">proxy</span>
+            </button>
+          </div>
+        )}
 
         {/* ── VOTE PHASE ── */}
         {existingParlay && (existingParlay.status === "voting" || existingParlay.status === "active") && (
