@@ -17,6 +17,8 @@ export async function GET() {
   if (!entry) return NextResponse.json({ error: "Not entered" }, { status: 404 });
 
   const effectiveTeamId = entry.proxyTeamId ?? entry.teamId;
+  const isProxy = effectiveTeamId === entry.proxyTeamId;
+  const myEffectiveStake = isProxy ? entry.proxyConfidenceStake : entry.confidenceStake;
 
   // Next match for this player's effective team
   const nextMatch = await prisma.worldCupMatch.findFirst({
@@ -43,19 +45,27 @@ export async function GET() {
 
   let opponent: { userId: number; username: string; confidenceStake: number } | null = null;
   if (opposingTeamId) {
-    const oppEntry = await prisma.worldCupEntry.findFirst({
+    const oppEntries = await prisma.worldCupEntry.findMany({
       where: { OR: [{ teamId: opposingTeamId ?? -1 }, { proxyTeamId: opposingTeamId ?? -1 }] },
-      orderBy: { confidenceStake: "desc" },
       include: { user: { select: { id: true, username: true } } },
     });
-    if (oppEntry) opponent = { userId: oppEntry.userId, username: oppEntry.user.username, confidenceStake: oppEntry.confidenceStake };
+    const oppsWithStake = oppEntries.map(e => ({
+      userId: e.userId,
+      username: e.user.username,
+      effectiveStake: e.teamId === opposingTeamId ? e.confidenceStake : e.proxyConfidenceStake,
+    }));
+    oppsWithStake.sort((a, b) => b.effectiveStake - a.effectiveStake);
+    if (oppsWithStake.length > 0) {
+      const top = oppsWithStake[0];
+      opponent = { userId: top.userId, username: top.username, confidenceStake: top.effectiveStake };
+    }
   }
 
   // Determine if this player can propose (higher confidence stake, within proposal window)
   const canPropose = !!(
     nextMatch &&
     opponent &&
-    entry.confidenceStake > opponent.confidenceStake &&
+    myEffectiveStake > opponent.confidenceStake &&
     twoHoursBefore && now >= twoHoursBefore &&
     oneHourBefore && now < oneHourBefore
   );
@@ -95,7 +105,7 @@ export async function GET() {
   return NextResponse.json({
     myTeam: entry.proxyTeam ?? entry.team,
     isProxy: !!entry.proxyTeamId,
-    confidenceStake: entry.confidenceStake,
+    confidenceStake: myEffectiveStake,
     monitorCans: entry.monitorCans,
     nextMatch,
     opponent,
@@ -133,7 +143,7 @@ export async function POST(req: Request) {
   const effectiveTeamId = entry.proxyTeamId ?? entry.teamId;
 
   const match = await prisma.worldCupMatch.findUnique({ where: { id: matchId } });
-  if (!match || match.status !== "SCHEDULED") {
+  if (!match || !["SCHEDULED", "TIMED"].includes(match.status)) {
     return NextResponse.json({ error: "Match not available" }, { status: 400 });
   }
 
@@ -149,15 +159,21 @@ export async function POST(req: Request) {
   const isAway = match.awayTeamId === effectiveTeamId;
   if (!isHome && !isAway) return NextResponse.json({ error: "Your team is not in this match" }, { status: 400 });
 
-  // Find opponent with highest confidence stake backing the other team
+  // Find opponent with highest effective confidence stake backing the other team
   const opposingTeamId = isHome ? match.awayTeamId : match.homeTeamId;
-  const oppEntry = await prisma.worldCupEntry.findFirst({
+  const oppEntries = await prisma.worldCupEntry.findMany({
     where: { OR: [{ teamId: opposingTeamId ?? -1 }, { proxyTeamId: opposingTeamId ?? -1 }] },
-    orderBy: { confidenceStake: "desc" },
     include: { user: { select: { id: true } } },
   });
-  if (!oppEntry) return NextResponse.json({ error: "No opponent backing the other team" }, { status: 400 });
-  if (entry.confidenceStake <= oppEntry.confidenceStake) {
+  if (oppEntries.length === 0) return NextResponse.json({ error: "No opponent backing the other team" }, { status: 400 });
+  const postIsProxy = effectiveTeamId === entry.proxyTeamId;
+  const postMyStake = postIsProxy ? entry.proxyConfidenceStake : entry.confidenceStake;
+  const oppsRanked = oppEntries.map(e => ({
+    ...e,
+    effectiveStake: e.teamId === opposingTeamId ? e.confidenceStake : e.proxyConfidenceStake,
+  })).sort((a, b) => b.effectiveStake - a.effectiveStake);
+  const oppEntry = oppsRanked[0];
+  if (postMyStake <= oppEntry.effectiveStake) {
     return NextResponse.json({ error: "Only the player with the higher confidence stake can propose" }, { status: 403 });
   }
 
