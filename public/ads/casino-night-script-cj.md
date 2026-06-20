@@ -1,6 +1,6 @@
 # BIG GAME CASINO NIGHT — AD SCRIPT
 ## Performer: CJ
-## Runtime: ~45 seconds
+## Runtime: ~50 seconds
 ## Memo from: THE HOUSE
 
 ---
@@ -107,53 +107,62 @@ But they didn't ask me to enjoy them. They asked me to tell you about them. And 
 ---
 
 **CJ:**
-*(leaning forward — this is the insider info section)*
+*(leaning forward — conspiratorial, like he's letting you in on something)*
 
-Now here's the move nobody's talking about yet.
+But the grind isn't the only way to play tonight.
 
-Score Sender.
+We've got scratch cards. One hundred fifty points for a basic card. Four hundred for a premium. You scratch a three-by-three grid — match three in a line and you win. Premium cards? Those are jackpot eligible. Every premium card purchased goes into the pot. One percent chance to take the whole thing.
 
-A thousand points from the shop. You play a game, you post your best score, you set a royalty — ten to ninety percent, whatever you want.
+*(small beat — like he's thinking about buying one himself)*
 
-And then? Anybody else can use that score. They tap a button, they get the points, you get paid. Automatically. Every single time.
-
-*(he sits back, lets it breathe)*
-
-You heard me. You play once. You get paid forever.
-
-Set it up on a game you're good at, go to sleep, wake up richer. In fake money. On a fake economy. That pays real bragging rights.
-
-*(finger guns at the camera — CJ has to commit to this)*
-
-THAT is how you play Casino Night.
+Could be fifty points in there. Could be five thousand. Depends on how many of you are feeling lucky.
 
 ---
 
 **CJ:**
-*(standing up or straightening up — this is the main event announcement)*
+*(transitioning, getting more intense)*
 
-BUT — the HEADLINE.
+And we've got roulette. Real roulette. European rules. Pick a color, pick a number, pick a dozen — whatever you want. Thirty-five to one if you call the number. Go all-in and there's an achievement waiting for you.
 
-Tonight's maximum bet — the biggest wager anyone drops — is getting TELEVISED.
+*(he pauses — this is the turn)*
 
-Full public wager. Whole server watching. The bots roll in — The House, The Shark, The Momentum — picking sides, throwing points, shifting the odds LIVE.
+But NONE of that is the main event.
 
-You post it, and everybody sees it. Everybody can jump in. The public favor tracker swinging back and forth as the whole platform piles on.
+---
+
+**CJ:**
+*(standing up or straightening up — this is the headline, and he means it)*
+
+The main event is Strike It Rich.
+
+Here's how it works. During the day, you submit your bet. You name it. You describe it. And you put your points where your mouth is. EVERY point you submit gets escrowed. Locked in. Gone from your balance until this is over.
+
+*(he leans into the camera)*
+
+And if you put your ENTIRE balance on the line — every single point you own — you get the all-in multiplier. Five times your money back.
+
+*(let that land)*
+
+FIVE. TIMES.
+
+*(beat — dead serious)*
+
+That is putting your LIFE on the line. That is walking into Casino Night with nothing to fall back on. No safety net. No second chance. You win — you're a legend. You lose — you're starting over from zero.
+
+And The House? The House is watching every single submission. It picks ONE. One player. Everybody else gets refunded. The chosen player steps onto the live stage and plays the game — live, in front of everyone.
 
 *(he points at the camera)*
 
-And when that deadline hits? We ALL see who called it. And who got cleaned out.
+One player. One game. One shot. The whole server watching.
 
-*(beat — dead serious for one second)*
-
-So if you're betting tonight — make it count. Because everyone's watching.
+You want to be that player? Then don't submit fifty points. Submit everything. Because The House doesn't pick the careful ones.
 
 ---
 
 **CJ:**
 *(full casino host energy — closing it out)*
 
-Casino Night. Tonight. Games are live, Score Senders are open, and the biggest bet gets the spotlight.
+Casino Night. Tonight. Scratch cards are live. Roulette is spinning. And one of you is going to put it ALL on the line for the big show.
 
 *(he puts the sunglasses back on)*
 
@@ -174,7 +183,7 @@ Don't keep The House waiting.
   ║                                                              ║
   ║         ──────────────────────────────────────────           ║
   ║                                                              ║
-  ║         New Games · Score Sender · Televised Max Bet         ║
+  ║    Scratch Cards · Roulette · Strike It Rich (×5 All-In)    ║
   ║                                                              ║
   ║         ──────────────────────────────────────────           ║
   ║                                                              ║
@@ -196,23 +205,26 @@ Don't keep The House waiting.
 **"I personally do not enjoy the games."**
 The audience knows this about CJ. That's what makes it funny. He delivers three breathless hype sentences about the games, stops, admits he doesn't like them, then immediately goes BACK into hype mode even harder. Do not cut this. The bit only works with the dip.
 
-**The finger guns.**
-CJ has to commit. Half-committed finger guns are worse than no finger guns. If he can't do it sincerely, have him do it so over-the-top that it wraps back around to funny. There is no middle ground on finger guns.
+**The scratch card section:**
+This is the warm-up. CJ should sound like he's genuinely considering buying one. The "could be fifty points... could be five thousand" line should have a pause in the middle — he's doing math on whether the premium is worth it. He lands on "depends on how many of you are feeling lucky" like he already knows the answer is everyone.
 
-**"You play once. You get paid forever."**
-This is the Score Sender hook. Deliver it like a late-night infomercial promise. CJ should believe it in the moment even though he knows better. If he naturally adds "...in theory" or "that's the pitch anyway," keep one of those.
+**"Putting your LIFE on the line."**
+This is the emotional peak of the ad. CJ should mean this. Not performed intensity — actual weight. The shift from "five times your money" to "starting over from zero" should feel like he just realized what he's asking people to do. If he naturally says "that's insane" or "I wouldn't do it" — keep it. The audience should feel the stakes are genuinely dangerous.
 
-**The televised bet section:**
-This is where CJ drops the comedy and goes announcer. He should sound like someone calling a main event. The energy shift is the point — Casino Night is real, the stakes are real, and for thirty seconds CJ is the guy telling you about it.
+**"The House doesn't pick the careful ones."**
+This is the hook. This is the line that should make someone who was going to submit 200 points reconsider and submit everything. CJ should deliver it like advice — not a dare, not a challenge. Advice from someone who understands the game even if he doesn't enjoy playing it.
+
+**One player. One game. One shot.**
+Three beats. Each one should land separately. CJ is a ring announcer here. If he naturally builds each one louder, keep it.
 
 **"Don't keep The House waiting."**
 Last line before cut. CJ should deliver this like he's not sure if it's a tagline or a threat. Because it's both.
 
 **Pacing:**
-This is the fastest ad in the series. Previous ads were quiet, conspiratorial, observational. This one is an EVENT. CJ should have energy throughout. The only slow moment is the "I don't enjoy the games" beat, and even that is a setup for going harder.
+The first half (games, scratch cards, roulette) moves fast. The Strike It Rich section SLOWS DOWN. The stakes are higher and the delivery should reflect that. "Five times" and "starting over from zero" need room to breathe. Don't rush the main event.
 
 **If CJ improvises:**
-He will. Keep everything that's funnier than what's on the page. The five things that must survive: the game overhauls, the "don't enjoy the games" beat, the Score Sender pitch, the televised max bet, and the sunglasses.
+He will. Keep everything that's funnier or more intense than what's on the page. The six things that must survive: the game overhauls, the "don't enjoy the games" beat, scratch cards, Strike It Rich with the all-in multiplier, "putting your life on the line," and the sunglasses.
 
 ---
 
