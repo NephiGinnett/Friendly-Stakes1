@@ -33,6 +33,7 @@ type AdminCasinoStatus = {
   scratchJackpot: number;
   bigBetRevealAt: string | null;
   bigBetGameType: string;
+  bigBetForce5x: boolean;
   pendingBets: BigBetEntry[];
   approvedBet: BigBetEntry | null;
   completedBets: CompletedBet[];
@@ -85,6 +86,8 @@ export default function AdminCasinoNightPage() {
   };
 
   if (!status) return <div className="min-h-screen flex items-center justify-center text-slate-500">Loading...</div>;
+
+  const effectiveMultiplier = status.bigBetForce5x ? 5.0 : (status.approvedBet?.multiplier ?? 3.0);
 
   return (
     <div className="min-h-screen pb-10">
@@ -141,10 +144,37 @@ export default function AdminCasinoNightPage() {
               <option value="">Not set</option>
               <option value="roulette">🎡 Roulette</option>
               <option value="blackjack">🃏 Blackjack</option>
+              <option value="slots">🎰 Slots</option>
               <option value="custom">🎲 Custom</option>
             </select>
             <button onClick={() => act("set_game_type", { gameType })}
               className="rounded-lg bg-violet-600 hover:bg-violet-500 text-white px-3 py-1.5 text-sm">Save</button>
+          </div>
+        </div>
+
+        {/* Multiplier Toggle */}
+        <div className="rounded-2xl bg-white/5 border border-white/10 p-5 space-y-3">
+          <p className="font-bold text-white">Payout Multiplier</p>
+          <p className="text-xs text-slate-400">
+            Normal: all-in gets ×5, others get ×3. Force ×5 overrides all bets to use ×5.
+          </p>
+          <div className="flex gap-3">
+            <button onClick={() => act("toggle_multiplier", { force5x: false })}
+              className={`flex-1 rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
+                !status.bigBetForce5x
+                  ? "bg-violet-600 text-white"
+                  : "bg-white/5 border border-white/10 text-slate-400 hover:bg-white/10"
+              }`}>
+              Regular (×3 / ×5 all-in)
+            </button>
+            <button onClick={() => act("toggle_multiplier", { force5x: true })}
+              className={`flex-1 rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
+                status.bigBetForce5x
+                  ? "bg-amber-600 text-white"
+                  : "bg-white/5 border border-white/10 text-slate-400 hover:bg-white/10"
+              }`}>
+              Force ×5 for all
+            </button>
           </div>
         </div>
 
@@ -154,10 +184,9 @@ export default function AdminCasinoNightPage() {
             <p className="font-bold text-amber-400">🎟️ Tonight&rsquo;s VIP</p>
             <div className="space-y-1">
               <p className="text-white font-semibold">{status.approvedBet.username}</p>
-              <p className="text-sm text-slate-300">&ldquo;{status.approvedBet.title}&rdquo;</p>
-              <p className="text-sm text-slate-400">{status.approvedBet.description}</p>
               <p className="text-sm text-slate-300">
-                {formatPoints(status.approvedBet.stake)} pts · ×{status.approvedBet.multiplier}
+                {formatPoints(status.approvedBet.stake)} pts ·
+                ×{effectiveMultiplier}{status.bigBetForce5x && !status.approvedBet.isAllIn ? " (forced)" : ""}
                 {status.approvedBet.isAllIn && " · ALL IN"}
               </p>
             </div>
@@ -165,7 +194,7 @@ export default function AdminCasinoNightPage() {
               <button onClick={() => completeBet(status.approvedBet!.id, "win")}
                 disabled={acting === status.approvedBet.id}
                 className="flex-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 text-sm disabled:opacity-40">
-                ✓ WIN ({formatPoints(Math.floor(status.approvedBet.stake * status.approvedBet.multiplier))} pts)
+                ✓ WIN ({formatPoints(Math.floor(status.approvedBet.stake * effectiveMultiplier))} pts)
               </button>
               <button onClick={() => completeBet(status.approvedBet!.id, "loss")}
                 disabled={acting === status.approvedBet.id}
@@ -194,8 +223,6 @@ export default function AdminCasinoNightPage() {
                       {b.username}
                       {b.isAllIn && <span className="ml-2 text-xs bg-rose-500/20 text-rose-300 px-1.5 py-0.5 rounded-full">ALL IN</span>}
                     </p>
-                    <p className="text-xs text-slate-300">&ldquo;{b.title}&rdquo;</p>
-                    <p className="text-xs text-slate-500">{b.description}</p>
                     <p className="text-xs text-slate-500 mt-0.5">
                       {formatPoints(b.stake)} pts · ×{b.multiplier} · potential: {formatPoints(Math.floor(b.stake * b.multiplier))} pts
                     </p>
@@ -230,7 +257,7 @@ export default function AdminCasinoNightPage() {
               <div key={b.id} className={`rounded-xl border p-3 ${
                 b.outcome === "win" ? "bg-emerald-500/10 border-emerald-500/20" : "bg-rose-500/10 border-rose-500/20"
               }`}>
-                <p className="text-sm text-white">{b.username} — &ldquo;{b.title}&rdquo;</p>
+                <p className="text-sm text-white">{b.username}</p>
                 <p className="text-xs text-slate-400">
                   {b.outcome?.toUpperCase()} · {formatPoints(b.stake)} at ×{b.multiplier}
                   {b.outcome === "win" && ` · payout: ${formatPoints(b.payout)} pts`}

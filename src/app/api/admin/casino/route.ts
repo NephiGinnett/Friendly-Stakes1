@@ -30,6 +30,7 @@ export async function GET() {
     scratchJackpot: config?.scratchJackpot ?? 0,
     bigBetRevealAt: config?.bigBetRevealAt ?? null,
     bigBetGameType: config?.bigBetGameType ?? "",
+    bigBetForce5x: config?.bigBetForce5x ?? false,
     pendingBets: pendingBets.map((b) => ({
       id: b.id, userId: b.userId, username: b.user.username, title: b.title,
       description: b.description, stake: b.stake, multiplier: b.multiplier,
@@ -59,6 +60,7 @@ export async function POST(req: Request) {
     gameType?: string;
     betId?: number;
     outcome?: "win" | "loss";
+    force5x?: boolean;
   };
 
   if (body.action === "toggle_casino") {
@@ -85,6 +87,14 @@ export async function POST(req: Request) {
     await prisma.houseConfig.update({
       where: { id: 1 },
       data: { bigBetGameType: gt },
+    });
+    return NextResponse.json({ ok: true });
+  }
+
+  if (body.action === "toggle_multiplier") {
+    await prisma.houseConfig.update({
+      where: { id: 1 },
+      data: { bigBetForce5x: body.force5x ?? false },
     });
     return NextResponse.json({ ok: true });
   }
@@ -131,17 +141,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Bet not found or not approved" }, { status: 400 });
     }
 
-    const payout = outcome === "win" ? Math.floor(bet.stake * bet.multiplier) : 0;
+    const config = await prisma.houseConfig.findUnique({ where: { id: 1 } });
+    const effectiveMultiplier = config?.bigBetForce5x ? 5.0 : bet.multiplier;
+    const payout = outcome === "win" ? Math.floor(bet.stake * effectiveMultiplier) : 0;
 
     await prisma.$transaction(async (tx) => {
       await tx.bigBet.update({
         where: { id: betId },
-        data: { outcome, payout, status: "completed", resolvedAt: new Date() },
+        data: { outcome, payout, multiplier: effectiveMultiplier, status: "completed", resolvedAt: new Date() },
       });
 
       if (outcome === "win" && payout > 0) {
         await tx.user.update({ where: { id: bet.userId }, data: { points: { increment: payout } } });
-        await logPoints(tx, bet.userId, payout, `Big Bet Show WIN — "${bet.title}" (×${bet.multiplier})`);
+        await logPoints(tx, bet.userId, payout, `Strike It Rich WIN (×${effectiveMultiplier})`);
       }
     });
 

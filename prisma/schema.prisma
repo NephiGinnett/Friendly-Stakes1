@@ -259,6 +259,7 @@ model HouseConfig {
   scratchJackpot     Int       @default(0)
   bigBetRevealAt     DateTime?
   bigBetGameType     String    @default("")
+  bigBetForce5x      Boolean   @default(false)
   updatedAt         DateTime @updatedAt
 }
 

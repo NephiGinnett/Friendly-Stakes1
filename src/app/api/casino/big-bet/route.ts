@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { logPoints } from "@/lib/pointLog";
+import { formatPoints } from "@/lib/utils";
 import { BASE_MULTIPLIER, ALL_IN_MULTIPLIER } from "@/lib/casinoNight";
 import { ACHIEVEMENTS } from "@/lib/achievements";
 
@@ -42,8 +43,6 @@ export async function GET() {
     myPoints: user.points,
     myBet: myBet ? {
       id: myBet.id,
-      title: myBet.title,
-      description: myBet.description,
       stake: myBet.stake,
       multiplier: myBet.multiplier,
       isAllIn: myBet.isAllIn,
@@ -58,8 +57,6 @@ export async function GET() {
       id: approvedBet.id,
       username: approvedBet.user.username,
       userId: approvedBet.user.id,
-      title: approvedBet.title,
-      description: approvedBet.description,
       stake: approvedBet.stake,
       multiplier: approvedBet.multiplier,
       isAllIn: approvedBet.isAllIn,
@@ -67,7 +64,6 @@ export async function GET() {
     completedBets: completedBets.map((b) => ({
       id: b.id,
       username: b.user.username,
-      title: b.title,
       stake: b.stake,
       outcome: b.outcome,
       payout: b.payout,
@@ -87,14 +83,11 @@ export async function POST(req: Request) {
   }
 
   const { title, description, stake } = await req.json() as {
-    title: string;
-    description: string;
+    title?: string;
+    description?: string;
     stake: number;
   };
 
-  if (!title?.trim() || !description?.trim()) {
-    return NextResponse.json({ error: "Title and description are required" }, { status: 400 });
-  }
   if (!stake || stake < 50 || !Number.isInteger(stake)) {
     return NextResponse.json({ error: "Minimum stake is 50 points" }, { status: 400 });
   }
@@ -116,12 +109,12 @@ export async function POST(req: Request) {
 
   await prisma.$transaction(async (tx) => {
     await tx.user.update({ where: { id: user.id }, data: { points: { decrement: stake } } });
-    await logPoints(tx, user.id, -stake, `Big Bet Show — "${title.trim()}" escrowed (${isAllIn ? "ALL IN ×5" : "×3"})`);
+    await logPoints(tx, user.id, -stake, `Strike It Rich — ${formatPoints(stake)} pts escrowed (${isAllIn ? "ALL IN ×5" : "×3"})`);
     await tx.bigBet.create({
       data: {
         userId: user.id,
-        title: title.trim(),
-        description: description.trim(),
+        title: title?.trim() || "Strike It Rich",
+        description: description?.trim() || `${formatPoints(stake)} pts`,
         stake,
         multiplier,
         isAllIn,

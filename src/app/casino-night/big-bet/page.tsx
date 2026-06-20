@@ -13,23 +13,22 @@ type BigBetStatus = {
   selectedGame: string | null;
   myPoints: number;
   myBet: {
-    id: number; title: string; description: string;
-    stake: number; multiplier: number; isAllIn: boolean; status: string;
+    id: number; stake: number; multiplier: number; isAllIn: boolean; status: string;
   } | null;
   biggestBet: { username: string; stake: number; isAllIn: boolean } | null;
   approvedBet: {
-    id: number; username: string; userId: number; title: string; description: string;
+    id: number; username: string; userId: number;
     stake: number; multiplier: number; isAllIn: boolean;
   } | null;
   completedBets: {
-    id: number; username: string; title: string; stake: number;
+    id: number; username: string; stake: number;
     outcome: string; payout: number; multiplier: number;
   }[];
   pendingCount: number;
 };
 
 const GAME_ICONS: Record<string, string> = {
-  roulette: "🎡", blackjack: "🃏", custom: "🎲",
+  roulette: "🎡", blackjack: "🃏", slots: "🎰", custom: "🎲",
 };
 
 function Countdown({ target }: { target: string }) {
@@ -53,8 +52,6 @@ function Countdown({ target }: { target: string }) {
 export default function BigBetPage() {
   const router = useRouter();
   const [status, setStatus] = useState<BigBetStatus | null>(null);
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
   const [stake, setStake] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -72,19 +69,18 @@ export default function BigBetPage() {
 
   const submit = async () => {
     const amt = parseInt(stake);
-    if (!title.trim() || !description.trim()) { setError("Title and description are required"); return; }
     if (!amt || amt < 50) { setError("Minimum stake is 50 points"); return; }
     setSubmitting(true); setError("");
 
     const res = await fetch("/api/casino/big-bet", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: title.trim(), description: description.trim(), stake: amt }),
+      body: JSON.stringify({ stake: amt }),
     });
     const d = await res.json();
     setSubmitting(false);
     if (res.ok) {
-      setTitle(""); setDescription(""); setStake("");
+      setStake("");
       load();
     } else {
       setError(d.error ?? "Something went wrong");
@@ -158,28 +154,15 @@ export default function BigBetPage() {
           </div>
         )}
 
-        {/* Submission form */}
+        {/* Submission form — simplified: just stake */}
         {!status.myBet && !status.approvedBet && status.casinoActive && (
           <div className="rounded-2xl bg-white/5 border border-white/10 p-5 space-y-4">
             <div>
               <p className="text-xs font-mono text-slate-500 uppercase tracking-widest mb-3">Strike It Rich</p>
               <p className="text-sm text-slate-400 mb-4">
-                Submit your biggest bet. The House selects one player for the live show tonight.
-                Everyone else gets their points back. The chosen player plays on stage for ×3 (or ×5 if all-in).
+                Put your points on the line. The House selects one player for the live show tonight.
+                Everyone else gets their points back. Go all-in for ×5.
               </p>
-            </div>
-
-            <div>
-              <label className="label">Title</label>
-              <input value={title} onChange={(e) => setTitle(e.target.value)}
-                placeholder="Name your bet..." className="input" />
-            </div>
-
-            <div>
-              <label className="label">Description</label>
-              <textarea value={description} onChange={(e) => setDescription(e.target.value)}
-                placeholder="What are you betting on?"
-                className="input min-h-[80px] resize-none" />
             </div>
 
             <div>
@@ -216,8 +199,6 @@ export default function BigBetPage() {
         {status.myBet && status.myBet.status === "pending" && (
           <div className="rounded-2xl bg-violet-500/10 border border-violet-500/30 p-5 space-y-2">
             <p className="text-xs font-mono text-violet-400 uppercase tracking-widest">Your Submission</p>
-            <p className="font-bold text-white">&ldquo;{status.myBet.title}&rdquo;</p>
-            <p className="text-sm text-slate-400">{status.myBet.description}</p>
             <p className="text-sm text-slate-300">
               {formatPoints(status.myBet.stake)} pts escrowed · ×{status.myBet.multiplier}
               {status.myBet.isAllIn && " · ALL IN"}
@@ -249,7 +230,7 @@ export default function BigBetPage() {
                     {b.outcome === "win" ? `WON ${formatPoints(b.payout)}` : "LOST"}
                   </span>
                 </div>
-                <p className="text-xs text-slate-400 mt-1">&ldquo;{b.title}&rdquo; — {formatPoints(b.stake)} pts at ×{b.multiplier}</p>
+                <p className="text-xs text-slate-400 mt-1">{formatPoints(b.stake)} pts at ×{b.multiplier}</p>
               </div>
             ))}
           </div>
@@ -259,7 +240,7 @@ export default function BigBetPage() {
         <div className="rounded-2xl bg-white/5 border border-white/10 px-5 py-4 space-y-2">
           <p className="text-xs font-mono text-slate-500 uppercase tracking-widest">How It Works</p>
           <div className="text-sm text-slate-400 space-y-1">
-            <p>1. Submit your biggest bet during the day. Your points are escrowed.</p>
+            <p>1. Stake your points. They&rsquo;re escrowed immediately.</p>
             <p>2. The House selects ONE player for tonight&rsquo;s live show.</p>
             <p>3. All other submissions are refunded in full.</p>
             <p>4. The selected player plays the game live on stage.</p>

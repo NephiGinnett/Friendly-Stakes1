@@ -42,6 +42,21 @@ function Countdown({ target }: { target: string }) {
   return <span className="font-mono">{text}</span>;
 }
 
+const GAMES = [
+  { href: "/house?tab=wheel", emoji: "🎡", name: "The Wheel", desc: "Spin for prizes, points, or pain", color: "violet" },
+  { href: "/casino-night/scratch", emoji: "🃏", name: "Scratch Cards", desc: "Basic 150 · Premium 400 · Jackpot", color: "violet" },
+  { href: "/casino-night/slots", emoji: "🎰", name: "Slots", desc: "Triple match for massive payouts", color: "emerald" },
+  { href: "/house?tab=blackjack", emoji: "🃏", name: "Blackjack", desc: "Beat the dealer · 1.5× on win", color: "amber" },
+  { href: "/casino-night/roulette", emoji: "🎡", name: "Roulette", desc: "Number · Color · Dozen · Half", color: "red" },
+] as const;
+
+const COLOR_MAP: Record<string, string> = {
+  violet: "bg-violet-500/10 border-violet-500/30 hover:bg-violet-500/20",
+  emerald: "bg-emerald-500/10 border-emerald-500/30 hover:bg-emerald-500/20",
+  amber: "bg-amber-500/10 border-amber-500/30 hover:bg-amber-500/20",
+  red: "bg-red-500/10 border-red-500/30 hover:bg-red-500/20",
+};
+
 export default function CasinoNightPage() {
   const router = useRouter();
   const [status, setStatus] = useState<CasinoStatus | null>(null);
@@ -97,76 +112,66 @@ export default function CasinoNightPage() {
           </div>
         )}
 
-        {status.casinoActive && spotlightBet && (
-          <div className="rounded-2xl bg-rose-500/10 border border-rose-500/30 p-5 text-center space-y-2">
-            <p className="text-xs font-mono text-rose-400 uppercase tracking-widest">
-              {status.approvedBet ? "🎟️ Tonight's VIP" : "🔥 Current Largest Submission"}
-            </p>
-            <p className="text-2xl font-black text-white">{spotlightBet.username}</p>
-            <p className="text-xl font-bold text-amber-400">
-              {formatPoints(spotlightBet.stake)} pts
-              {spotlightBet.isAllIn && <span className="ml-2 text-sm bg-rose-500/20 text-rose-300 px-2 py-0.5 rounded-full">ALL IN</span>}
-            </p>
-            {status.revealAt && (
-              <div className="text-sm text-slate-400">
-                Live show in: <Countdown target={status.revealAt} />
-              </div>
-            )}
-          </div>
-        )}
-
         {status.casinoActive && (
           <div className="rounded-2xl bg-amber-500/10 border border-amber-500/30 p-5 text-center space-y-1">
             <p className="text-xs font-mono text-amber-400 uppercase tracking-widest">Scratch Jackpot</p>
             <p className="text-4xl font-black text-white">{formatPoints(status.jackpot)} pts</p>
-            <p className="text-xs text-slate-500">Accumulated since the last jackpot was won. Premium cards only.</p>
+            <p className="text-xs text-slate-500">Premium cards only.</p>
           </div>
         )}
 
+        {/* 5 Game Panels */}
         {status.casinoActive && (
-          <div className="grid grid-cols-1 gap-3">
-            <Link href="/casino-night/big-bet" className="block rounded-2xl bg-rose-500/10 border border-rose-500/30 px-5 py-4 hover:bg-rose-500/20 transition-colors">
-              <div className="flex items-center gap-3">
-                <span className="text-3xl">📺</span>
-                <div>
-                  <p className="font-bold text-white">Strike It Rich</p>
-                  <p className="text-xs text-slate-400">Submit your bet · ×3 payout · ×5 if you go all in</p>
-                </div>
-                <span className="ml-auto text-slate-500 text-sm">&rarr;</span>
-              </div>
-            </Link>
-
-            <Link href="/casino-night/scratch" className="block rounded-2xl bg-violet-500/10 border border-violet-500/30 px-5 py-4 hover:bg-violet-500/20 transition-colors">
-              <div className="flex items-center gap-3">
-                <span className="text-3xl">🃏</span>
-                <div>
-                  <p className="font-bold text-white">Scratch Cards</p>
-                  <p className="text-xs text-slate-400">Basic 150 pts · Premium 400 pts · Jackpot eligible</p>
-                </div>
-                <span className="ml-auto text-slate-500 text-sm">&rarr;</span>
-              </div>
-            </Link>
-
-            <Link href="/casino-night/roulette" className="block rounded-2xl bg-red-500/10 border border-red-500/30 px-5 py-4 hover:bg-red-500/20 transition-colors">
-              <div className="flex items-center gap-3">
-                <span className="text-3xl">🎡</span>
-                <div>
-                  <p className="font-bold text-white">Roulette</p>
-                  <p className="text-xs text-slate-400">Number · Color · Dozen · Half · Even/Odd</p>
-                </div>
-                <span className="ml-auto text-slate-500 text-sm">&rarr;</span>
-              </div>
-            </Link>
+          <div className="grid grid-cols-2 gap-3">
+            {GAMES.map((g) => (
+              <Link key={g.href} href={g.href}
+                className={`block rounded-2xl border px-4 py-4 transition-colors ${COLOR_MAP[g.color]}`}>
+                <span className="text-2xl">{g.emoji}</span>
+                <p className="font-bold text-white text-sm mt-1">{g.name}</p>
+                <p className="text-[11px] text-slate-400 leading-tight">{g.desc}</p>
+              </Link>
+            ))}
           </div>
         )}
 
+        {/* Strike It Rich — center bottom */}
+        {status.casinoActive && (
+          <Link href="/casino-night/big-bet" className="block rounded-2xl bg-rose-500/10 border-2 border-rose-500/40 px-5 py-5 hover:bg-rose-500/20 transition-colors">
+            <div className="text-center space-y-2">
+              <p className="text-3xl">📺</p>
+              <p className="text-lg font-black text-white">Strike It Rich</p>
+              <p className="text-xs text-slate-400">Submit your biggest bet · ×3 payout · ×5 if you go all in</p>
+              {spotlightBet && (
+                <div className="mt-2 pt-2 border-t border-rose-500/20">
+                  <p className="text-xs font-mono text-rose-400 uppercase tracking-widest">
+                    {status.approvedBet ? "🎟️ Tonight's VIP" : "🔥 Current Leader"}
+                  </p>
+                  <p className="text-base font-black text-white">{spotlightBet.username}</p>
+                  <p className="text-sm font-bold text-amber-400">
+                    {formatPoints(spotlightBet.stake)} pts
+                    {spotlightBet.isAllIn && <span className="ml-2 text-xs bg-rose-500/20 text-rose-300 px-2 py-0.5 rounded-full">ALL IN</span>}
+                  </p>
+                  {status.revealAt && (
+                    <p className="text-xs text-slate-400 mt-1">
+                      Live show in: <Countdown target={status.revealAt} />
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          </Link>
+        )}
+
+        {/* Rules */}
         {status.casinoActive && (
           <div className="rounded-2xl bg-white/5 border border-white/10 px-5 py-4 space-y-3">
             <p className="text-xs font-mono text-slate-500 uppercase tracking-widest">The Rules</p>
             <div className="space-y-2 text-sm text-slate-300">
-              <p>📺 <strong>Strike It Rich</strong> — Submit your biggest bet during the day. One player is selected for the live show. Everyone else gets refunded. The chosen player plays the game on stage for ×3 payout (×5 if all-in).</p>
-              <p>🃏 Scratch cards reveal a 3×3 grid. Match 3 symbols in any row, column, or diagonal to win.</p>
-              <p>🎡 Roulette is standard European rules. Go all-in for something special.</p>
+              <p>📺 <strong>Strike It Rich</strong> — Submit your biggest bet. One player is selected for the live show. Everyone else gets refunded. ×3 payout (×5 if all-in).</p>
+              <p>🃏 Scratch cards reveal a 3×3 grid. Match 3 in any line to win.</p>
+              <p>🎰 Slots — triple match for multiplied payout, double returns your bet.</p>
+              <p>🎡 Roulette — standard European rules. Go all-in for something special.</p>
+              <p>🃏 Blackjack &amp; The Wheel are on the House floor.</p>
             </div>
           </div>
         )}

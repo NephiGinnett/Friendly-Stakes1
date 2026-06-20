@@ -27,6 +27,7 @@ export const ALL_PAGES: DiscoveryPage[] = [
   { slug: "/casino-night/scratch", label: "Scratch Cards", emoji: "🃏", section: "Casino Night" },
   { slug: "/casino-night/big-bet", label: "Big Bet Show", emoji: "📺", section: "Casino Night" },
   { slug: "/casino-night/roulette", label: "Roulette", emoji: "🎡", section: "Casino Night" },
+  { slug: "/casino-night/slots", label: "Slots", emoji: "🎰", section: "Casino Night" },
 ];
 
 export const VALID_SLUGS = new Set(ALL_PAGES.map((p) => p.slug));

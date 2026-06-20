@@ -149,3 +149,65 @@ export function rouletteColor(n: number): "red" | "black" | "green" {
 
 export const BASE_MULTIPLIER = 3.0;
 export const ALL_IN_MULTIPLIER = 5.0;
+
+// ── Slots ─────────────────────────────────────────────────────────────────────
+
+export const SLOT_SYMBOLS = ["👁", "🏚️", "💀", "🔒", "⚡", "💎", "7️⃣"] as const;
+export type SlotSymbol = (typeof SLOT_SYMBOLS)[number];
+
+const SLOT_WEIGHTS: [SlotSymbol, number][] = [
+  ["🔒", 28],
+  ["💀", 22],
+  ["🏚️", 18],
+  ["⚡", 14],
+  ["👁", 10],
+  ["💎", 5],
+  ["7️⃣", 3],
+];
+
+export const SLOT_PAYOUTS: Record<SlotSymbol, number> = {
+  "🔒": 2,
+  "💀": 3,
+  "🏚️": 5,
+  "⚡": 8,
+  "👁": 15,
+  "💎": 25,
+  "7️⃣": 50,
+};
+
+function pickSlotSymbol(): SlotSymbol {
+  const total = SLOT_WEIGHTS.reduce((s, [, w]) => s + w, 0);
+  let roll = Math.random() * total;
+  for (const [sym, weight] of SLOT_WEIGHTS) {
+    roll -= weight;
+    if (roll <= 0) return sym;
+  }
+  return SLOT_WEIGHTS[SLOT_WEIGHTS.length - 1][0];
+}
+
+export type SlotResult = {
+  reels: [SlotSymbol, SlotSymbol, SlotSymbol];
+  multiplier: number;
+  payout: number;
+  isTriple: boolean;
+  isDouble: boolean;
+};
+
+export function spinSlots(betAmount: number): SlotResult {
+  const reels: [SlotSymbol, SlotSymbol, SlotSymbol] = [
+    pickSlotSymbol(),
+    pickSlotSymbol(),
+    pickSlotSymbol(),
+  ];
+
+  if (reels[0] === reels[1] && reels[1] === reels[2]) {
+    const multiplier = SLOT_PAYOUTS[reels[0]];
+    return { reels, multiplier, payout: betAmount * multiplier, isTriple: true, isDouble: false };
+  }
+
+  if (reels[0] === reels[1] || reels[1] === reels[2] || reels[0] === reels[2]) {
+    return { reels, multiplier: 1, payout: betAmount, isTriple: false, isDouble: true };
+  }
+
+  return { reels, multiplier: 0, payout: 0, isTriple: false, isDouble: false };
+}
