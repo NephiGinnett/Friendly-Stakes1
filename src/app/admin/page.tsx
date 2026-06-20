@@ -808,6 +808,15 @@ export default function AdminPage() {
             </div>
           )}
 
+          {/* Casino Night event */}
+          <a href="/admin/casino-night" className="card block hover:border-violet-500/30 transition-colors">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium text-white">🎰 Casino Night Event</p>
+              <span className="text-xs text-violet-400">&rarr;</span>
+            </div>
+            <p className="text-xs text-slate-500 mt-1">Manage Casino Night: toggle event, approve Big Bet submissions, set live show time.</p>
+          </a>
+
           {/* Casino open/close */}
           <div className="card space-y-3">
             <div className="flex items-center justify-between">

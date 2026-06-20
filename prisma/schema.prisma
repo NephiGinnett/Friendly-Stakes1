@@ -78,6 +78,10 @@ model User {
   gameSessions            GameSession[]
   scoreSenders            ScoreSender[]
   bracketPicks            BracketPick[]
+  scratchCards            ScratchCard[]
+  bigBets                 BigBet[]
+  rouletteGames           RouletteGame[]
+  visitedPages            String            @default("[]")
 }
 
 model Session {
@@ -250,6 +254,11 @@ model HouseConfig {
   worldCupEventEndAt DateTime?
   wcFanPot          Int       @default(0) // accumulated Fan Competition prize pot
   bracketLockedAt   DateTime? // picks locked when this is set and in the past
+  casinoNightActive  Boolean   @default(false)
+  casinoNightEndsAt  DateTime?
+  scratchJackpot     Int       @default(0)
+  bigBetRevealAt     DateTime?
+  bigBetGameType     String    @default("")
   updatedAt         DateTime @updatedAt
 }
 
@@ -627,6 +636,50 @@ model GameSession {
   metadata     String    @default("") // JSON: { coinsEarned, distance, … }
   pointsEarned Int       @default(0)
   dailyDate    String    @default("") // "YYYY-MM-DD" for daily cap
+}
+
+// ── Casino Night ──────────────────────────────────────────────────────────────
+
+model ScratchCard {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  user       User     @relation(fields: [userId], references: [id])
+  tier       String   // "basic" | "premium"
+  cost       Int      // 150 | 400
+  grid       String   // JSON: 3×3 array of symbols
+  payout     Int      @default(0)
+  isJackpot  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+}
+
+model BigBet {
+  id           Int      @id @default(autoincrement())
+  userId       Int
+  user         User     @relation(fields: [userId], references: [id])
+  title        String
+  description  String
+  gameType     String   @default("custom")
+  stake        Int
+  multiplier   Float    @default(3.0)
+  isAllIn      Boolean  @default(false)
+  outcome      String   @default("")
+  resolvedAt   DateTime?
+  status       String   @default("pending") // pending | approved | refunded | completed
+  payout       Int      @default(0)
+  createdAt    DateTime @default(now())
+}
+
+model RouletteGame {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  user       User     @relation(fields: [userId], references: [id])
+  betAmount  Int
+  betType    String
+  betValue   String
+  result     Int
+  payout     Int      @default(0)
+  isAllIn    Boolean  @default(false)
+  createdAt  DateTime @default(now())
 }
 
 model ScoreSender {

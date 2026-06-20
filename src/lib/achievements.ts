@@ -368,6 +368,52 @@ export const ACHIEVEMENTS = {
     emoji: "🥉",
     imageUrl: "/achievements/wc-bronze-badge.png",
   },
+
+  // ── Casino Night ────────────────────────────────────────────────────────────
+
+  scratch_jackpot: {
+    id: "scratch_jackpot",
+    name: "System Override",
+    description: "You hit the jackpot on a premium scratch card. The accumulated pot — every premium card purchased since the last winner — was yours. The House did not plan for this. The House is recalibrating.",
+    hint: "💰💰💰",
+    reward: "The jackpot itself",
+    rewardType: "none" as const,
+    emoji: "💰",
+    imageUrl: "/achievements/system-override.png",
+  },
+  casino_all_in: {
+    id: "casino_all_in",
+    name: "All Your Chips",
+    description: "You put everything on the table. Every last point. The House watched. It was impressed — not by your courage, but by the data point you provided.",
+    hint: "Go all-in at the casino.",
+    reward: "Earn 300 pts",
+    rewardPoints: 300,
+    rewardType: "increment" as const,
+    emoji: "🎰",
+    imageUrl: "/achievements/all-your-chips.png",
+  },
+  big_bet_all_in: {
+    id: "big_bet_all_in",
+    name: "Maximum Exposure",
+    description: "You submitted your entire balance to the Big Bet Show. All of it. The House considered warning you. It decided not to.",
+    hint: "Go all-in on Strike It Rich.",
+    reward: "Earn 200 pts",
+    rewardPoints: 200,
+    rewardType: "increment" as const,
+    emoji: "📺",
+    imageUrl: "/achievements/maximum-exposure.png",
+  },
+  casino_explorer: {
+    id: "casino_explorer",
+    name: "Full Access",
+    description: "You visited every page in Casino Night. The House appreciates thoroughness. It also appreciates having a complete behavioral profile.",
+    hint: "Discover all casino pages.",
+    reward: "Earn 150 pts",
+    rewardPoints: 150,
+    rewardType: "increment" as const,
+    emoji: "🗺️",
+    imageUrl: "/achievements/full-access.png",
+  },
 } as const;
 
 export type AchievementId = keyof typeof ACHIEVEMENTS;
