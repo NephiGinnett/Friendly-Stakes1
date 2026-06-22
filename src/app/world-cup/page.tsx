@@ -7,6 +7,7 @@ import Navbar from "@/components/Navbar";
 import PointsBadge from "@/components/PointsBadge";
 import TeamBadges from "@/components/TeamBadges";
 import { formatPoints } from "@/lib/utils";
+import { useWcSync } from "@/lib/useWcSync";
 
 type User = { id: number; username: string; points: number; isAdmin: boolean };
 type Team = { id: number; name: string; code: string; flag: string; confederation: string };
@@ -36,6 +37,8 @@ export default function WorldCupPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [filter, setFilter] = useState<string>("ALL");
+
+  useWcSync();
 
   useEffect(() => {
     fetch("/api/auth/me")

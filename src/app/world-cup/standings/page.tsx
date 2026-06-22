@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
+import { useWcSync } from "@/lib/useWcSync";
 
 type ShootoutRow = { username: string; flag: string; plays: number; bestScore: number; totalCans: number };
 type ReflexRow = { username: string; flag: string; plays: number; totalSaves: number; saveRate: number; totalCans: number };
@@ -17,6 +18,8 @@ export default function StandingsPage() {
   const [tab, setTab] = useState<"confidence" | "shootout" | "reflex">("confidence");
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState("");
+
+  useWcSync();
 
   useEffect(() => {
     fetch("/api/auth/me").then((r) => { if (!r.ok) router.push("/login"); });
