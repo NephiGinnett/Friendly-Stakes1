@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
+import { useWcSync } from "@/lib/useWcSync";
 
 const ROUNDS = ["R32", "R16", "QF", "SF", "FINAL"] as const;
 type Round = typeof ROUNDS[number];
@@ -31,6 +32,8 @@ export default function BracketPage() {
   const [score, setScore] = useState(0);
   const [activeRound, setActiveRound] = useState<Round>("R32");
   const [saving, setSaving] = useState<string | null>(null);
+
+  useWcSync();
 
   const load = useCallback(async () => {
     const res = await fetch("/api/world-cup/bracket");

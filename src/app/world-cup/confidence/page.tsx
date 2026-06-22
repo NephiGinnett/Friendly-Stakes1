@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import { formatPoints } from "@/lib/utils";
+import { useWcSync } from "@/lib/useWcSync";
 
 type Team = { id: number; name: string; flag: string };
 type Match = {
@@ -82,6 +83,8 @@ export default function ConfidencePage() {
   const [msg, setMsg] = useState("");
   const [error, setError] = useState("");
   const [tab, setTab] = useState<"primary" | "proxy">("primary");
+
+  useWcSync();
 
   const fetchAll = () => {
     fetch("/api/world-cup/confidence").then((r) => r.ok ? r.json() : null).then((d) => {
