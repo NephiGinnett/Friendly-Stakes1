@@ -1,6 +1,6 @@
 # BIG GAME CASINO NIGHT — AD SCRIPT
 ## Performer: CJ
-## Runtime: ~50 seconds
+## Runtime: ~60 seconds
 ## Memo from: THE HOUSE
 
 ---
@@ -111,18 +111,26 @@ But they didn't ask me to enjoy them. They asked me to tell you about them. And 
 
 But the grind isn't the only way to play tonight.
 
-We've got scratch cards. One hundred fifty points for a basic card. Four hundred for a premium. You scratch a three-by-three grid — match three in a line and you win. Premium cards? Those are jackpot eligible. Every premium card purchased goes into the pot. One percent chance to take the whole thing.
+We've got SCRATCH CARDS.
+
+One hundred fifty points for a basic card. Four hundred for a premium. You scratch a three-by-three grid — match three symbols in a row, column, or diagonal and you win. Cherries, oranges, lemons — that's your bread and butter. But hit three bells? Three diamonds? That's real money. Nine hundred points on a basic. Eighteen hundred on a premium.
+
+*(he holds up a finger — this is the important part)*
+
+And here's the thing about premium cards. Every premium card you buy? Three-quarters of that price goes straight into the jackpot pool. That pot grows every single time someone scratches. And there's a one percent chance — ONE percent — that your card hits the diagonal and takes the ENTIRE jackpot.
 
 *(small beat — like he's thinking about buying one himself)*
 
-Could be fifty points in there. Could be five thousand. Depends on how many of you are feeling lucky.
+Could be fifty points in there. Could be five thousand. Depends on how many of you are feeling lucky before I am.
 
 ---
 
 **CJ:**
-*(transitioning, getting more intense)*
+*(transitioning, picking up speed — the casino floor is opening up)*
 
-And we've got roulette. Real roulette. European rules. Pick a color, pick a number, pick a dozen — whatever you want. Thirty-five to one if you call the number. Go all-in and there's an achievement waiting for you.
+We've got SLOTS. Brand new. Three reels, House-themed. You set your bet, you pull, and you pray. Triple sevens? That's fifty times your bet. Triple diamonds — twenty-five times. Even a double match gives you your bet back so you live to spin again.
+
+And we've got ROULETTE. Real roulette. European rules. Pick a color, pick a number, pick a dozen — whatever you want. Thirty-five to one if you call the number. Go all-in and there's an achievement waiting for you.
 
 *(he pauses — this is the turn)*
 
@@ -135,7 +143,7 @@ But NONE of that is the main event.
 
 The main event is Strike It Rich.
 
-Here's how it works. During the day, you submit your bet. You name it. You describe it. And you put your points where your mouth is. EVERY point you submit gets escrowed. Locked in. Gone from your balance until this is over.
+Here's how it works. During the day, you submit your bet. You put your points where your mouth is. EVERY point you submit gets escrowed. Locked in. Gone from your balance until this is over.
 
 *(he leans into the camera)*
 
@@ -162,7 +170,7 @@ You want to be that player? Then don't submit fifty points. Submit everything. B
 **CJ:**
 *(full casino host energy — closing it out)*
 
-Casino Night. Tonight. Scratch cards are live. Roulette is spinning. And one of you is going to put it ALL on the line for the big show.
+Casino Night. Tonight. Scratch cards are stacking the jackpot. Slots are spinning. Roulette is live. And one of you is going to put it ALL on the line for the big show.
 
 *(he puts the sunglasses back on)*
 
@@ -183,7 +191,7 @@ Don't keep The House waiting.
   ║                                                              ║
   ║         ──────────────────────────────────────────           ║
   ║                                                              ║
-  ║    Scratch Cards · Roulette · Strike It Rich (×5 All-In)    ║
+  ║     Scratch Cards · Slots · Roulette · Strike It Rich       ║
   ║                                                              ║
   ║         ──────────────────────────────────────────           ║
   ║                                                              ║
@@ -206,7 +214,10 @@ Don't keep The House waiting.
 The audience knows this about CJ. That's what makes it funny. He delivers three breathless hype sentences about the games, stops, admits he doesn't like them, then immediately goes BACK into hype mode even harder. Do not cut this. The bit only works with the dip.
 
 **The scratch card section:**
-This is the warm-up. CJ should sound like he's genuinely considering buying one. The "could be fifty points... could be five thousand" line should have a pause in the middle — he's doing math on whether the premium is worth it. He lands on "depends on how many of you are feeling lucky" like he already knows the answer is everyone.
+This should feel like CJ is pitching a late-night infomercial — but he's genuinely doing math on whether to buy one. The payout breakdown (bells, diamonds) gives it weight. The jackpot pool reveal is the hook: "three-quarters of every premium card goes into the pot" makes the player feel like every purchase is building toward something they could win. The "one percent" should land like a dare. The "before I am" at the end — that's CJ considering it for real. Keep whatever face he makes.
+
+**The slots section:**
+Quick and punchy. CJ is rattling off the casino floor. "Triple sevens — fifty times your bet" should sound like he can't believe it's real. Don't let him linger here — slots are the appetizer, Strike It Rich is the meal.
 
 **"Putting your LIFE on the line."**
 This is the emotional peak of the ad. CJ should mean this. Not performed intensity — actual weight. The shift from "five times your money" to "starting over from zero" should feel like he just realized what he's asking people to do. If he naturally says "that's insane" or "I wouldn't do it" — keep it. The audience should feel the stakes are genuinely dangerous.
@@ -221,10 +232,10 @@ Three beats. Each one should land separately. CJ is a ring announcer here. If he
 Last line before cut. CJ should deliver this like he's not sure if it's a tagline or a threat. Because it's both.
 
 **Pacing:**
-The first half (games, scratch cards, roulette) moves fast. The Strike It Rich section SLOWS DOWN. The stakes are higher and the delivery should reflect that. "Five times" and "starting over from zero" need room to breathe. Don't rush the main event.
+The first half (games, scratch cards, slots, roulette) moves fast. The Strike It Rich section SLOWS DOWN. The stakes are higher and the delivery should reflect that. "Five times" and "starting over from zero" need room to breathe. Don't rush the main event.
 
 **If CJ improvises:**
-He will. Keep everything that's funnier or more intense than what's on the page. The six things that must survive: the game overhauls, the "don't enjoy the games" beat, scratch cards, Strike It Rich with the all-in multiplier, "putting your life on the line," and the sunglasses.
+He will. Keep everything that's funnier or more intense than what's on the page. The seven things that must survive: the game overhauls, the "don't enjoy the games" beat, scratch cards with the jackpot pool, slots, Strike It Rich with the all-in multiplier, "putting your life on the line," and the sunglasses.
 
 ---
 

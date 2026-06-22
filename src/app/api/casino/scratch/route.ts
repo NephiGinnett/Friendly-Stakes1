@@ -60,7 +60,7 @@ export async function POST(req: Request) {
   await prisma.$transaction(async (tx) => {
     await tx.user.update({ where: { id: user.id }, data: { points: { decrement: cost } } });
     await logPoints(tx, user.id, -cost, `Scratch card (${tier}) purchased`);
-    await tx.houseConfig.update({ where: { id: 1 }, data: { scratchJackpot: { increment: cost } } });
+    await tx.houseConfig.update({ where: { id: 1 }, data: { scratchJackpot: { increment: Math.floor(cost * 0.75) } } });
     await tx.scratchCard.create({
       data: { userId: user.id, tier, cost, grid: JSON.stringify(grid), payout, isJackpot },
     });
