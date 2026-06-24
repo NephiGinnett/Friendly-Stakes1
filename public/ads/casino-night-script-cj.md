@@ -104,6 +104,8 @@ But they didn't ask me to enjoy them. They asked me to tell you about them. And 
 
 — they're better than they've ever been. A hundred points a day, per game, three hundred on the table. The grind is REAL.
 
+And here's the thing — even if you're like me and you don't want to play? Someone else already did. Score Senders. You buy one from the shop, you publish your best score, and now other players can use YOUR score instead of playing. They pay you a royalty — you set the rate. Ten percent, fifty, ninety — whatever you want. You earn points while you sleep. Which, honestly? That's the only game I'm interested in.
+
 ---
 
 **CJ:**
@@ -213,6 +215,9 @@ Don't keep The House waiting.
 **"I personally do not enjoy the games."**
 The audience knows this about CJ. That's what makes it funny. He delivers three breathless hype sentences about the games, stops, admits he doesn't like them, then immediately goes BACK into hype mode even harder. Do not cut this. The bit only works with the dip.
 
+**The Score Sender callback:**
+This is the punchline to the "don't enjoy the games" beat. CJ just admitted he doesn't like playing — and then immediately pitches a way to earn without playing. "You earn points while you sleep" should land like CJ just realized he's been sleeping on the best feature. The "only game I'm interested in" line is him breaking the fourth wall. Let him smile on it if he wants to — this is the one moment where CJ-the-person and CJ-the-host agree.
+
 **The scratch card section:**
 This should feel like CJ is pitching a late-night infomercial — but he's genuinely doing math on whether to buy one. The payout breakdown (bells, diamonds) gives it weight. The jackpot pool reveal is the hook: "three-quarters of every premium card goes into the pot" makes the player feel like every purchase is building toward something they could win. The "one percent" should land like a dare. The "before I am" at the end — that's CJ considering it for real. Keep whatever face he makes.
 
@@ -235,7 +240,7 @@ Last line before cut. CJ should deliver this like he's not sure if it's a taglin
 The first half (games, scratch cards, slots, roulette) moves fast. The Strike It Rich section SLOWS DOWN. The stakes are higher and the delivery should reflect that. "Five times" and "starting over from zero" need room to breathe. Don't rush the main event.
 
 **If CJ improvises:**
-He will. Keep everything that's funnier or more intense than what's on the page. The seven things that must survive: the game overhauls, the "don't enjoy the games" beat, scratch cards with the jackpot pool, slots, Strike It Rich with the all-in multiplier, "putting your life on the line," and the sunglasses.
+He will. Keep everything that's funnier or more intense than what's on the page. The eight things that must survive: the game overhauls, the "don't enjoy the games" beat, score senders, scratch cards with the jackpot pool, slots, Strike It Rich with the all-in multiplier, "putting your life on the line," and the sunglasses.
 
 ---
 
