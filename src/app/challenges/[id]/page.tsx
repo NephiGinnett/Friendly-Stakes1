@@ -251,7 +251,7 @@ export default function ChallengeDetailPage() {
             <h3 className="font-semibold text-white">Vote — did <span className="text-emerald-300">{challenge.acceptedBy?.username}</span> complete this?</h3>
             <p className="text-sm text-slate-400">Settles when 2+ weighted votes agree. If completed, they earn {pts(netPayout)} pts.</p>
 
-            {thumbUsesLeft > 0 && (
+            {thumbUsesLeft > 0 && !myVote && (
               <button
                 onClick={() => setUseThumb((v) => !v)}
                 className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all text-sm font-medium ${
