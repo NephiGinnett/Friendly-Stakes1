@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { logPoints } from "@/lib/pointLog";
-import { seedBracketSlots, STAGE_TO_ROUND } from "@/lib/wcSync";
+import { seedBracketSlots, findWcTeam, STAGE_TO_ROUND, type FdTeam } from "@/lib/wcSync";
 
 const FD_BASE = "https://api.football-data.org/v4";
 const FD_TOKEN = process.env.FOOTBALL_DATA_API_KEY;
@@ -227,7 +227,7 @@ async function runSync() {
     const matches: {
       id: number; status: string; stage: string; group: string | null;
       utcDate: string;
-      homeTeam: { name: string; shortName?: string }; awayTeam: { name: string; shortName?: string };
+      homeTeam: FdTeam; awayTeam: FdTeam;
       score: { winner: string | null; fullTime: { home: number | null; away: number | null } };
     }[] = data.matches ?? [];
 
@@ -241,13 +241,9 @@ async function runSync() {
 
     for (const m of matches) {
       try {
-        // Try both full name and shortName for fuzzy team matching
-        const homeTeam = await prisma.worldCupTeam.findFirst({
-          where: { OR: [{ name: { contains: m.homeTeam.name } }, ...(m.homeTeam.shortName ? [{ name: { contains: m.homeTeam.shortName } }] : [])] },
-        });
-        const awayTeam = await prisma.worldCupTeam.findFirst({
-          where: { OR: [{ name: { contains: m.awayTeam.name } }, ...(m.awayTeam.shortName ? [{ name: { contains: m.awayTeam.shortName } }] : [])] },
-        });
+        // Match on tla code first, then fall back to fuzzy name matching
+        const homeTeam = await findWcTeam(m.homeTeam);
+        const awayTeam = await findWcTeam(m.awayTeam);
 
         const dbMatch = await prisma.worldCupMatch.upsert({
           where: { fdMatchId: m.id },
@@ -255,8 +251,8 @@ async function runSync() {
             fdMatchId: m.id,
             homeTeamId: homeTeam?.id ?? null,
             awayTeamId: awayTeam?.id ?? null,
-            homeTeamName: m.homeTeam.name,
-            awayTeamName: m.awayTeam.name,
+            homeTeamName: m.homeTeam.name ?? "TBD",
+            awayTeamName: m.awayTeam.name ?? "TBD",
             kickoff: new Date(m.utcDate),
             stage: m.stage,
             group: m.group ?? null,

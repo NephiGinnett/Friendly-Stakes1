@@ -2,13 +2,33 @@ import { prisma } from "@/lib/db";
 
 const FD_BASE = "https://api.football-data.org/v4";
 
+export type FdTeam = { name?: string | null; shortName?: string | null; tla?: string | null };
+
 type FdMatch = {
   id: number; status: string; stage: string; group: string | null;
   utcDate: string;
-  homeTeam: { name: string; shortName?: string };
-  awayTeam: { name: string; shortName?: string };
+  homeTeam: FdTeam;
+  awayTeam: FdTeam;
   score: { winner: string | null; fullTime: { home: number | null; away: number | null } };
 };
+
+// Resolve a football-data team to a WorldCupTeam row. Match on the 3-letter
+// code (tla) first — far more reliable than names, which football-data spells
+// differently than our DB ("Korea Republic" vs "South Korea", "IR Iran" vs
+// "Iran", etc.) — then fall back to a fuzzy name match.
+export async function findWcTeam(team: FdTeam | null | undefined) {
+  if (!team) return null;
+  if (team.tla) {
+    const byCode = await prisma.worldCupTeam.findFirst({ where: { code: team.tla.toUpperCase() } });
+    if (byCode) return byCode;
+  }
+  if (team.name) {
+    return prisma.worldCupTeam.findFirst({
+      where: { OR: [{ name: { contains: team.name } }, ...(team.shortName ? [{ name: { contains: team.shortName } }] : [])] },
+    });
+  }
+  return null;
+}
 
 export async function fetchFdMatches(token: string): Promise<FdMatch[]> {
   const res = await fetch(`${FD_BASE}/competitions/WC/matches`, {
@@ -49,12 +69,8 @@ export async function seedBracketSlots(matches: FdMatch[]): Promise<number> {
 
   for (const m of matches) {
     if (!STAGE_TO_ROUND[m.stage]) continue;
-    const homeTeam = m.homeTeam?.name ? await prisma.worldCupTeam.findFirst({
-      where: { OR: [{ name: { contains: m.homeTeam.name } }, ...(m.homeTeam.shortName ? [{ name: { contains: m.homeTeam.shortName } }] : [])] },
-    }) : null;
-    const awayTeam = m.awayTeam?.name ? await prisma.worldCupTeam.findFirst({
-      where: { OR: [{ name: { contains: m.awayTeam.name } }, ...(m.awayTeam.shortName ? [{ name: { contains: m.awayTeam.shortName } }] : [])] },
-    }) : null;
+    const homeTeam = await findWcTeam(m.homeTeam);
+    const awayTeam = await findWcTeam(m.awayTeam);
     knockoutRows.push({
       fdMatchId: m.id,
       stage: m.stage,
@@ -118,12 +134,8 @@ export async function upsertMatches(matches: FdMatch[]): Promise<{ upserted: num
       // Skip matches where teams aren't determined yet (knockout TBD)
       if (!m.homeTeam?.name && !m.awayTeam?.name) continue;
 
-      const homeTeam = m.homeTeam?.name ? await prisma.worldCupTeam.findFirst({
-        where: { OR: [{ name: { contains: m.homeTeam.name } }, ...(m.homeTeam.shortName ? [{ name: { contains: m.homeTeam.shortName } }] : [])] },
-      }) : null;
-      const awayTeam = m.awayTeam?.name ? await prisma.worldCupTeam.findFirst({
-        where: { OR: [{ name: { contains: m.awayTeam.name } }, ...(m.awayTeam.shortName ? [{ name: { contains: m.awayTeam.shortName } }] : [])] },
-      }) : null;
+      const homeTeam = await findWcTeam(m.homeTeam);
+      const awayTeam = await findWcTeam(m.awayTeam);
 
       await prisma.worldCupMatch.upsert({
         where: { fdMatchId: m.id },
