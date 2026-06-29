@@ -17,7 +17,7 @@ const TEAMS = [
   { name: "Uruguay",        code: "URU", flag: "🇺🇾", confederation: "CONMEBOL" },
   { name: "Venezuela",      code: "VEN", flag: "🇻🇪", confederation: "CONMEBOL" },
 
-  // UEFA (16)
+  // UEFA (19)
   { name: "Germany",        code: "GER", flag: "🇩🇪", confederation: "UEFA" },
   { name: "Spain",          code: "ESP", flag: "🇪🇸", confederation: "UEFA" },
   { name: "France",         code: "FRA", flag: "🇫🇷", confederation: "UEFA" },
@@ -34,8 +34,11 @@ const TEAMS = [
   { name: "Serbia",         code: "SRB", flag: "🇷🇸", confederation: "UEFA" },
   { name: "Romania",        code: "ROU", flag: "🇷🇴", confederation: "UEFA" },
   { name: "Scotland",       code: "SCO", flag: "🏴󠁧󠁢󠁳󠁣󠁴󠁿", confederation: "UEFA" },
+  { name: "Norway",         code: "NOR", flag: "🇳🇴", confederation: "UEFA" },
+  { name: "Sweden",         code: "SWE", flag: "🇸🇪", confederation: "UEFA" },
+  { name: "Bosnia-Herzegovina", code: "BIH", flag: "🇧🇦", confederation: "UEFA" },
 
-  // CAF (9)
+  // CAF (12)
   { name: "Morocco",        code: "MAR", flag: "🇲🇦", confederation: "CAF" },
   { name: "Nigeria",        code: "NGA", flag: "🇳🇬", confederation: "CAF" },
   { name: "Senegal",        code: "SEN", flag: "🇸🇳", confederation: "CAF" },
@@ -45,6 +48,9 @@ const TEAMS = [
   { name: "Tunisia",        code: "TUN", flag: "🇹🇳", confederation: "CAF" },
   { name: "Mali",           code: "MLI", flag: "🇲🇱", confederation: "CAF" },
   { name: "DR Congo",       code: "COD", flag: "🇨🇩", confederation: "CAF" },
+  { name: "Algeria",        code: "ALG", flag: "🇩🇿", confederation: "CAF" },
+  { name: "Cape Verde Islands", code: "CPV", flag: "🇨🇻", confederation: "CAF" },
+  { name: "Ghana",          code: "GHA", flag: "🇬🇭", confederation: "CAF" },
 
   // AFC (8)
   { name: "Japan",          code: "JPN", flag: "🇯🇵", confederation: "AFC" },
