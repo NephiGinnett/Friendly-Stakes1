@@ -491,7 +491,7 @@ export default function WagerDetailPage() {
               Settles automatically once 2+ votes agree on the same side.
             </p>
 
-            {thumbUsesLeft > 0 && (
+            {thumbUsesLeft > 0 && !userVote && (
               <button
                 onClick={() => setUseThumb((v) => !v)}
                 className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all text-sm font-medium ${
