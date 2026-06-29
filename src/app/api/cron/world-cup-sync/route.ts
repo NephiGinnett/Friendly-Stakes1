@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { logPoints } from "@/lib/pointLog";
-import { seedBracketSlots } from "@/lib/wcSync";
+import { seedBracketSlots, STAGE_TO_ROUND } from "@/lib/wcSync";
 
 const FD_BASE = "https://api.football-data.org/v4";
 const FD_TOKEN = process.env.FOOTBALL_DATA_API_KEY;
@@ -296,7 +296,7 @@ async function runSync() {
     const bracketSlots = await seedBracketSlots(matches);
 
     // Auto-lock bracket when R32 has started — set bracketLockedAt to earliest R32 kickoff if not already set
-    const r32Matches = matches.filter(m => m.stage === "ROUND_OF_32");
+    const r32Matches = matches.filter(m => STAGE_TO_ROUND[m.stage] === "R32");
     const anyR32Started = r32Matches.some(m => !["SCHEDULED", "TIMED"].includes(m.status));
     if (anyR32Started) {
       const config = await prisma.houseConfig.findUnique({ where: { id: 1 }, select: { bracketLockedAt: true } });
