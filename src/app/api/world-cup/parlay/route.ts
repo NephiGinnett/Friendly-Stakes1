@@ -6,7 +6,7 @@ import { logPoints } from "@/lib/pointLog";
 const MULTIPLIERS = [2, 3, 5, 8, 13]; // indexed by (activeLegCount - 1)
 const MONITOR_PER_LEG = { 100: 1, 200: 2, 300: 3 } as Record<number, number>;
 
-export async function GET() {
+export async function GET(req: Request) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -16,13 +16,18 @@ export async function GET() {
   });
   if (!entry) return NextResponse.json({ error: "Not entered" }, { status: 404 });
 
-  const effectiveTeamId = entry.proxyTeamId ?? entry.teamId;
+  const { searchParams } = new URL(req.url);
+  const target = searchParams.get("target");
+  const useProxy = target === "proxy" && !!entry.proxyTeamId;
 
-  // Next match for this player's effective team
+  const teamId = useProxy ? entry.proxyTeamId! : entry.teamId;
+  const team = useProxy ? entry.proxyTeam! : entry.team;
+  const myStake = useProxy ? entry.proxyConfidenceStake : entry.confidenceStake;
+
   const nextMatch = await prisma.worldCupMatch.findFirst({
     where: {
       status: { in: ["SCHEDULED", "TIMED"] },
-      OR: [{ homeTeamId: effectiveTeamId }, { awayTeamId: effectiveTeamId }],
+      OR: [{ homeTeamId: teamId }, { awayTeamId: teamId }],
     },
     orderBy: { kickoff: "asc" },
     include: { homeTeam: true, awayTeam: true },
@@ -36,31 +41,36 @@ export async function GET() {
     ? new Date(new Date(nextMatch.kickoff).getTime() - 1 * 60 * 60 * 1000)
     : null;
 
-  // Find the opposing team's player with the highest confidence stake
   const opposingTeamId = nextMatch
-    ? nextMatch.homeTeamId === effectiveTeamId ? nextMatch.awayTeamId : nextMatch.homeTeamId
+    ? nextMatch.homeTeamId === teamId ? nextMatch.awayTeamId : nextMatch.homeTeamId
     : null;
 
   let opponent: { userId: number; username: string; confidenceStake: number } | null = null;
   if (opposingTeamId) {
-    const oppEntry = await prisma.worldCupEntry.findFirst({
+    const oppEntries = await prisma.worldCupEntry.findMany({
       where: { OR: [{ teamId: opposingTeamId ?? -1 }, { proxyTeamId: opposingTeamId ?? -1 }] },
-      orderBy: { confidenceStake: "desc" },
       include: { user: { select: { id: true, username: true } } },
     });
-    if (oppEntry) opponent = { userId: oppEntry.userId, username: oppEntry.user.username, confidenceStake: oppEntry.confidenceStake };
+    const oppsWithStake = oppEntries.map(e => ({
+      userId: e.userId,
+      username: e.user.username,
+      effectiveStake: e.teamId === opposingTeamId ? e.confidenceStake : e.proxyConfidenceStake,
+    }));
+    oppsWithStake.sort((a, b) => b.effectiveStake - a.effectiveStake);
+    if (oppsWithStake.length > 0) {
+      const top = oppsWithStake[0];
+      opponent = { userId: top.userId, username: top.username, confidenceStake: top.effectiveStake };
+    }
   }
 
-  // Determine if this player can propose (higher confidence stake, within proposal window)
   const canPropose = !!(
     nextMatch &&
     opponent &&
-    entry.confidenceStake > opponent.confidenceStake &&
+    myStake > opponent.confidenceStake &&
     twoHoursBefore && now >= twoHoursBefore &&
     oneHourBefore && now < oneHourBefore
   );
 
-  // Existing parlay for this match (as proposer or opponent)
   const existingParlay = nextMatch
     ? await prisma.parlay.findFirst({
         where: {
@@ -76,7 +86,6 @@ export async function GET() {
       })
     : null;
 
-  // Past parlays
   const history = await prisma.parlay.findMany({
     where: {
       OR: [{ proposerId: user.id }, { opponentId: user.id }],
@@ -93,9 +102,11 @@ export async function GET() {
   });
 
   return NextResponse.json({
-    myTeam: entry.proxyTeam ?? entry.team,
-    isProxy: !!entry.proxyTeamId,
-    confidenceStake: entry.confidenceStake,
+    myTeam: team,
+    primaryTeam: entry.team,
+    proxyTeam: entry.proxyTeam ?? null,
+    isProxy: useProxy,
+    confidenceStake: myStake,
     monitorCans: entry.monitorCans,
     nextMatch,
     opponent,
@@ -111,7 +122,7 @@ export async function POST(req: Request) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { matchId, costPerLeg, legs } = await req.json();
+  const { matchId, costPerLeg, legs, target } = await req.json();
   // legs: { order: number; description: string }[]
 
   if (![100, 200, 300].includes(costPerLeg)) {
@@ -126,14 +137,15 @@ export async function POST(req: Request) {
 
   const entry = await prisma.worldCupEntry.findUnique({
     where: { userId: user.id },
-    include: { team: true },
+    include: { team: true, proxyTeam: true },
   });
   if (!entry) return NextResponse.json({ error: "Not entered" }, { status: 404 });
 
-  const effectiveTeamId = entry.proxyTeamId ?? entry.teamId;
+  const useProxy = target === "proxy" && !!entry.proxyTeamId;
+  const effectiveTeamId = useProxy ? entry.proxyTeamId! : entry.teamId;
 
   const match = await prisma.worldCupMatch.findUnique({ where: { id: matchId } });
-  if (!match || match.status !== "SCHEDULED") {
+  if (!match || !["SCHEDULED", "TIMED"].includes(match.status)) {
     return NextResponse.json({ error: "Match not available" }, { status: 400 });
   }
 
@@ -149,15 +161,20 @@ export async function POST(req: Request) {
   const isAway = match.awayTeamId === effectiveTeamId;
   if (!isHome && !isAway) return NextResponse.json({ error: "Your team is not in this match" }, { status: 400 });
 
-  // Find opponent with highest confidence stake backing the other team
+  // Find opponent with highest effective confidence stake backing the other team
   const opposingTeamId = isHome ? match.awayTeamId : match.homeTeamId;
-  const oppEntry = await prisma.worldCupEntry.findFirst({
+  const oppEntries = await prisma.worldCupEntry.findMany({
     where: { OR: [{ teamId: opposingTeamId ?? -1 }, { proxyTeamId: opposingTeamId ?? -1 }] },
-    orderBy: { confidenceStake: "desc" },
     include: { user: { select: { id: true } } },
   });
-  if (!oppEntry) return NextResponse.json({ error: "No opponent backing the other team" }, { status: 400 });
-  if (entry.confidenceStake <= oppEntry.confidenceStake) {
+  if (oppEntries.length === 0) return NextResponse.json({ error: "No opponent backing the other team" }, { status: 400 });
+  const postMyStake = useProxy ? entry.proxyConfidenceStake : entry.confidenceStake;
+  const oppsRanked = oppEntries.map(e => ({
+    ...e,
+    effectiveStake: e.teamId === opposingTeamId ? e.confidenceStake : e.proxyConfidenceStake,
+  })).sort((a, b) => b.effectiveStake - a.effectiveStake);
+  const oppEntry = oppsRanked[0];
+  if (postMyStake <= oppEntry.effectiveStake) {
     return NextResponse.json({ error: "Only the player with the higher confidence stake can propose" }, { status: 403 });
   }
 
