@@ -126,9 +126,22 @@ export default function AdminPage() {
   const [restartResult, setRestartResult] = useState<{ filename: string; snapshot: string[] } | null>(null);
   const [restartError, setRestartError] = useState<string | null>(null);
 
-  // Collapsible sections
+  // Collapsible sections — persisted across page loads via localStorage
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
-  const toggleSection = (key: string) => setCollapsed(prev => ({ ...prev, [key]: !prev[key] }));
+  const toggleSection = (key: string) => setCollapsed(prev => {
+    const next = { ...prev, [key]: !prev[key] };
+    try { localStorage.setItem("adminCollapsed", JSON.stringify(next)); } catch {}
+    return next;
+  });
+  // Restore saved collapse state on mount (after hydration, so SSR markup matches)
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("adminCollapsed");
+      if (saved) setCollapsed(JSON.parse(saved));
+      const savedRound = localStorage.getItem("adminBracketRound");
+      if (savedRound) setBracketExpandRound(savedRound);
+    } catch {}
+  }, []);
 
   const fetchAll = () => {
     fetch("/api/admin/users").then((r) => r.ok ? r.json() : []).then(setUsers);
@@ -1112,7 +1125,14 @@ export default function AdminPage() {
                     return (
                       <div key={r}>
                         <button
-                          onClick={() => setBracketExpandRound(bracketExpandRound === r ? null : r)}
+                          onClick={() => {
+                            const next = bracketExpandRound === r ? null : r;
+                            setBracketExpandRound(next);
+                            try {
+                              if (next) localStorage.setItem("adminBracketRound", next);
+                              else localStorage.removeItem("adminBracketRound");
+                            } catch {}
+                          }}
                           className="w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-white/[0.03] border border-white/8 hover:border-white/15 transition-colors"
                         >
                           <span className={`w-2 h-2 rounded-full shrink-0 ${full ? "bg-emerald-500" : info.slotCount > 0 ? "bg-amber-500" : "bg-slate-600"}`} />
@@ -1271,7 +1291,13 @@ export default function AdminPage() {
                         const d = await res.json();
                         if (d.httpStatus === 200) {
                           const count = Array.isArray((d.body as { matches?: unknown[] })?.matches) ? (d.body as { matches: unknown[] }).matches.length : "?";
-                          setBracketMsg(`✅ API OK — ${count} matches returned`);
+                          const unmatched: string[] = Array.isArray(d.unmatched) ? d.unmatched : [];
+                          setBracketMsg(
+                            `✅ API OK — ${count} matches returned` +
+                            (unmatched.length
+                              ? ` · ⚠️ ${unmatched.length} knockout team(s) not matching DB: ${unmatched.join(", ")}`
+                              : " · all knockout teams resolve ✓")
+                          );
                         } else {
                           setBracketMsg(`❌ API returned ${d.httpStatus}: ${JSON.stringify(d.body).slice(0, 120)}`);
                         }
