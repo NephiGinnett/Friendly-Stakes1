@@ -20,8 +20,13 @@ export async function fetchFdMatches(token: string): Promise<FdMatch[]> {
   return data.matches ?? [];
 }
 
-const STAGE_TO_ROUND: Record<string, string> = {
+// football-data.org v4 labels the first two knockout rounds LAST_32 / LAST_16;
+// older/alternate feeds use ROUND_OF_32 / ROUND_OF_16. Accept both so bracket
+// slots seed regardless of which the API returns.
+export const STAGE_TO_ROUND: Record<string, string> = {
+  LAST_32: "R32",
   ROUND_OF_32: "R32",
+  LAST_16: "R16",
   ROUND_OF_16: "R16",
   QUARTER_FINALS: "QF",
   SEMI_FINALS: "SF",
