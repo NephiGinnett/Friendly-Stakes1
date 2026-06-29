@@ -55,9 +55,11 @@ async function settleMatchConfidenceWagers(matchId: number, winnerTeamId: number
     ...awayProxy.map((e) => ({ ...e, effectiveStake: e.proxyConfidenceStake })),
   ];
 
-  // Bot backfill: if one side has no backers, inject a phantom 100-pt bot entry
-  // so the other side's players still earn from confidence wagers
-  const BOT_STAKE = 100;
+  // Bot backfill: if one side has no backers (an NPC team), inject a phantom
+  // bot entry with a random 100–200 stake so the other side's players still
+  // earn from confidence wagers. Computed once per match so the resulting
+  // settlement records are consistent.
+  const BOT_STAKE = 100 + Math.floor(Math.random() * 101); // 100–200 inclusive
   if (homeEntries.length === 0 && awayEntries.length > 0) {
     homeEntries.push({ userId: -1, isBot: true, effectiveStake: BOT_STAKE, user: { username: "Auto-Opponent" } } as unknown as EntryWithStake);
   } else if (awayEntries.length === 0 && homeEntries.length > 0) {

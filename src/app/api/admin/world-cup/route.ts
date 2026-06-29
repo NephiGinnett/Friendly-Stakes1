@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { fetchFdMatches, upsertMatches, seedBracketSlots, findWcTeam, STAGE_TO_ROUND, type FdTeam } from "@/lib/wcSync";
+import { seedWorldCupTeams } from "@/lib/worldCupSeed";
 
 const ROUND_EXPECTED: Record<string, number> = { R32: 16, R16: 8, QF: 4, SF: 2, FINAL: 1 };
 const ROUNDS = ["R32", "R16", "QF", "SF", "FINAL"];
@@ -210,6 +211,7 @@ export async function POST(req: Request) {
     const token = process.env.FOOTBALL_DATA_API_KEY;
     if (!token) return NextResponse.json({ error: "FOOTBALL_DATA_API_KEY not set" }, { status: 500 });
     try {
+      await seedWorldCupTeams(); // ensure newly-added teams exist before matching
       const matches = await fetchFdMatches(token);
       const { upserted, errors } = await upsertMatches(matches);
       const bracketSlots = await seedBracketSlots(matches);
