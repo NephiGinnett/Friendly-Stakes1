@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
-import { fetchFdMatches, upsertMatches } from "@/lib/wcSync";
+import { fetchFdMatches, upsertMatches, seedBracketSlots } from "@/lib/wcSync";
 
 const ROUND_EXPECTED: Record<string, number> = { R32: 16, R16: 8, QF: 4, SF: 2, FINAL: 1 };
 const ROUNDS = ["R32", "R16", "QF", "SF", "FINAL"];
@@ -212,7 +212,8 @@ export async function POST(req: Request) {
     try {
       const matches = await fetchFdMatches(token);
       const { upserted, errors } = await upsertMatches(matches);
-      return NextResponse.json({ ok: true, fetched: matches.length, upserted, errors });
+      const bracketSlots = await seedBracketSlots(matches);
+      return NextResponse.json({ ok: true, fetched: matches.length, upserted, bracketSlots, errors });
     } catch (e) {
       return NextResponse.json({ error: e instanceof Error ? e.message : "Sync failed" }, { status: 500 });
     }

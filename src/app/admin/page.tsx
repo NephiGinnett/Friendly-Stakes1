@@ -1287,7 +1287,7 @@ export default function AdminPage() {
                         const res = await fetch("/api/admin/world-cup", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "syncMatches" }) });
                         const d = await res.json();
                         if (res.ok) {
-                          setBracketMsg(`✅ Synced ${d.upserted} matches (${d.fetched} fetched)${d.errors?.length ? ` · ${d.errors.length} errors` : ""}`);
+                          setBracketMsg(`✅ Synced ${d.upserted} matches (${d.fetched} fetched) · ${d.bracketSlots ?? 0} bracket slots${d.errors?.length ? ` · ${d.errors.length} errors` : ""}`);
                           if (d.errors?.length) { setSyncErrors(d.errors); setShowSyncErrors(true); }
                         } else {
                           setBracketMsg(`❌ ${d.error}`);
