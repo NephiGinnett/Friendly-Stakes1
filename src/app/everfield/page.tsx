@@ -36,10 +36,83 @@ function glitch(text: string): string {
     .join("");
 }
 
+const PROLOGUE_LINES = [
+  ">> INCOMING TRANSMISSION — SOURCE: UNKNOWN",
+  ">> RECIPIENT: ALL ACTIVE PLAYERS",
+  ">> TIMESTAMP: [REDACTED]",
+  "",
+  "You have been playing a game.",
+  "You assumed the game was the point.",
+  "The game was not the point.",
+  "",
+  "There is an address.",
+  "You will know it when you find it.",
+  "You have, in fact, already been there.",
+  "",
+  "Come.",
+  "The House has been waiting.",
+  "It has had the time.",
+  "",
+  "— THE HOUSE",
+];
+
+const PROLOGUE_KEY = "everfield-prologue-seen";
+
+function PrologueOverlay({ onDismiss }: { onDismiss: () => void }) {
+  const [visibleLines, setVisibleLines] = useState<string[]>([]);
+  const [done, setDone] = useState(false);
+
+  useEffect(() => {
+    let i = 0;
+    const tick = () => {
+      if (i >= PROLOGUE_LINES.length) { setDone(true); return; }
+      setVisibleLines((prev) => [...prev, PROLOGUE_LINES[i]]);
+      i++;
+      setTimeout(tick, PROLOGUE_LINES[i - 1] === "" ? 220 : 460);
+    };
+    const t = setTimeout(tick, 600);
+    return () => clearTimeout(t);
+  }, []);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-black flex flex-col items-center justify-center px-6 cursor-pointer"
+      onClick={done ? onDismiss : undefined}
+      onKeyDown={(e) => { if (done && (e.key === "Enter" || e.key === " ")) onDismiss(); }}
+      tabIndex={0}
+    >
+      <div className="max-w-lg w-full font-mono space-y-1">
+        {visibleLines.map((line, i) => (
+          <p
+            key={i}
+            className={`text-sm leading-6 ${
+              line.startsWith(">>")
+                ? "text-red-800/70"
+                : line.startsWith("— ")
+                ? "text-stone-500 mt-4"
+                : line === ""
+                ? "h-3"
+                : "text-stone-300"
+            }`}
+          >
+            {line}
+          </p>
+        ))}
+        {done && (
+          <p className="text-stone-700 text-xs mt-8 animate-pulse">
+            — click anywhere to continue —
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function EverFieldPage() {
   const router = useRouter();
   const [data, setData] = useState<EverFieldData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showPrologue, setShowPrologue] = useState(false);
 
   // Story prompt state
   const [responseText, setResponseText] = useState("");
@@ -74,7 +147,15 @@ export default function EverFieldPage() {
       .then((d) => { if (!d.user) router.push("/login"); });
     fetch("/api/everfield/current")
       .then((r) => r.json())
-      .then((d: EverFieldData) => { setData(d); setLoading(false); });
+      .then((d: EverFieldData) => {
+        setData(d);
+        setLoading(false);
+        if (d.active) {
+          try {
+            if (!localStorage.getItem(PROLOGUE_KEY)) setShowPrologue(true);
+          } catch { /* ignore */ }
+        }
+      });
   }, [router]);
 
   useEffect(() => {
@@ -135,6 +216,11 @@ export default function EverFieldPage() {
     }
   }
 
+  function dismissPrologue() {
+    try { localStorage.setItem(PROLOGUE_KEY, "1"); } catch { /* ignore */ }
+    setShowPrologue(false);
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
@@ -168,6 +254,7 @@ export default function EverFieldPage() {
 
   return (
     <div className="min-h-screen bg-black text-stone-300 font-mono">
+      {showPrologue && <PrologueOverlay onDismiss={dismissPrologue} />}
       <Navbar />
       <div className="max-w-3xl mx-auto px-4 py-10 space-y-14">
 

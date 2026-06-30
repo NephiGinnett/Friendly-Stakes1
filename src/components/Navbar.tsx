@@ -16,6 +16,7 @@ type Notifs = {
   bingo: string | null;
   boss: boolean;
   distributions: number;
+  everField: boolean;
 };
 
 export default function Navbar() {
@@ -23,7 +24,7 @@ export default function Navbar() {
   const pathname = usePathname();
   const [user, setUser] = useState<User | null>(null);
   const [houseStatus, setHouseStatus] = useState<HouseStatus | null>(null);
-  const [notifs, setNotifs] = useState<Notifs>({ challenges: 0, wagers: 0, achievements: 0, adminBingo: 0, bingo: null, boss: false, distributions: 0 });
+  const [notifs, setNotifs] = useState<Notifs>({ challenges: 0, wagers: 0, achievements: 0, adminBingo: 0, bingo: null, boss: false, distributions: 0, everField: false });
   const [notifsEnabled, setNotifsEnabled] = useState(true);
 
   useEffect(() => {
@@ -79,6 +80,7 @@ export default function Navbar() {
     bingo: notifs.bingo !== null,
     admin: notifs.adminBingo > 0,
     house: notifs.boss,
+    everfield: notifs.everField,
   };
 
   const showDot = (key: keyof typeof dotMap) => notifsEnabled && dotMap[key];
@@ -103,7 +105,7 @@ export default function Navbar() {
     { href: "/games", label: "🎮" },
     { href: "/house", label: "🎰", dotKey: "house" },
     ...(showWorldCup ? [{ href: "/world-cup", label: "⚽", isWc: true }] : []),
-    ...(showEverField ? [{ href: "/everfield", label: "👁" }] : []),
+    ...(showEverField ? [{ href: "/everfield", label: "👁", dotKey: "everfield" as keyof typeof dotMap }] : []),
     { href: "/profile", label: user.username },
   ];
 
