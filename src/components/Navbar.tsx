@@ -7,7 +7,7 @@ import { getDisplayVersion } from "@/lib/version";
 import TeamBadges from "@/components/TeamBadges";
 
 type User = { id: number; username: string; points: number; isAdmin: boolean; siteTheme?: string };
-type HouseStatus = { worldCupAdminAt: string | null; worldCupPlayerAt: string | null };
+type HouseStatus = { worldCupAdminAt: string | null; worldCupPlayerAt: string | null; everFieldActive: boolean };
 type Notifs = {
   challenges: number;
   wagers: number;
@@ -91,6 +91,8 @@ export default function Navbar() {
     (user.isAdmin && now >= wcAdminAt) || now >= wcPlayerAt
   );
 
+  const showEverField = houseStatus?.everFieldActive;
+
   const navItems: { href: string; label: string; dotKey?: keyof typeof dotMap; isWc?: boolean }[] = [
     { href: "/feed", label: "Feed", dotKey: "feed" },
     { href: "/wagers/new", label: "+" },
@@ -101,6 +103,7 @@ export default function Navbar() {
     { href: "/games", label: "🎮" },
     { href: "/house", label: "🎰", dotKey: "house" },
     ...(showWorldCup ? [{ href: "/world-cup", label: "⚽", isWc: true }] : []),
+    ...(showEverField ? [{ href: "/everfield", label: "👁" }] : []),
     { href: "/profile", label: user.username },
   ];
 

@@ -77,6 +77,9 @@ model User {
   parlayVoteLogs          ParlayVoteLog[]
   gameSessions            GameSession[]
   bracketPicks            BracketPick[]
+  everFieldResponses      EverFieldResponse[]
+  everFieldMadLibEntries  EverFieldMadLibEntry[]
+  everFieldDiscoveries    EverFieldDiscovery[]
 }
 
 model Session {
@@ -610,6 +613,97 @@ model BracketPick {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   @@unique([userId, round, position])
+}
+
+// ── Everfield ─────────────────────────────────────────────────────────────────
+
+// Global singleton (id=1 always)
+model EverFieldConfig {
+  id             Int      @id @default(1)
+  active         Boolean  @default(false)
+  currentStageId Int?
+  updatedAt      DateTime @updatedAt
+}
+
+model EverFieldStage {
+  id           Int      @id @default(autoincrement())
+  order        Int      // 1, 2, 3, 4
+  title        String
+  storyText    String   @default("") // Scott's story for this stage (markdown)
+  playerPrompt String   // question players respond to
+  isActive     Boolean  @default(false) // players can submit responses
+  isPublished  Boolean  @default(false) // story text is visible to players
+  ttsAudioUrl  String   @default("")    // pre-generated TTS audio path
+  createdAt    DateTime @default(now())
+
+  responses EverFieldResponse[]
+  madLibs   EverFieldMadLib[]
+  clues     EverFieldClue[]
+}
+
+model EverFieldResponse {
+  id          Int            @id @default(autoincrement())
+  stageId     Int
+  stage       EverFieldStage @relation(fields: [stageId], references: [id])
+  userId      Int
+  user        User           @relation(fields: [userId], references: [id])
+  response    String
+  sentToScott Boolean        @default(false)
+  createdAt   DateTime       @default(now())
+
+  @@unique([stageId, userId])
+}
+
+model EverFieldMadLib {
+  id         Int            @id @default(autoincrement())
+  stageId    Int?
+  stage      EverFieldStage? @relation(fields: [stageId], references: [id])
+  title      String
+  slots      String         // JSON: [{label, type}]
+  realVersion String        @default("") // admin/Scott's canonical story
+  isActive   Boolean        @default(false)
+  createdAt  DateTime       @default(now())
+
+  entries EverFieldMadLibEntry[]
+}
+
+model EverFieldMadLibEntry {
+  id        Int             @id @default(autoincrement())
+  madLibId  Int
+  madLib    EverFieldMadLib @relation(fields: [madLibId], references: [id])
+  userId    Int
+  user      User            @relation(fields: [userId], references: [id])
+  responses String          // JSON: string[] aligned to slots
+  createdAt DateTime        @default(now())
+
+  @@unique([madLibId, userId])
+}
+
+// Easter eggs / clues hidden around the site
+model EverFieldClue {
+  id         Int             @id @default(autoincrement())
+  slug       String          @unique // "transmission-1", "eye-in-the-feed"
+  stageId    Int?
+  stage      EverFieldStage? @relation(fields: [stageId], references: [id])
+  order      Int             @default(0)
+  pagePath   String          // hint: which page it's hidden on
+  flavorText String          // what The House says when found
+  hintText   String          @default("") // cryptic public-facing hint
+  isActive   Boolean         @default(false)
+  createdAt  DateTime        @default(now())
+
+  discoveries EverFieldDiscovery[]
+}
+
+model EverFieldDiscovery {
+  id           Int          @id @default(autoincrement())
+  clueId       Int
+  clue         EverFieldClue @relation(fields: [clueId], references: [id])
+  userId       Int
+  user         User          @relation(fields: [userId], references: [id])
+  discoveredAt DateTime      @default(now())
+
+  @@unique([clueId, userId])
 }
 
 // ── Games Room ────────────────────────────────────────────────────────────────
