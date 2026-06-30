@@ -12,7 +12,7 @@ export async function GET() {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const [config, spinToday, bj] = await Promise.all([
+  const [config, spinToday, bj, efConfig] = await Promise.all([
     prisma.houseConfig.upsert({
       where: { id: 1 },
       create: { id: 1, phase: 0 },
@@ -23,6 +23,7 @@ export async function GET() {
       orderBy: { createdAt: "desc" },
     }),
     prisma.blackjackGame.findUnique({ where: { userId: user.id } }),
+    prisma.everFieldConfig.findUnique({ where: { id: 1 } }),
   ]);
 
   const phase = config.phase as 0 | 1 | 2 | 3 | 4;
@@ -44,5 +45,6 @@ export async function GET() {
     worldCupAdminAt: config.worldCupAdminAt,
     worldCupPlayerAt: config.worldCupPlayerAt,
     worldCupEventEndAt: config.worldCupEventEndAt,
+    everFieldActive: efConfig?.active ?? false,
   });
 }

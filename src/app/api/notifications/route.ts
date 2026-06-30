@@ -20,6 +20,7 @@ export async function GET(req: Request) {
     houseConfig,
     allDistributions,
     claimedDistributions,
+    efConfig,
   ] = await Promise.all([
     prisma.challenge.count({ where: { targetId: user.id, status: "pending" } }),
 
@@ -59,6 +60,7 @@ export async function GET(req: Request) {
 
     prisma.adminDistribution.findMany({ select: { id: true } }),
     prisma.adminDistributionClaim.findMany({ where: { userId: user.id }, select: { distributionId: true } }),
+    prisma.everFieldConfig.findUnique({ where: { id: 1 }, select: { active: true } }),
   ]);
 
   const unvotedChallenges = myVotingChallenges.filter((c) => c.votes.length === 0).length;
@@ -74,5 +76,6 @@ export async function GET(req: Request) {
     bingo: latestBingoApproval?.claimedAt ?? null,
     boss: houseConfig?.bossActive ?? false,
     distributions: pendingDistributions,
+    everField: efConfig?.active ?? false,
   });
 }
