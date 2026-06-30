@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
-import { fetchFdMatches, upsertMatches } from "@/lib/wcSync";
+import { fetchFdMatches, upsertMatches, seedBracketSlots } from "@/lib/wcSync";
 
 const SYNC_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -25,7 +25,8 @@ export async function POST() {
     lastSyncAt = now;
     const matches = await fetchFdMatches(token);
     const { upserted, errors } = await upsertMatches(matches);
-    return NextResponse.json({ ok: true, upserted, errors: errors.length });
+    const bracketSlots = await seedBracketSlots(matches);
+    return NextResponse.json({ ok: true, upserted, bracketSlots, errors: errors.length });
   } catch {
     return NextResponse.json({ ok: true, skipped: true, reason: "sync failed" });
   }

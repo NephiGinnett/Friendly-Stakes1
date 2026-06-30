@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
-import { fetchFdMatches, upsertMatches } from "@/lib/wcSync";
+import { fetchFdMatches, upsertMatches, seedBracketSlots, findWcTeam, STAGE_TO_ROUND, type FdTeam } from "@/lib/wcSync";
+import { seedWorldCupTeams } from "@/lib/worldCupSeed";
 
 const ROUND_EXPECTED: Record<string, number> = { R32: 16, R16: 8, QF: 4, SF: 2, FINAL: 1 };
 const ROUNDS = ["R32", "R16", "QF", "SF", "FINAL"];
@@ -239,9 +240,11 @@ export async function POST(req: Request) {
     const token = process.env.FOOTBALL_DATA_API_KEY;
     if (!token) return NextResponse.json({ error: "FOOTBALL_DATA_API_KEY not set" }, { status: 500 });
     try {
+      await seedWorldCupTeams(); // ensure newly-added teams exist before matching
       const matches = await fetchFdMatches(token);
       const { upserted, errors } = await upsertMatches(matches);
-      return NextResponse.json({ ok: true, fetched: matches.length, upserted, errors });
+      const bracketSlots = await seedBracketSlots(matches);
+      return NextResponse.json({ ok: true, fetched: matches.length, upserted, bracketSlots, errors });
     } catch (e) {
       return NextResponse.json({ error: e instanceof Error ? e.message : "Sync failed" }, { status: 500 });
     }
@@ -258,7 +261,26 @@ export async function POST(req: Request) {
     const text = await res.text();
     let parsed: unknown;
     try { parsed = JSON.parse(text); } catch { parsed = text; }
-    return NextResponse.json({ httpStatus: res.status, body: parsed });
+
+    // For knockout matches, report any team that has a name in the feed but
+    // does NOT resolve to a WorldCupTeam — these are the ones rendering as TBD.
+    const unmatched: string[] = [];
+    const fdMatches = (parsed as { matches?: { stage: string; homeTeam: FdTeam; awayTeam: FdTeam }[] })?.matches;
+    if (Array.isArray(fdMatches)) {
+      const seen = new Set<string>();
+      for (const m of fdMatches) {
+        if (!STAGE_TO_ROUND[m.stage]) continue;
+        for (const t of [m.homeTeam, m.awayTeam]) {
+          if (!t?.name) continue; // genuinely TBD in the feed — not a matching problem
+          const label = `${t.name}${t.tla ? ` (${t.tla})` : ""}`;
+          if (seen.has(label)) continue;
+          seen.add(label);
+          if (!(await findWcTeam(t))) unmatched.push(label);
+        }
+      }
+    }
+
+    return NextResponse.json({ httpStatus: res.status, body: parsed, unmatched });
   }
 
   // Remove admin's own test entry so they can re-enter or clean up before launch

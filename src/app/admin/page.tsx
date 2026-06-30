@@ -126,6 +126,23 @@ export default function AdminPage() {
   const [restartResult, setRestartResult] = useState<{ filename: string; snapshot: string[] } | null>(null);
   const [restartError, setRestartError] = useState<string | null>(null);
 
+  // Collapsible sections — persisted across page loads via localStorage
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const toggleSection = (key: string) => setCollapsed(prev => {
+    const next = { ...prev, [key]: !prev[key] };
+    try { localStorage.setItem("adminCollapsed", JSON.stringify(next)); } catch {}
+    return next;
+  });
+  // Restore saved collapse state on mount (after hydration, so SSR markup matches)
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("adminCollapsed");
+      if (saved) setCollapsed(JSON.parse(saved));
+      const savedRound = localStorage.getItem("adminBracketRound");
+      if (savedRound) setBracketExpandRound(savedRound);
+    } catch {}
+  }, []);
+
   const fetchAll = () => {
     fetch("/api/admin/users").then((r) => r.ok ? r.json() : []).then(setUsers);
     fetch("/api/admin/bingo/claims").then((r) => r.ok ? r.json() : []).then(setClaims);
@@ -414,15 +431,19 @@ export default function AdminPage() {
 
         {/* ── Wager Management ── */}
         <section className="space-y-3">
-          <h2 className="font-semibold text-white flex items-center gap-2">
-            🎲 Active Wagers
-            {wagers.filter((w) => w.status !== "settled" && w.status !== "cancelled").length > 0 && (
-              <span className="bg-violet-500/20 text-violet-300 text-xs px-2 py-0.5 rounded-full">
-                {wagers.filter((w) => w.status !== "settled" && w.status !== "cancelled").length} open
-              </span>
-            )}
-          </h2>
+          <button onClick={() => toggleSection("wagers")} className="w-full flex items-center justify-between group">
+            <h2 className="font-semibold text-white flex items-center gap-2">
+              🎲 Active Wagers
+              {wagers.filter((w) => w.status !== "settled" && w.status !== "cancelled").length > 0 && (
+                <span className="bg-violet-500/20 text-violet-300 text-xs px-2 py-0.5 rounded-full">
+                  {wagers.filter((w) => w.status !== "settled" && w.status !== "cancelled").length} open
+                </span>
+              )}
+            </h2>
+            <span className="text-slate-500 text-xs group-hover:text-slate-300 transition-colors">{collapsed["wagers"] ? "▶" : "▼"}</span>
+          </button>
 
+          {!collapsed["wagers"] && (<>
           {wagerMsg && (
             <p className={`text-sm px-3 py-2 rounded-xl ${wagerMsg.includes("error") || wagerMsg.includes("Error") ? "bg-rose-500/15 text-rose-300" : "bg-emerald-500/15 text-emerald-300"}`}>
               {wagerMsg}
@@ -493,19 +514,24 @@ export default function AdminPage() {
               ))}
             </div>
           )}
+          </>)}
         </section>
 
         {/* ── Pending Bingo Claims ── */}
         <section className="space-y-3">
-          <h2 className="font-semibold text-white flex items-center gap-2">
-            🎱 Bingo Claims
-            {claims.length > 0 && (
-              <span className="bg-amber-500/20 text-amber-300 text-xs px-2 py-0.5 rounded-full">
-                {claims.length} pending
-              </span>
-            )}
-          </h2>
+          <button onClick={() => toggleSection("bingo")} className="w-full flex items-center justify-between group">
+            <h2 className="font-semibold text-white flex items-center gap-2">
+              🎱 Bingo Claims
+              {claims.length > 0 && (
+                <span className="bg-amber-500/20 text-amber-300 text-xs px-2 py-0.5 rounded-full">
+                  {claims.length} pending
+                </span>
+              )}
+            </h2>
+            <span className="text-slate-500 text-xs group-hover:text-slate-300 transition-colors">{collapsed["bingo"] ? "▶" : "▼"}</span>
+          </button>
 
+          {!collapsed["bingo"] && (<>
           {claims.length === 0 ? (
             <p className="text-slate-600 text-sm">No pending claims.</p>
           ) : (
@@ -543,15 +569,19 @@ export default function AdminPage() {
               </div>
             ))
           )}
+          </>)}
         </section>
 
         {/* ── Add Bingo Items ── */}
         <section className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="font-semibold text-white">📋 Bingo Items Pool</h2>
-            <span className="text-xs text-slate-500">{bingoItems.length} items</span>
-          </div>
+          <button onClick={() => toggleSection("bingoItems")} className="w-full flex items-center justify-between group">
+            <h2 className="font-semibold text-white flex items-center gap-2">📋 Bingo Items Pool
+              <span className="text-xs text-slate-500 font-normal">{bingoItems.length} items</span>
+            </h2>
+            <span className="text-slate-500 text-xs group-hover:text-slate-300 transition-colors">{collapsed["bingoItems"] ? "▶" : "▼"}</span>
+          </button>
 
+          {!collapsed["bingoItems"] && (<>
           <div className="card space-y-3">
             <p className="text-xs text-slate-400">
               Paste items one per line in the format:{" "}
@@ -617,19 +647,24 @@ export default function AdminPage() {
               )}
             </>
           )}
+          </>)}
         </section>
 
         {/* ── AR Faire ── */}
         <section className="space-y-3">
-          <h2 className="font-semibold text-white flex items-center gap-2">
-            📖 AR Faire
-            {arPending.length > 0 && (
-              <span className="bg-amber-500/20 text-amber-300 text-xs px-2 py-0.5 rounded-full">
-                {arPending.length} pending
-              </span>
-            )}
-          </h2>
+          <button onClick={() => toggleSection("arFaire")} className="w-full flex items-center justify-between group">
+            <h2 className="font-semibold text-white flex items-center gap-2">
+              📖 AR Faire
+              {arPending.length > 0 && (
+                <span className="bg-amber-500/20 text-amber-300 text-xs px-2 py-0.5 rounded-full">
+                  {arPending.length} pending
+                </span>
+              )}
+            </h2>
+            <span className="text-slate-500 text-xs group-hover:text-slate-300 transition-colors">{collapsed["arFaire"] ? "▶" : "▼"}</span>
+          </button>
 
+          {!collapsed["arFaire"] && (<>
           {arMsg && <p className={`text-sm font-mono ${arMsg.includes("✓") ? "text-emerald-400" : arMsg.includes("refunded") ? "text-amber-400" : "text-red-400"}`}>{arMsg}</p>}
 
           {/* Pending quiz reviews */}
@@ -729,11 +764,16 @@ export default function AdminPage() {
               </div>
             )}
           </div>
+          </>)}
         </section>
 
         {/* ── Password List ── */}
         <section className="space-y-3">
-          <h2 className="font-semibold text-white">🔐 Password List</h2>
+          <button onClick={() => toggleSection("passwords")} className="w-full flex items-center justify-between group">
+            <h2 className="font-semibold text-white">🔐 Password List</h2>
+            <span className="text-slate-500 text-xs group-hover:text-slate-300 transition-colors">{collapsed["passwords"] ? "▶" : "▼"}</span>
+          </button>
+          {!collapsed["passwords"] && (
           <div className="card space-y-3">
             <p className="text-sm text-slate-400">Sends the full password + PIN list to Nephi&apos;s Discord DM. Not displayed here.</p>
             <button
@@ -748,13 +788,17 @@ export default function AdminPage() {
               Send passwords to Nephi&apos;s Discord
             </button>
           </div>
+          )}
         </section>
 
         {/* ── Manage Users ── */}
         <section className="space-y-3">
-          <h2 className="font-semibold text-white">👥 Manage Users</h2>
+          <button onClick={() => toggleSection("users")} className="w-full flex items-center justify-between group">
+            <h2 className="font-semibold text-white">👥 Manage Users</h2>
+            <span className="text-slate-500 text-xs group-hover:text-slate-300 transition-colors">{collapsed["users"] ? "▶" : "▼"}</span>
+          </button>
 
-          {users.map((u) => (
+          {!collapsed["users"] && users.map((u) => (
             <div key={u.id} className="card space-y-3">
               <div className="flex items-center justify-between">
                 <div>
@@ -791,8 +835,12 @@ export default function AdminPage() {
 
         {/* ── The House ── */}
         <section className="space-y-3">
-          <h2 className="font-semibold text-white flex items-center gap-2">🎰 The House</h2>
+          <button onClick={() => toggleSection("house")} className="w-full flex items-center justify-between group">
+            <h2 className="font-semibold text-white flex items-center gap-2">🎰 The House</h2>
+            <span className="text-slate-500 text-xs group-hover:text-slate-300 transition-colors">{collapsed["house"] ? "▶" : "▼"}</span>
+          </button>
 
+          {!collapsed["house"] && (<>
           {houseStatus && (
             <div className="card text-sm space-y-1">
               <div className="flex justify-between">
@@ -1086,7 +1134,14 @@ export default function AdminPage() {
                     return (
                       <div key={r}>
                         <button
-                          onClick={() => setBracketExpandRound(bracketExpandRound === r ? null : r)}
+                          onClick={() => {
+                            const next = bracketExpandRound === r ? null : r;
+                            setBracketExpandRound(next);
+                            try {
+                              if (next) localStorage.setItem("adminBracketRound", next);
+                              else localStorage.removeItem("adminBracketRound");
+                            } catch {}
+                          }}
                           className="w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-white/[0.03] border border-white/8 hover:border-white/15 transition-colors"
                         >
                           <span className={`w-2 h-2 rounded-full shrink-0 ${full ? "bg-emerald-500" : info.slotCount > 0 ? "bg-amber-500" : "bg-slate-600"}`} />
@@ -1245,7 +1300,13 @@ export default function AdminPage() {
                         const d = await res.json();
                         if (d.httpStatus === 200) {
                           const count = Array.isArray((d.body as { matches?: unknown[] })?.matches) ? (d.body as { matches: unknown[] }).matches.length : "?";
-                          setBracketMsg(`✅ API OK — ${count} matches returned`);
+                          const unmatched: string[] = Array.isArray(d.unmatched) ? d.unmatched : [];
+                          setBracketMsg(
+                            `✅ API OK — ${count} matches returned` +
+                            (unmatched.length
+                              ? ` · ⚠️ ${unmatched.length} knockout team(s) not matching DB: ${unmatched.join(", ")}`
+                              : " · all knockout teams resolve ✓")
+                          );
                         } else {
                           setBracketMsg(`❌ API returned ${d.httpStatus}: ${JSON.stringify(d.body).slice(0, 120)}`);
                         }
@@ -1261,7 +1322,7 @@ export default function AdminPage() {
                         const res = await fetch("/api/admin/world-cup", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "syncMatches" }) });
                         const d = await res.json();
                         if (res.ok) {
-                          setBracketMsg(`✅ Synced ${d.upserted} matches (${d.fetched} fetched)${d.errors?.length ? ` · ${d.errors.length} errors` : ""}`);
+                          setBracketMsg(`✅ Synced ${d.upserted} matches (${d.fetched} fetched) · ${d.bracketSlots ?? 0} bracket slots${d.errors?.length ? ` · ${d.errors.length} errors` : ""}`);
                           if (d.errors?.length) { setSyncErrors(d.errors); setShowSyncErrors(true); }
                         } else {
                           setBracketMsg(`❌ ${d.error}`);
@@ -1437,11 +1498,16 @@ export default function AdminPage() {
           )}
 
           {houseMsg && <p className={`text-sm font-mono ${houseMsg.includes("error") || houseMsg.includes("Error") ? "text-red-400" : "text-emerald-400"}`}>{houseMsg}</p>}
+          </>)}
         </section>
 
         {/* ── Event Tally ── */}
         <section className="space-y-3">
-          <h2 className="font-semibold text-white flex items-center gap-2">📊 Event Tally</h2>
+          <button onClick={() => toggleSection("tally")} className="w-full flex items-center justify-between group">
+            <h2 className="font-semibold text-white flex items-center gap-2">📊 Event Tally</h2>
+            <span className="text-slate-500 text-xs group-hover:text-slate-300 transition-colors">{collapsed["tally"] ? "▶" : "▼"}</span>
+          </button>
+          {!collapsed["tally"] && (<>
           {!showTally ? (
             <button onClick={loadTally} className="w-full py-2.5 rounded-xl bg-white/5 border border-white/10 text-slate-300 text-sm hover:bg-white/10 transition-colors">
               Load Point Tally
@@ -1490,12 +1556,17 @@ export default function AdminPage() {
               <button onClick={() => setShowTally(false)} className="text-xs text-slate-500 hover:text-slate-300">Hide</button>
             </div>
           )}
+          </>)}
         </section>
 
         {/* ── Admin Distribution ── */}
         <section className="space-y-3">
-          <h2 className="font-semibold text-white">🎁 Send Distribution</h2>
-          <p className="text-xs text-slate-500">Send a claimable reward to all players. They'll see it on their feed until claimed.</p>
+          <button onClick={() => toggleSection("dist")} className="w-full flex items-center justify-between group">
+            <h2 className="font-semibold text-white">🎁 Send Distribution</h2>
+            <span className="text-slate-500 text-xs group-hover:text-slate-300 transition-colors">{collapsed["dist"] ? "▶" : "▼"}</span>
+          </button>
+          {!collapsed["dist"] && (<>
+          <p className="text-xs text-slate-500">Send a claimable reward to all players. They&apos;ll see it on their feed until claimed.</p>
 
           {distMsg && (
             <p className={`text-sm px-3 py-2 rounded-xl ${distMsg.includes("error") || distMsg.includes("Error") ? "bg-rose-500/15 text-rose-300" : "bg-emerald-500/15 text-emerald-300"}`}>
@@ -1585,12 +1656,16 @@ export default function AdminPage() {
               ))}
             </div>
           )}
+          </>)}
         </section>
 
-        {/* ── Restart Game ── */}
         {/* ── Database Backup ── */}
         <section className="space-y-3">
-          <h2 className="font-semibold text-white">💾 Database Backup</h2>
+          <button onClick={() => toggleSection("backup")} className="w-full flex items-center justify-between group">
+            <h2 className="font-semibold text-white">💾 Database Backup</h2>
+            <span className="text-slate-500 text-xs group-hover:text-slate-300 transition-colors">{collapsed["backup"] ? "▶" : "▼"}</span>
+          </button>
+          {!collapsed["backup"] && (
           <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-3">
             <p className="text-slate-400 text-sm leading-snug">
               Downloads a copy of the live SQLite database file. Save it somewhere safe — it contains all users, points, wagers, and game history.
@@ -1603,11 +1678,17 @@ export default function AdminPage() {
               ⬇️ Download backup
             </a>
           </div>
+          )}
         </section>
 
+        {/* ── Restart Game ── */}
         <section className="space-y-3 pb-4">
-          <h2 className="font-semibold text-white">🔄 Restart Game</h2>
+          <button onClick={() => toggleSection("restart")} className="w-full flex items-center justify-between group">
+            <h2 className="font-semibold text-white">🔄 Restart Game</h2>
+            <span className="text-slate-500 text-xs group-hover:text-slate-300 transition-colors">{collapsed["restart"] ? "▶" : "▼"}</span>
+          </button>
 
+          {!collapsed["restart"] && (<>
           {restartError && (
             <div className="card border-red-500/30 bg-red-500/5">
               <p className="text-sm text-red-400 font-semibold">Reset failed: {restartError}</p>
@@ -1661,6 +1742,7 @@ export default function AdminPage() {
               </div>
             </div>
           )}
+          </>)}
         </section>
       </div>
 

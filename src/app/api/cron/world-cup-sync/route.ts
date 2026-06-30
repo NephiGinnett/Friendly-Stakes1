@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { logPoints } from "@/lib/pointLog";
-import { fetchFdMatches, upsertMatches } from "@/lib/wcSync";
+import { seedBracketSlots, findWcTeam, STAGE_TO_ROUND, type FdTeam } from "@/lib/wcSync";
 
 const FD_BASE = "https://api.football-data.org/v4";
 const FD_TOKEN = process.env.FOOTBALL_DATA_API_KEY;
@@ -55,9 +55,11 @@ async function settleMatchConfidenceWagers(matchId: number, winnerTeamId: number
     ...awayProxy.map((e) => ({ ...e, effectiveStake: e.proxyConfidenceStake })),
   ];
 
-  // Bot backfill: if one side has no backers, inject a phantom 100-pt bot entry
-  // so the other side's players still earn from confidence wagers
-  const BOT_STAKE = 100;
+  // Bot backfill: if one side has no backers (an NPC team), inject a phantom
+  // bot entry with a random 100–200 stake so the other side's players still
+  // earn from confidence wagers. Computed once per match so the resulting
+  // settlement records are consistent.
+  const BOT_STAKE = 100 + Math.floor(Math.random() * 101); // 100–200 inclusive
   if (homeEntries.length === 0 && awayEntries.length > 0) {
     homeEntries.push({ userId: -1, isBot: true, effectiveStake: BOT_STAKE, user: { username: "Auto-Opponent" } } as unknown as EntryWithStake);
   } else if (awayEntries.length === 0 && homeEntries.length > 0) {
@@ -203,18 +205,6 @@ async function settleMatchConfidenceWagers(matchId: number, winnerTeamId: number
   return settled;
 }
 
-const STAGE_TO_ROUND: Record<string, string> = {
-  ROUND_OF_32: "R32",
-  ROUND_OF_16: "R16",
-  QUARTER_FINALS: "QF",
-  SEMI_FINALS: "SF",
-  FINAL: "FINAL",
-};
-
-const ROUND_CANS: Record<string, number> = {
-  R32: 5, R16: 10, QF: 20, SF: 40, FINAL: 80,
-};
-
 export async function POST(req: Request) {
   const auth = req.headers.get("authorization");
   if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -239,7 +229,7 @@ async function runSync() {
     const matches: {
       id: number; status: string; stage: string; group: string | null;
       utcDate: string;
-      homeTeam: { name: string; shortName?: string }; awayTeam: { name: string; shortName?: string };
+      homeTeam: FdTeam; awayTeam: FdTeam;
       score: { winner: string | null; fullTime: { home: number | null; away: number | null } };
     }[] = data.matches ?? [];
 
@@ -251,21 +241,11 @@ async function runSync() {
     let settled = 0;
     const matchErrors: string[] = [];
 
-    // Accumulate knockout match data for bracket slot sync
-    const knockoutRows: {
-      fdMatchId: number; stage: string; kickoff: Date;
-      homeCode: string; awayCode: string; winnerCode: string;
-    }[] = [];
-
     for (const m of matches) {
       try {
-        // Try both full name and shortName for fuzzy team matching
-        const homeTeam = await prisma.worldCupTeam.findFirst({
-          where: { OR: [{ name: { contains: m.homeTeam.name } }, ...(m.homeTeam.shortName ? [{ name: { contains: m.homeTeam.shortName } }] : [])] },
-        });
-        const awayTeam = await prisma.worldCupTeam.findFirst({
-          where: { OR: [{ name: { contains: m.awayTeam.name } }, ...(m.awayTeam.shortName ? [{ name: { contains: m.awayTeam.shortName } }] : [])] },
-        });
+        // Match on tla code first, then fall back to fuzzy name matching
+        const homeTeam = await findWcTeam(m.homeTeam);
+        const awayTeam = await findWcTeam(m.awayTeam);
 
         const dbMatch = await prisma.worldCupMatch.upsert({
           where: { fdMatchId: m.id },
@@ -273,8 +253,8 @@ async function runSync() {
             fdMatchId: m.id,
             homeTeamId: homeTeam?.id ?? null,
             awayTeamId: awayTeam?.id ?? null,
-            homeTeamName: m.homeTeam.name,
-            awayTeamName: m.awayTeam.name,
+            homeTeamName: m.homeTeam.name ?? "TBD",
+            awayTeamName: m.awayTeam.name ?? "TBD",
             kickoff: new Date(m.utcDate),
             stage: m.stage,
             group: m.group ?? null,
@@ -303,19 +283,6 @@ async function runSync() {
           const count = await settleMatchConfidenceWagers(dbMatch.id, winnerTeamId);
           settled += count;
         }
-
-        if (STAGE_TO_ROUND[m.stage]) {
-          knockoutRows.push({
-            fdMatchId: m.id,
-            stage: m.stage,
-            kickoff: new Date(m.utcDate),
-            homeCode: homeTeam?.code ?? "",
-            awayCode: awayTeam?.code ?? "",
-            winnerCode: m.score.winner === "HOME_TEAM" ? (homeTeam?.code ?? "")
-              : m.score.winner === "AWAY_TEAM" ? (awayTeam?.code ?? "")
-              : "",
-          });
-        }
       } catch (matchErr) {
         const msg = matchErr instanceof Error ? matchErr.message : String(matchErr);
         console.error(`[wc-sync] match ${m.id} (${m.homeTeam.name} vs ${m.awayTeam.name}) failed:`, msg);
@@ -323,56 +290,19 @@ async function runSync() {
       }
     }
 
-    // Sync bracket slots — group by stage, sort by fdMatchId for stable positions
-    let bracketSlots = 0;
-    const byStage = new Map<string, typeof knockoutRows>();
-    for (const row of knockoutRows) {
-      if (!byStage.has(row.stage)) byStage.set(row.stage, []);
-      byStage.get(row.stage)!.push(row);
-    }
-
-    for (const stage of Array.from(byStage.keys())) {
-      const rows = byStage.get(stage)!;
-      const round = STAGE_TO_ROUND[stage];
-      rows.sort((a: { fdMatchId: number }, b: { fdMatchId: number }) => a.fdMatchId - b.fdMatchId);
-      for (let pos = 0; pos < rows.length; pos++) {
-        const r = rows[pos];
-        await prisma.bracketSlot.upsert({
-          where: { round_position: { round, position: pos } },
-          create: { round, position: pos, team1Code: r.homeCode, team2Code: r.awayCode, winnerCode: r.winnerCode, fdMatchId: r.fdMatchId },
-          update: { team1Code: r.homeCode, team2Code: r.awayCode, winnerCode: r.winnerCode, fdMatchId: r.fdMatchId },
-        });
-        bracketSlots++;
-
-        // Award monitor cans to players who correctly predicted this match
-        if (r.winnerCode) {
-          const correctPicks = await prisma.bracketPick.findMany({
-            where: { round, position: pos, teamCode: r.winnerCode, cansAwarded: false },
-          });
-          for (const pick of correctPicks) {
-            await prisma.worldCupEntry.updateMany({
-              where: { userId: pick.userId },
-              data: { monitorCans: { increment: ROUND_CANS[round] ?? 0 } },
-            });
-            await prisma.bracketPick.update({
-              where: { id: pick.id },
-              data: { cansAwarded: true },
-            });
-          }
-        }
-      }
-    }
+    // Sync bracket slots — shared with the manual "Sync Matches" admin action
+    const bracketSlots = await seedBracketSlots(matches);
 
     // Auto-lock bracket when R32 has started — set bracketLockedAt to earliest R32 kickoff if not already set
-    const r32Rows = byStage.get("ROUND_OF_32") ?? [];
-    const anyR32Started = r32Rows.some(r => {
-      const dbMatch = matches.find(m => m.id === r.fdMatchId);
-      return dbMatch && !["SCHEDULED", "TIMED"].includes(dbMatch.status);
-    });
+    const r32Matches = matches.filter(m => STAGE_TO_ROUND[m.stage] === "R32");
+    const anyR32Started = r32Matches.some(m => !["SCHEDULED", "TIMED"].includes(m.status));
     if (anyR32Started) {
       const config = await prisma.houseConfig.findUnique({ where: { id: 1 }, select: { bracketLockedAt: true } });
       if (!config?.bracketLockedAt) {
-        const earliestKickoff = r32Rows.reduce<Date | null>((min, r) => (!min || r.kickoff < min) ? r.kickoff : min, null);
+        const earliestKickoff = r32Matches.reduce<Date | null>((min, m) => {
+          const k = new Date(m.utcDate);
+          return (!min || k < min) ? k : min;
+        }, null);
         await prisma.houseConfig.upsert({
           where: { id: 1 },
           create: { id: 1, bracketLockedAt: earliestKickoff ?? new Date() },
