@@ -118,7 +118,9 @@ export async function POST(req: Request) {
       where: { status: "pending", id: { not: betId } },
     });
 
-    // Grant the chosen VIP the exclusive Casino Night theme (kept site-wide).
+    // Unlock the exclusive Casino Night theme for the chosen VIP as their award.
+    // They keep it in their owned themes to activate themselves; it is not
+    // force-applied (the floor already shows it live to everyone).
     const vip = await prisma.user.findUnique({
       where: { id: bet.userId },
       select: { ownedThemes: true },
@@ -134,7 +136,7 @@ export async function POST(req: Request) {
       if (themeNewlyAwarded) {
         await tx.user.update({
           where: { id: bet.userId },
-          data: { ownedThemes: JSON.stringify(vipThemes), siteTheme: "casino-night" },
+          data: { ownedThemes: JSON.stringify(vipThemes) },
         });
       }
 
