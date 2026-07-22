@@ -18,7 +18,10 @@ export default function ThemeProvider({ children }: { children: React.ReactNode 
   }, []);
 
   const isWcPage = pathname.startsWith("/world-cup");
-  const activeTheme = isWcPage ? "world-cup" : themeId;
+  const isCasinoPage = pathname.startsWith("/casino-night");
+  // World Cup and Casino Night pages force their event theme for everyone on
+  // the floor; elsewhere the user's own selected theme applies.
+  const activeTheme = isWcPage ? "world-cup" : isCasinoPage ? "casino-night" : themeId;
   const theme = getTheme(activeTheme);
 
   useEffect(() => {

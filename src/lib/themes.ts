@@ -1,4 +1,4 @@
-export type ThemeId = "" | "world-cup" | "neon-red" | "midnight-gold";
+export type ThemeId = "" | "world-cup" | "neon-red" | "midnight-gold" | "casino-night";
 
 export type ThemeDef = {
   id: ThemeId;
@@ -55,6 +55,22 @@ export const THEMES: Record<string, ThemeDef> = {
       "--border-subtle": "234, 179, 8, 0.12",
       "--text-muted": "148, 148, 163",
     },
+  },
+  "casino-night": {
+    id: "casino-night",
+    name: "Casino Night — High Roller",
+    description: "The House floor. Crimson felt, gold trim, and the quiet hum of the machines. Awarded to the Big Bet VIP; live for all on the casino floor.",
+    preview: "🎰",
+    css: {
+      "--bg-base": "16, 8, 10",
+      "--bg-surface": "24, 12, 15",
+      "--accent-primary": "220, 38, 38",
+      "--accent-primary-rgb": "220, 38, 38",
+      "--accent-secondary": "234, 179, 8",
+      "--border-subtle": "220, 38, 38, 0.14",
+      "--text-muted": "168, 148, 150",
+    },
+    overlay: "repeating-linear-gradient(135deg, transparent, transparent 38px, rgba(234,179,8,0.03) 38px, rgba(234,179,8,0.03) 76px)",
   },
 };
 

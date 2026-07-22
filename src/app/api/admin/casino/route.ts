@@ -118,8 +118,25 @@ export async function POST(req: Request) {
       where: { status: "pending", id: { not: betId } },
     });
 
+    // Grant the chosen VIP the exclusive Casino Night theme (kept site-wide).
+    const vip = await prisma.user.findUnique({
+      where: { id: bet.userId },
+      select: { ownedThemes: true },
+    });
+    let vipThemes: string[] = [];
+    try { vipThemes = JSON.parse(vip?.ownedThemes || "[]"); } catch { /* */ }
+    const themeNewlyAwarded = !vipThemes.includes("casino-night");
+    if (themeNewlyAwarded) vipThemes.push("casino-night");
+
     await prisma.$transaction(async (tx) => {
       await tx.bigBet.update({ where: { id: betId }, data: { status: "approved" } });
+
+      if (themeNewlyAwarded) {
+        await tx.user.update({
+          where: { id: bet.userId },
+          data: { ownedThemes: JSON.stringify(vipThemes), siteTheme: "casino-night" },
+        });
+      }
 
       for (const other of otherPending) {
         await tx.bigBet.update({ where: { id: other.id }, data: { status: "refunded" } });
@@ -128,7 +145,7 @@ export async function POST(req: Request) {
       }
     });
 
-    return NextResponse.json({ ok: true, refunded: otherPending.length });
+    return NextResponse.json({ ok: true, refunded: otherPending.length, themeAwarded: themeNewlyAwarded });
   }
 
   // Admin completes the live game — records outcome and pays out
