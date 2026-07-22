@@ -126,7 +126,7 @@ export async function POST(req: Request) {
         where: { userId_achievementId: { userId: user.id, achievementId: "big_bet_all_in" } },
       });
       if (!ach) {
-        await tx.userAchievement.create({ data: { userId: user.id, achievementId: "big_bet_all_in" } });
+        await tx.userAchievement.create({ data: { userId: user.id, achievementId: "big_bet_all_in", claimed: true } });
         await tx.user.update({ where: { id: user.id }, data: { points: { increment: 200 } } });
         await logPoints(tx, user.id, 200, `Achievement unlocked: Maximum Exposure`);
         newAchievement = "big_bet_all_in";

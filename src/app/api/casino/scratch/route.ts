@@ -73,7 +73,7 @@ export async function POST(req: Request) {
         where: { userId_achievementId: { userId: user.id, achievementId: "scratch_jackpot" } },
       });
       if (!existing) {
-        await tx.userAchievement.create({ data: { userId: user.id, achievementId: "scratch_jackpot" } });
+        await tx.userAchievement.create({ data: { userId: user.id, achievementId: "scratch_jackpot", claimed: true } });
         newAchievement = "scratch_jackpot";
       }
     } else if (payout > 0) {

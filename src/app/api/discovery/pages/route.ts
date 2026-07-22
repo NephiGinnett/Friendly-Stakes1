@@ -40,7 +40,7 @@ export async function POST(req: Request) {
           where: { userId_achievementId: { userId: user.id, achievementId: "casino_explorer" } },
         });
         if (!existing) {
-          await tx.userAchievement.create({ data: { userId: user.id, achievementId: "casino_explorer" } });
+          await tx.userAchievement.create({ data: { userId: user.id, achievementId: "casino_explorer", claimed: true } });
           await tx.user.update({ where: { id: user.id }, data: { points: { increment: 150 } } });
           await logPoints(tx, user.id, 150, `Achievement unlocked: Full Access`);
           newAchievement = { name: "Full Access", emoji: "🗺️" };
