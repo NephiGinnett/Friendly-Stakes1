@@ -76,10 +76,12 @@ export default function AdminPage() {
 
   // World Cup bracket state
   type BracketRoundInfo = { slotCount: number; expected: number; pickCount: number; slots: { round: string; position: number; team1Code: string; team2Code: string; winnerCode: string }[] };
-  type BracketStatus = { locked: boolean; bracketLockedAt: string | null; worldCupPlayerAt: string | null; entryCount: number; pickerCount: number; byRound: Record<string, BracketRoundInfo>; teams: { id: number; code: string; name: string; flag: string; eliminated: boolean }[]; adminHasEntry: boolean; eliminatedCount: number };
+  type BracketStatus = { locked: boolean; bracketLockedAt: string | null; worldCupPlayerAt: string | null; entryCount: number; pickerCount: number; byRound: Record<string, BracketRoundInfo>; teams: { id: number; code: string; name: string; flag: string; eliminated: boolean }[]; adminHasEntry: boolean; eliminatedCount: number; fanPot: number };
   const [bracketStatus, setBracketStatus] = useState<BracketStatus | null>(null);
   const [bracketMsg, setBracketMsg] = useState<string | null>(null);
   const [bracketExpandRound, setBracketExpandRound] = useState<string | null>(null);
+  const [prophetUsername, setProphetUsername] = useState("");
+  const [grantBusy, setGrantBusy] = useState(false);
   const [seedForm, setSeedForm] = useState({ round: "R32", position: "0", team1Code: "", team2Code: "" });
   const [seeding, setSeeding] = useState(false);
   const [elimTeamCode, setElimTeamCode] = useState("");
@@ -1121,6 +1123,80 @@ export default function AdminPage() {
                       className="text-xs px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-slate-400 hover:text-white transition-colors"
                     >
                       Unlock
+                    </button>
+                  </div>
+                </div>
+
+                {/* Manual achievement grants */}
+                <div className="space-y-3 rounded-lg bg-white/[0.03] border border-white/8 p-3">
+                  <p className="text-xs text-slate-500 font-mono uppercase tracking-widest">Manual grants</p>
+
+                  {/* Group Stage Prophet → single player */}
+                  <div className="space-y-1.5">
+                    <p className="text-xs text-slate-400">🔮 Grant <span className="text-white font-semibold">Group Stage Prophet</span> to a player (+3 🥤 cans, 500 pts claimable).</p>
+                    <div className="flex gap-2">
+                      <input
+                        value={prophetUsername}
+                        onChange={(e) => setProphetUsername(e.target.value)}
+                        placeholder="username (e.g. kyle)"
+                        className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-white text-xs focus:outline-none focus:border-violet-500/50"
+                      />
+                      <button
+                        disabled={grantBusy || !prophetUsername.trim()}
+                        onClick={async () => {
+                          setGrantBusy(true); setBracketMsg(null);
+                          const res = await fetch("/api/admin/world-cup", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "grantProphet", username: prophetUsername.trim() }) });
+                          const d = await res.json().catch(() => ({}));
+                          if (!res.ok) setBracketMsg(d.error ?? "Error granting.");
+                          else if (d.alreadyHad) setBracketMsg(`${d.username} already had Group Stage Prophet.`);
+                          else setBracketMsg(`Granted Group Stage Prophet to ${d.username}${d.cansGranted ? ` (+${d.cansGranted} cans)` : " (no WC entry — cans skipped)"}.`);
+                          setGrantBusy(false);
+                        }}
+                        className="text-xs px-3 py-1.5 rounded-lg bg-violet-500/15 border border-violet-500/30 text-violet-300 hover:bg-violet-500/25 disabled:opacity-40 transition-colors whitespace-nowrap"
+                      >
+                        Grant
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Three-Leg Machine → all non-admins */}
+                  <div className="space-y-1.5 pt-1 border-t border-white/8">
+                    <p className="text-xs text-slate-400">🎯 Grant <span className="text-white font-semibold">Three-Leg Machine</span> to every non-admin player (parlay make-good; +4 🥤 cans each, 400 pts claimable). Safe to re-run — skips players who already have it.</p>
+                    <button
+                      disabled={grantBusy}
+                      onClick={async () => {
+                        if (!confirm("Grant Three-Leg Machine to ALL non-admin players?")) return;
+                        setGrantBusy(true); setBracketMsg(null);
+                        const res = await fetch("/api/admin/world-cup", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "grantThreeLegAll" }) });
+                        const d = await res.json().catch(() => ({}));
+                        if (!res.ok) setBracketMsg(d.error ?? "Error granting.");
+                        else setBracketMsg(`Three-Leg Machine granted to ${d.granted} player(s) (${d.cansGranted} cans total, ${d.totalPlayers} non-admins checked).`);
+                        setGrantBusy(false);
+                      }}
+                      className="text-xs px-3 py-1.5 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/25 disabled:opacity-40 transition-colors"
+                    >
+                      Grant to all non-admins
+                    </button>
+                  </div>
+
+                  {/* Fan Competition payout */}
+                  <div className="space-y-1.5 pt-1 border-t border-white/8">
+                    <p className="text-xs text-slate-400">🏅 Pay the <span className="text-white font-semibold">Fan Competition</span> pot (65% to 1st fan score, 35% to 2nd). Current pot: <span className="text-amber-300 font-mono">{bracketStatus.fanPot} pts</span>. Not paid automatically when the event ends — run this once.</p>
+                    <button
+                      disabled={grantBusy || bracketStatus.fanPot <= 0}
+                      onClick={async () => {
+                        if (!confirm(`Pay out the ${bracketStatus.fanPot}-pt fan competition pot to the top two fan scores?`)) return;
+                        setGrantBusy(true); setBracketMsg(null);
+                        const res = await fetch("/api/admin/world-cup", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "payFanCompetition" }) });
+                        const d = await res.json().catch(() => ({}));
+                        if (!res.ok) setBracketMsg(d.error ?? "Error paying fan competition.");
+                        else setBracketMsg(`Fan competition paid: ${d.first.username} +${d.first.payout}${d.second ? `, ${d.second.username} +${d.second.payout}` : ""} (pot ${d.pot}).`);
+                        setGrantBusy(false);
+                        loadBracketStatus();
+                      }}
+                      className="text-xs px-3 py-1.5 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-300 hover:bg-amber-500/25 disabled:opacity-40 transition-colors"
+                    >
+                      {bracketStatus.fanPot > 0 ? "Pay fan competition" : "Pot empty / already paid"}
                     </button>
                   </div>
                 </div>
