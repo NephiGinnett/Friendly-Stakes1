@@ -19,6 +19,7 @@ const TIERS = [
 const MERGE_COLORS = ["#ff6b1a","#ffcc00","#88ff44","#44ffcc","#44aaff","#8844ff","#ff44cc","#ff88ff","#ffffff"];
 const ROWS = 6, COLS = 4, TOTAL = ROWS * COLS;
 const AUTO_FORGE_INTERVAL = 3.5;
+const AUTO_MERGE_INTERVAL = 2.5;
 const SAVE_KEY = "tapforge:v1"; // persists the forge (grid, coins, upgrades, prestige) between plays
 
 type Particle = { x: number; y: number; vx: number; vy: number; life: number; decay: number; size: number; color: string };
@@ -35,6 +36,8 @@ export default function TapForge({ onGameOver }: { onGameOver: (p: GameOverPaylo
   const autoForgeLevelRef = useRef(0);
   const luckyForgeRef = useRef(false);
   const autoForgeTimerRef = useRef(0);
+  const autoMergeRef = useRef(false);
+  const autoMergeTimerRef = useRef(0);
 
   const [, forceRender] = useState(0);
   const rerender = useCallback(() => forceRender(n => n + 1), []);
@@ -67,6 +70,7 @@ export default function TapForge({ onGameOver }: { onGameOver: (p: GameOverPaylo
         prestigeCount: prestigeCountRef.current,
         autoForgeLevel: autoForgeLevelRef.current,
         lucky: luckyForgeRef.current,
+        autoMerge: autoMergeRef.current,
       }));
     } catch { /* ignore */ }
   }, []);
@@ -85,6 +89,7 @@ export default function TapForge({ onGameOver }: { onGameOver: (p: GameOverPaylo
       prestigeMultiRef.current = Math.pow(1.5, prestigeCountRef.current);
       autoForgeLevelRef.current = s.autoForgeLevel ?? 0;
       luckyForgeRef.current = !!s.lucky;
+      autoMergeRef.current = !!s.autoMerge;
       setStarted(true);
     } catch { /* ignore */ }
   }, []);
@@ -152,6 +157,23 @@ export default function TapForge({ onGameOver }: { onGameOver: (p: GameOverPaylo
     const g = gridRef.current;
     for (let i = 0; i < TOTAL; i++) if (g[i] === null) return i;
     return -1;
+  }
+  // Lowest-tier matching pair, so Auto-Merge upgrades from the bottom up.
+  function findMergePair(): [number, number] | null {
+    const g = gridRef.current;
+    let best: [number, number] | null = null;
+    let bestTier = Infinity;
+    const seen: Record<number, number> = {};
+    for (let i = 0; i < TOTAL; i++) {
+      const t = g[i];
+      if (t === null) continue;
+      if (seen[t] !== undefined) {
+        if (t < bestTier) { bestTier = t; best = [seen[t], i]; }
+      } else {
+        seen[t] = i;
+      }
+    }
+    return best;
   }
 
   const floatsRef = useRef<{ id: number; text: string; x: number; y: number; color: string; isMerge: boolean }[]>([]);
@@ -339,6 +361,16 @@ export default function TapForge({ onGameOver }: { onGameOver: (p: GameOverPaylo
         }
       }
 
+      // Auto-Merge — periodically combines a matching pair into the next tier.
+      if (autoMergeRef.current) {
+        autoMergeTimerRef.current += dt;
+        if (autoMergeTimerRef.current >= AUTO_MERGE_INTERVAL) {
+          autoMergeTimerRef.current = 0;
+          const pair = findMergePair();
+          if (pair) mergeItems(pair[0], pair[1]);
+        }
+      }
+
       // Particles
       if (ctx && canvas) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -435,6 +467,16 @@ export default function TapForge({ onGameOver }: { onGameOver: (p: GameOverPaylo
     }
   }
 
+  function buyAutoMerge() {
+    if (!autoMergeRef.current && coinsRef.current >= 1000) {
+      coinsRef.current -= 1000;
+      autoMergeRef.current = true;
+      floatText("🔗 Auto-Merge ON!", window.innerWidth / 2, window.innerHeight / 2, "#44aaff", true);
+      saveState();
+      rerender();
+    }
+  }
+
   function doPrestige() {
     if (!confirm("Prestige? Resets grid, gives permanent x1.5 multiplier!")) return;
     sfxPrestige();
@@ -451,6 +493,7 @@ export default function TapForge({ onGameOver }: { onGameOver: (p: GameOverPaylo
   const totalCoins = totalCoinsRef.current;
   const autoLevel = autoForgeLevelRef.current;
   const hasLucky = luckyForgeRef.current;
+  const hasAutoMerge = autoMergeRef.current;
   const hasHighTier = grid.some(t => t !== null && t >= 8);
 
   // Start screen
@@ -644,6 +687,19 @@ export default function TapForge({ onGameOver }: { onGameOver: (p: GameOverPaylo
               }}
             >
               {hasLucky ? "🍀 Lucky ON ✓" : "🍀 Lucky Forge (200🪙)"}
+            </button>
+            <button
+              onClick={buyAutoMerge}
+              disabled={hasAutoMerge || coins < 1000}
+              style={{
+                padding: "7px 14px", background: hasAutoMerge ? "#0a1a2a" : "#1a1a1a",
+                border: `1px solid ${hasAutoMerge ? "#44aaff" : "#44aaff88"}`, borderRadius: 16,
+                color: "#44aaff", fontSize: "0.78rem",
+                cursor: hasAutoMerge ? "default" : "pointer",
+                opacity: (hasAutoMerge || coins < 1000) ? 0.5 : 1,
+              }}
+            >
+              {hasAutoMerge ? "🔗 Auto-Merge ON ✓" : "🔗 Auto-Merge (1000🪙)"}
             </button>
           </div>
 
