@@ -29,32 +29,6 @@ async function checkNightHunterAchievement(userId: number, completed: boolean): 
   return true;
 }
 
-async function checkFullSendAchievement(userId: number, thisDist: number): Promise<boolean> {
-  if (thisDist <= 40000) return false;
-
-  const otherSessions = await prisma.gameSession.findMany({
-    where: { gameId: "learn-to-fly", endedAt: { not: null }, userId: { not: userId } },
-    select: { metadata: true },
-  });
-
-  const bestOther = Math.max(
-    0,
-    ...otherSessions.map((s) => {
-      try { return (JSON.parse(s.metadata || "{}").distance as number) ?? 0; } catch { return 0; }
-    })
-  );
-
-  if (thisDist <= bestOther) return false;
-
-  const existing = await prisma.userAchievement.findUnique({
-    where: { userId_achievementId: { userId, achievementId: "full_send" } },
-  });
-  if (existing) return false;
-
-  await prisma.userAchievement.create({ data: { userId, achievementId: "full_send" } });
-  return true;
-}
-
 export async function POST(req: Request) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -72,7 +46,6 @@ export async function POST(req: Request) {
   const now = new Date();
   const durationSecs = Math.floor((now.getTime() - session.startedAt.getTime()) / 1000);
   const today = todayDateStr();
-  const thisDist = (metadata as Record<string, unknown>).distance as number ?? 0;
 
   if (!submit) {
     await prisma.gameSession.update({
@@ -87,9 +60,7 @@ export async function POST(req: Request) {
     });
 
     let achievementUnlocked = false;
-    if (session.gameId === "learn-to-fly") {
-      achievementUnlocked = await checkFullSendAchievement(user.id, thisDist);
-    } else if (session.gameId === "echolocate") {
+    if (session.gameId === "echolocate") {
       const completed = !!(metadata as Record<string, unknown>).completed;
       achievementUnlocked = await checkNightHunterAchievement(user.id, completed);
     } else if (session.gameId === "paint-shop") {
@@ -147,9 +118,7 @@ export async function POST(req: Request) {
   });
 
   let achievementUnlocked = false;
-  if (session.gameId === "learn-to-fly") {
-    achievementUnlocked = await checkFullSendAchievement(user.id, thisDist);
-  } else if (session.gameId === "echolocate") {
+  if (session.gameId === "echolocate") {
     const completed = !!(metadata as Record<string, unknown>).completed;
     achievementUnlocked = await checkNightHunterAchievement(user.id, completed);
   } else if (session.gameId === "paint-shop") {

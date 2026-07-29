@@ -46,6 +46,7 @@ export async function GET() {
     teams,
     eliminatedCount,
     adminHasEntry: !!adminEntry,
+    fanPot: config?.wcFanPot ?? 0,
   });
 }
 
@@ -55,7 +56,7 @@ export async function POST(req: Request) {
 
   // Parse body once — all fields destructured up front
   const body = await req.json().catch(() => ({}));
-  const { action, adminLiveAt, playerLiveAt, eventEndAt, winningTeamId } = body;
+  const { action, adminLiveAt, playerLiveAt, eventEndAt, winningTeamId, username } = body;
 
   // Launch: set admin preview 12h before, player live at June 11 00:00 UTC
   if (action === "launch") {
@@ -113,6 +114,7 @@ export async function POST(req: Request) {
   }
 
   // Declare tournament champion — grants group_stage_prophet + 3 bonus Monitor Cans
+  // Also awards wc_gold_badge to winners and wc_bronze_badge to all other participants
   if (action === "declareChampion") {
     if (!winningTeamId) return NextResponse.json({ error: "winningTeamId required" }, { status: 400 });
 
@@ -136,7 +138,89 @@ export async function POST(req: Request) {
       }
     }
 
-    return NextResponse.json({ ok: true, championsFound: winners.length, rewarded });
+    // Award gold badge to winners, bronze badge to all other participants
+    let goldAwarded = 0;
+    let bronzeAwarded = 0;
+
+    for (const entry of winners) {
+      const exists = await prisma.userAchievement.findUnique({
+        where: { userId_achievementId: { userId: entry.userId, achievementId: "wc_gold_badge" } },
+      });
+      if (!exists) {
+        await prisma.userAchievement.create({ data: { userId: entry.userId, achievementId: "wc_gold_badge" } });
+        goldAwarded++;
+      }
+    }
+
+    const winnerUserIds = winners.map(w => w.userId);
+    const nonWinners = await prisma.worldCupEntry.findMany({
+      where: { userId: { notIn: winnerUserIds } },
+    });
+    for (const entry of nonWinners) {
+      const exists = await prisma.userAchievement.findUnique({
+        where: { userId_achievementId: { userId: entry.userId, achievementId: "wc_bronze_badge" } },
+      });
+      if (!exists) {
+        await prisma.userAchievement.create({ data: { userId: entry.userId, achievementId: "wc_bronze_badge" } });
+        bronzeAwarded++;
+      }
+    }
+
+    return NextResponse.json({ ok: true, championsFound: winners.length, rewarded, goldAwarded, bronzeAwarded });
+  }
+
+  // Manually grant Group Stage Prophet to a single player (by username).
+  // Mirrors the declareChampion reward: achievement (500 pts claimable) + 3 cans.
+  if (action === "grantProphet") {
+    if (!username || typeof username !== "string") {
+      return NextResponse.json({ error: "username required" }, { status: 400 });
+    }
+    const target = await prisma.user.findUnique({ where: { username: username.trim() } });
+    if (!target) {
+      return NextResponse.json({ error: `No user named "${username}"` }, { status: 404 });
+    }
+
+    const existing = await prisma.userAchievement.findUnique({
+      where: { userId_achievementId: { userId: target.id, achievementId: "group_stage_prophet" } },
+    });
+    if (existing) {
+      return NextResponse.json({ ok: true, alreadyHad: true, username: target.username });
+    }
+
+    const entry = await prisma.worldCupEntry.findUnique({ where: { userId: target.id } });
+    await prisma.$transaction(async (tx) => {
+      await tx.userAchievement.create({ data: { userId: target.id, achievementId: "group_stage_prophet" } });
+      if (entry) {
+        await tx.worldCupEntry.update({ where: { userId: target.id }, data: { monitorCans: { increment: 3 } } });
+      }
+    });
+    return NextResponse.json({ ok: true, granted: true, username: target.username, cansGranted: entry ? 3 : 0 });
+  }
+
+  // Grant Three-Leg Machine to every non-admin player (parlay make-good).
+  // Achievement carries 400 claimable pts; also grants 4 cans to players with a
+  // World Cup entry, matching the normal parlay unlock. Skips anyone who already
+  // has it, so it is safe to run more than once.
+  if (action === "grantThreeLegAll") {
+    const players = await prisma.user.findMany({ where: { isAdmin: false }, select: { id: true } });
+    let granted = 0;
+    let cansGranted = 0;
+    for (const p of players) {
+      const existing = await prisma.userAchievement.findUnique({
+        where: { userId_achievementId: { userId: p.id, achievementId: "three_leg_machine" } },
+      });
+      if (existing) continue;
+      const entry = await prisma.worldCupEntry.findUnique({ where: { userId: p.id } });
+      await prisma.$transaction(async (tx) => {
+        await tx.userAchievement.create({ data: { userId: p.id, achievementId: "three_leg_machine" } });
+        if (entry) {
+          await tx.worldCupEntry.update({ where: { userId: p.id }, data: { monitorCans: { increment: 4 } } });
+        }
+      });
+      if (entry) cansGranted += 4;
+      granted++;
+    }
+    return NextResponse.json({ ok: true, granted, cansGranted, totalPlayers: players.length });
   }
 
   // Lock bracket immediately

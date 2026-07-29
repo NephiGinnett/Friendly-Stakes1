@@ -1,23 +1,12 @@
 "use client";
 import { useEffect, useRef, useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { GameOverPayload } from "./LearnToFly";
+import type { GameOverPayload } from "./types";
+import { ECHO_MAPS } from "@/lib/echolocateMaps";
 
-// ── Map ────────────────────────────────────────────────────────────────────────
-// 0=open 1=wall 2=bug 3=spawn 4=exit
-const RAW_MAP = [
-  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-  [1,2,2,2,1,2,2,2,2,2,1,2,2,2,1],
-  [1,2,1,2,2,2,1,2,1,2,2,2,1,2,1],
-  [1,2,1,2,1,2,1,2,1,2,1,2,1,2,1],
-  [1,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
-  [1,2,1,2,1,0,1,3,1,0,1,2,1,2,4],  // col 14 = secret exit
-  [1,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
-  [1,2,1,2,1,2,1,2,1,2,1,2,1,2,1],
-  [1,2,1,2,2,2,1,2,1,2,2,2,1,2,1],
-  [1,2,2,2,1,2,2,2,2,2,1,2,2,2,1],
-  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-];
+// Pick a random map each session
+const mapIndex = Math.floor(Math.random() * ECHO_MAPS.length);
+const RAW_MAP = ECHO_MAPS[mapIndex].tiles;
 const NR = RAW_MAP.length;
 const NC = RAW_MAP[0].length;
 

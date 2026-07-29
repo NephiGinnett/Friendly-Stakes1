@@ -1,0 +1,97 @@
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
+import { getCurrentUser } from "@/lib/auth";
+import { logPoints } from "@/lib/pointLog";
+import { scratchResult, SCRATCH_COSTS, ScratchTier } from "@/lib/casinoNight";
+import { ACHIEVEMENTS } from "@/lib/achievements";
+
+export async function GET() {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const config = await prisma.houseConfig.findUnique({ where: { id: 1 } });
+  const recent = await prisma.scratchCard.findMany({
+    where: { userId: user.id },
+    orderBy: { createdAt: "desc" },
+    take: 10,
+  });
+
+  return NextResponse.json({
+    casinoActive: config?.casinoNightActive ?? false,
+    jackpot: config?.scratchJackpot ?? 0,
+    costs: SCRATCH_COSTS,
+    myPoints: user.points,
+    recent: recent.map((c) => ({
+      id: c.id,
+      tier: c.tier,
+      cost: c.cost,
+      grid: JSON.parse(c.grid),
+      payout: c.payout,
+      isJackpot: c.isJackpot,
+      createdAt: c.createdAt,
+    })),
+  });
+}
+
+export async function POST(req: Request) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { tier } = (await req.json()) as { tier: ScratchTier };
+  if (tier !== "basic" && tier !== "premium") {
+    return NextResponse.json({ error: "Invalid tier" }, { status: 400 });
+  }
+
+  const config = await prisma.houseConfig.findUnique({ where: { id: 1 } });
+  if (!config?.casinoNightActive) {
+    return NextResponse.json({ error: "Casino Night is not active" }, { status: 403 });
+  }
+
+  const cost = SCRATCH_COSTS[tier];
+  if (user.points < cost) {
+    return NextResponse.json({ error: "Not enough points" }, { status: 400 });
+  }
+
+  const jackpotPool = config.scratchJackpot;
+  const { grid, payout, isJackpot } = scratchResult(tier, jackpotPool);
+
+  let newAchievement: string | null = null;
+
+  await prisma.$transaction(async (tx) => {
+    await tx.user.update({ where: { id: user.id }, data: { points: { decrement: cost } } });
+    await logPoints(tx, user.id, -cost, `Scratch card (${tier}) purchased`);
+    await tx.houseConfig.update({ where: { id: 1 }, data: { scratchJackpot: { increment: Math.floor(cost * 0.75) } } });
+    await tx.scratchCard.create({
+      data: { userId: user.id, tier, cost, grid: JSON.stringify(grid), payout, isJackpot },
+    });
+
+    if (isJackpot) {
+      await tx.user.update({ where: { id: user.id }, data: { points: { increment: jackpotPool } } });
+      await logPoints(tx, user.id, jackpotPool, `Scratch card JACKPOT — Casino Night`);
+      await tx.houseConfig.update({ where: { id: 1 }, data: { scratchJackpot: 0 } });
+      const existing = await tx.userAchievement.findUnique({
+        where: { userId_achievementId: { userId: user.id, achievementId: "scratch_jackpot" } },
+      });
+      if (!existing) {
+        await tx.userAchievement.create({ data: { userId: user.id, achievementId: "scratch_jackpot", claimed: true } });
+        newAchievement = "scratch_jackpot";
+      }
+    } else if (payout > 0) {
+      await tx.user.update({ where: { id: user.id }, data: { points: { increment: payout } } });
+      await logPoints(tx, user.id, payout, `Scratch card win (${tier})`);
+    }
+  });
+
+  const updatedConfig = await prisma.houseConfig.findUnique({ where: { id: 1 } });
+
+  return NextResponse.json({
+    grid,
+    payout,
+    isJackpot,
+    jackpotAwarded: isJackpot ? jackpotPool : 0,
+    newJackpot: updatedConfig?.scratchJackpot ?? 0,
+    newAchievement: newAchievement
+      ? ACHIEVEMENTS[newAchievement as keyof typeof ACHIEVEMENTS]
+      : null,
+  });
+}
