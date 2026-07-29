@@ -137,5 +137,16 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, pointsEarned: playerPts, royaltyPaid: royaltyPts, dailyTotal: alreadyEarned + pointsFromSender });
   }
 
+  // Remove your own published score from the market (deactivate — re-publishing
+  // reactivates it).
+  if (action === "unpublish") {
+    if (!gameId) return NextResponse.json({ error: "Invalid game" }, { status: 400 });
+    await prisma.scoreSender.updateMany({
+      where: { userId: user.id, gameId },
+      data: { active: false },
+    });
+    return NextResponse.json({ ok: true });
+  }
+
   return NextResponse.json({ error: "Invalid action" }, { status: 400 });
 }
