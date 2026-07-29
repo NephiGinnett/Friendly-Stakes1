@@ -14,6 +14,7 @@ type HouseData = {
   lastSpinLabel: string | null;
   hasActiveBlackjack: boolean;
   casinoOpen: boolean;
+  casinoNightActive?: boolean;
 };
 
 type SacrificeVoteEntry = { userId: number; username: string; votes: number };
@@ -796,6 +797,23 @@ export default function HousePage() {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Casino Night takeover — replaces the regular gaming floor while live */}
+        {data.casinoNightActive && (
+          <button
+            onClick={() => router.push("/casino-night")}
+            className="w-full text-left rounded-2xl border-2 border-amber-500/40 p-5 transition-colors hover:border-amber-400/60"
+            style={{ background: "linear-gradient(135deg, rgba(220,38,38,0.12), rgba(234,179,8,0.10))" }}
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-3xl">🎲</span>
+              <div className="flex-1">
+                <p className="text-white font-bold">Casino Night is LIVE</p>
+                <p className="text-xs text-slate-300">The House floor has been transformed. Enter the casino →</p>
+              </div>
+            </div>
+          </button>
         )}
 
         {/* Games (phases 0–2, and phase 4) */}

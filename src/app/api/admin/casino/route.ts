@@ -34,12 +34,13 @@ export async function GET() {
     pendingBets: pendingBets.map((b) => ({
       id: b.id, userId: b.userId, username: b.user.username, title: b.title,
       description: b.description, stake: b.stake, multiplier: b.multiplier,
-      isAllIn: b.isAllIn, createdAt: b.createdAt,
+      isAllIn: b.isAllIn, gameType: b.gameType, createdAt: b.createdAt,
     })),
     approvedBet: approvedBet ? {
       id: approvedBet.id, userId: approvedBet.userId, username: approvedBet.user.username,
       title: approvedBet.title, description: approvedBet.description,
       stake: approvedBet.stake, multiplier: approvedBet.multiplier, isAllIn: approvedBet.isAllIn,
+      gameType: approvedBet.gameType,
     } : null,
     completedBets: completedBets.map((b) => ({
       id: b.id, username: b.user.username, title: b.title,
