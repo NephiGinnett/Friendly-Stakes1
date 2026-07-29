@@ -37,6 +37,7 @@ export async function GET() {
     lastSpinLabel: spinToday?.label ?? null,
     hasActiveBlackjack: bj?.status === "active",
     casinoOpen: config.casinoOpen,
+    casinoNightActive: config.casinoNightActive,
     bossHpMultiplier: config.bossHpMultiplier,
     botsEnabled: config.botsEnabled,
     arFaireActive: config.arFaireActive,

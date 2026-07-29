@@ -103,26 +103,43 @@ export default function AdminCasinoNightPage() {
           <div className="rounded-xl bg-violet-500/10 border border-violet-500/30 px-4 py-2 text-sm text-violet-300">{msg}</div>
         )}
 
-        {/* Toggle */}
-        <div className="rounded-2xl bg-white/5 border border-white/10 p-5 space-y-3">
-          <p className="font-bold text-white">Casino Night Status</p>
-          <p className="text-sm text-slate-400">
-            Currently: <span className={status.casinoNightActive ? "text-emerald-400" : "text-rose-400"}>
-              {status.casinoNightActive ? "ACTIVE" : "INACTIVE"}
+        {/* Go Live */}
+        <div className={`rounded-2xl border p-5 space-y-4 ${status.casinoNightActive ? "bg-emerald-500/10 border-emerald-500/40" : "bg-white/5 border-white/10"}`}>
+          <div className="flex items-center justify-between">
+            <p className="font-bold text-white">Casino Night</p>
+            <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${status.casinoNightActive ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30" : "bg-rose-500/20 text-rose-300 border border-rose-500/30"}`}>
+              {status.casinoNightActive ? "🔴 LIVE" : "⬛ OFF"}
             </span>
-          </p>
-          <p className="text-xs text-slate-500">Scratch Jackpot: {formatPoints(status.scratchJackpot)} pts</p>
-          {status.casinoNightEndsAt && (
-            <p className="text-xs text-slate-500">Ends: {new Date(status.casinoNightEndsAt).toLocaleString()}</p>
-          )}
-          <div className="flex gap-2 flex-wrap">
-            <input type="datetime-local" value={endsAt} onChange={(e) => setEndsAt(e.target.value)}
-              className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white" />
-            <button onClick={() => act("toggle_casino", { active: true, endsAt: endsAt || undefined })}
-              className="rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-1.5 text-sm">Activate</button>
-            <button onClick={() => act("toggle_casino", { active: false })}
-              className="rounded-lg bg-rose-600 hover:bg-rose-500 text-white px-4 py-1.5 text-sm">Deactivate</button>
           </div>
+          <p className="text-xs text-slate-500">
+            Going live instantly opens the floor and shows the 🎲 Casino tab to every player — no schedule needed. Scratch Jackpot: {formatPoints(status.scratchJackpot)} pts
+          </p>
+
+          {!status.casinoNightActive ? (
+            <button onClick={() => act("toggle_casino", { active: true })}
+              className="w-full rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-3 text-base font-bold transition-colors">
+              🔴 GO LIVE NOW
+            </button>
+          ) : (
+            <button onClick={() => { if (confirm("End Casino Night for everyone? The floor closes and the tab disappears.")) act("toggle_casino", { active: false }); }}
+              className="w-full rounded-xl bg-rose-600 hover:bg-rose-500 text-white px-4 py-3 text-base font-bold transition-colors">
+              ⬛ END CASINO NIGHT
+            </button>
+          )}
+
+          {/* Optional auto-end — collapsed, secondary */}
+          <details className="text-xs text-slate-500">
+            <summary className="cursor-pointer hover:text-slate-300">Optional: schedule an auto-end time</summary>
+            <div className="mt-2 flex gap-2 flex-wrap items-center">
+              <input type="datetime-local" value={endsAt} onChange={(e) => setEndsAt(e.target.value)}
+                className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white" />
+              <button onClick={() => act("toggle_casino", { active: true, endsAt: endsAt || undefined })}
+                className="rounded-lg bg-emerald-600/80 hover:bg-emerald-500 text-white px-3 py-1.5 text-sm">Go live + set end</button>
+            </div>
+            {status.casinoNightEndsAt && (
+              <p className="mt-1 text-slate-500">Current auto-end: {new Date(status.casinoNightEndsAt).toLocaleString()}</p>
+            )}
+          </details>
         </div>
 
         {/* Show Settings */}

@@ -64,10 +64,13 @@ export async function POST(req: Request) {
   };
 
   if (body.action === "toggle_casino") {
+    const goingLive = body.active ?? false;
     await prisma.houseConfig.update({
       where: { id: 1 },
       data: {
-        casinoNightActive: body.active ?? false,
+        casinoNightActive: goingLive,
+        // Going live also opens the floor so slots/games are immediately playable.
+        ...(goingLive ? { casinoOpen: true } : {}),
         casinoNightEndsAt: body.endsAt ? new Date(body.endsAt) : undefined,
       },
     });
