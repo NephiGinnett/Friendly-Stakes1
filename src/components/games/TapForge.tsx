@@ -19,6 +19,7 @@ const TIERS = [
 const MERGE_COLORS = ["#ff6b1a","#ffcc00","#88ff44","#44ffcc","#44aaff","#8844ff","#ff44cc","#ff88ff","#ffffff"];
 const ROWS = 6, COLS = 4, TOTAL = ROWS * COLS;
 const AUTO_FORGE_INTERVAL = 3.5;
+const SAVE_KEY = "tapforge:v1"; // persists the forge (grid, coins, upgrades, prestige) between plays
 
 type Particle = { x: number; y: number; vx: number; vy: number; life: number; decay: number; size: number; color: string };
 
@@ -55,6 +56,50 @@ export default function TapForge({ onGameOver }: { onGameOver: (p: GameOverPaylo
 
   const audioCtxRef = useRef<AudioContext | null>(null);
   const anvilTouchFiredRef = useRef(false);
+  const lastSaveRef = useRef(0);
+
+  const saveState = useCallback(() => {
+    try {
+      localStorage.setItem(SAVE_KEY, JSON.stringify({
+        grid: gridRef.current,
+        coins: coinsRef.current,
+        totalCoins: totalCoinsRef.current,
+        prestigeCount: prestigeCountRef.current,
+        autoForgeLevel: autoForgeLevelRef.current,
+        lucky: luckyForgeRef.current,
+      }));
+    } catch { /* ignore */ }
+  }, []);
+
+  // Restore a saved forge on mount so progress persists between plays.
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(SAVE_KEY);
+      if (!raw) return;
+      const s = JSON.parse(raw);
+      if (!Array.isArray(s.grid) || s.grid.length !== TOTAL) return;
+      gridRef.current = s.grid;
+      coinsRef.current = s.coins ?? 0;
+      totalCoinsRef.current = s.totalCoins ?? 0;
+      prestigeCountRef.current = s.prestigeCount ?? 0;
+      prestigeMultiRef.current = Math.pow(1.5, prestigeCountRef.current);
+      autoForgeLevelRef.current = s.autoForgeLevel ?? 0;
+      luckyForgeRef.current = !!s.lucky;
+      setStarted(true);
+    } catch { /* ignore */ }
+  }, []);
+
+  // Save when leaving the page/tab so the latest forge state isn't lost.
+  useEffect(() => {
+    const onHide = () => saveState();
+    window.addEventListener("pagehide", onHide);
+    document.addEventListener("visibilitychange", onHide);
+    return () => {
+      saveState();
+      window.removeEventListener("pagehide", onHide);
+      document.removeEventListener("visibilitychange", onHide);
+    };
+  }, [saveState]);
 
   function getAudio() {
     if (!audioCtxRef.current) audioCtxRef.current = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
@@ -312,6 +357,7 @@ export default function TapForge({ onGameOver }: { onGameOver: (p: GameOverPaylo
         ctx.globalAlpha = 1;
       }
 
+      if (now - lastSaveRef.current > 2000) { lastSaveRef.current = now; saveState(); }
       rerender();
       rafRef.current = requestAnimationFrame(loop);
     }
@@ -348,6 +394,7 @@ export default function TapForge({ onGameOver }: { onGameOver: (p: GameOverPaylo
 
   function handleCashOut() {
     gameOverRef.current = true;
+    saveState();
     setGameOver(true);
     onGameOver({
       coinsEarned: Math.floor(totalCoinsRef.current),

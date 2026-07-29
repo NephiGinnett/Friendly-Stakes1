@@ -20,6 +20,7 @@ type CardResult = {
   isJackpot: boolean;
   jackpotAwarded: number;
   newJackpot: number;
+  itemsWon: { itemType: string; name: string; emoji: string }[];
   newAchievement: { name: string; emoji: string; reward: string } | null;
 };
 
@@ -176,9 +177,15 @@ export default function ScratchPage() {
                   </>
                 ) : result.payout > 0 ? (
                   <p className="text-lg font-bold text-emerald-400">+{formatPoints(result.payout)} pts</p>
-                ) : (
+                ) : (result.itemsWon?.length ?? 0) === 0 ? (
                   <p className="text-slate-500 text-sm">No matching lines. The House thanks you for your contribution.</p>
-                )}
+                ) : null}
+                {result.itemsWon?.map((item, i) => (
+                  <div key={i} className="rounded-xl bg-violet-500/10 border border-violet-500/30 p-3 mt-2">
+                    <p className="text-sm font-bold text-violet-300">🎁 Item won: {item.emoji} {item.name}</p>
+                    <p className="text-xs text-slate-400">Added to your inventory.</p>
+                  </div>
+                ))}
                 {result.newAchievement && (
                   <div className="rounded-xl bg-amber-500/10 border border-amber-500/30 p-3 mt-2">
                     <p className="text-sm font-bold text-amber-300">{result.newAchievement.emoji} Achievement: {result.newAchievement.name}</p>
@@ -204,13 +211,17 @@ export default function ScratchPage() {
             </div>
             <div>
               <p className="text-xs text-slate-600 mb-1">Premium</p>
-              {([["🍒",120],["🍊",180],["🍋",240],["🍇",300],["🍀",420],["⭐",600],["🔔",900],["💎",1800]] as [string,number][]).map(([s, p]) => (
+              {([["🍒",240],["🍊",360],["🍋",480],["🍇",600],["🍀",840],["⭐",1200],["🔔",1800],["💎",3600]] as [string,number][]).map(([s, p]) => (
                 <div key={s} className="flex justify-between text-slate-400">
                   <span>{s}{s}{s}</span>
                   <span className="font-mono text-xs">{formatPoints(p)}</span>
                 </div>
               ))}
-              <div className="flex justify-between text-amber-400 font-semibold mt-1">
+              <div className="flex justify-between text-violet-300 font-semibold mt-1">
+                <span>🎁🎁🎁</span>
+                <span className="font-mono text-xs">ITEM</span>
+              </div>
+              <div className="flex justify-between text-amber-400 font-semibold">
                 <span>💰💰💰</span>
                 <span className="font-mono text-xs">JACKPOT</span>
               </div>

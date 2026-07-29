@@ -18,7 +18,7 @@ const BASIC_POOL: [Symbol, number][] = [
 
 const PREMIUM_POOL: [Symbol, number][] = [
   ["🍒", 25], ["🍊", 18], ["🍋", 15], ["🍇", 12],
-  ["🍀", 10], ["⭐", 8],  ["🔔", 6],  ["💎", 4], ["💰", 2],
+  ["🍀", 10], ["⭐", 8],  ["🔔", 6],  ["💎", 4], ["🎁", 3], ["💰", 2],
 ];
 
 export const BASIC_PAYOUTS: Record<Symbol, number> = {
@@ -26,10 +26,16 @@ export const BASIC_PAYOUTS: Record<Symbol, number> = {
   "🍀": 200, "⭐": 280, "🔔": 400, "💎": 900,
 };
 
+// Premium payouts are 2× the basic-tier values (jackpot handled separately),
+// with 🎁 lines awarding a random power-up item instead of points.
 export const PREMIUM_PAYOUTS: Record<Symbol, number> = {
-  "🍒": 120, "🍊": 180, "🍋": 240, "🍇": 300,
-  "🍀": 420, "⭐": 600, "🔔": 900, "💎": 1800, "💰": 0,
+  "🍒": 240, "🍊": 360, "🍋": 480, "🍇": 600,
+  "🍀": 840, "⭐": 1200, "🔔": 1800, "💎": 3600, "🎁": 0, "💰": 0,
 };
+
+// A line of 3 🎁 on a premium card wins one of these power-ups at random.
+export const SCRATCH_ITEM_POOL = ["thumb", "ward", "temp_vpn", "score_sender"] as const;
+export const GIFT_SYMBOL = "🎁";
 
 function pickSymbol(pool: [Symbol, number][]): Symbol {
   const total = pool.reduce((s, [, w]) => s + w, 0);
@@ -64,7 +70,7 @@ function getLines(grid: Symbol[][]): Symbol[][] {
 export function scratchResult(
   tier: ScratchTier,
   jackpotPool: number
-): { grid: Symbol[][]; payout: number; isJackpot: boolean } {
+): { grid: Symbol[][]; payout: number; isJackpot: boolean; itemsWon: string[] } {
   const payoutMap = tier === "premium" ? PREMIUM_PAYOUTS : BASIC_PAYOUTS;
 
   if (tier === "premium" && Math.random() < 0.01) {
@@ -73,20 +79,26 @@ export function scratchResult(
       [pickSymbol(PREMIUM_POOL), "💰", pickSymbol(PREMIUM_POOL)],
       ["💰", pickSymbol(PREMIUM_POOL), pickSymbol(PREMIUM_POOL)],
     ];
-    return { grid, payout: jackpotPool, isJackpot: true };
+    return { grid, payout: jackpotPool, isJackpot: true, itemsWon: [] };
   }
 
   const grid = generateGrid(tier);
   const lines = getLines(grid);
 
   let payout = 0;
+  const itemsWon: string[] = [];
   for (const line of lines) {
     if (line[0] === line[1] && line[1] === line[2] && line[0] !== "💰") {
-      payout += payoutMap[line[0]] ?? 0;
+      if (line[0] === GIFT_SYMBOL) {
+        // A gift line wins a random power-up instead of points.
+        itemsWon.push(SCRATCH_ITEM_POOL[Math.floor(Math.random() * SCRATCH_ITEM_POOL.length)]);
+      } else {
+        payout += payoutMap[line[0]] ?? 0;
+      }
     }
   }
 
-  return { grid, payout, isJackpot: false };
+  return { grid, payout, isJackpot: false, itemsWon };
 }
 
 // ── Roulette ──────────────────────────────────────────────────────────────────
