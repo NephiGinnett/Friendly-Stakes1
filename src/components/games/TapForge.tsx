@@ -54,6 +54,7 @@ export default function TapForge({ onGameOver }: { onGameOver: (p: GameOverPaylo
   } | null>(null);
 
   const audioCtxRef = useRef<AudioContext | null>(null);
+  const anvilTouchFiredRef = useRef(false);
 
   function getAudio() {
     if (!audioCtxRef.current) audioCtxRef.current = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
@@ -437,7 +438,6 @@ export default function TapForge({ onGameOver }: { onGameOver: (p: GameOverPaylo
     e.preventDefault();
   };
 
-  const anvilTouchFiredRef = useRef(false);
   const onAnvilTouch = (e: React.TouchEvent) => {
     const t = e.changedTouches[0];
     forgeItem(t.clientX, t.clientY);
