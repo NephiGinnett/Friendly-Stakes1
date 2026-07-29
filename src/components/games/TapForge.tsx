@@ -20,6 +20,7 @@ const MERGE_COLORS = ["#ff6b1a","#ffcc00","#88ff44","#44ffcc","#44aaff","#8844ff
 const ROWS = 6, COLS = 4, TOTAL = ROWS * COLS;
 const AUTO_FORGE_INTERVAL = 3.5;
 const AUTO_MERGE_INTERVAL = 2.5;
+const LUCKY_COSTS = [200, 800, 2500]; // cost to raise Lucky Forge level 0→1, 1→2, 2→3
 const SAVE_KEY = "tapforge:v1"; // persists the forge (grid, coins, upgrades, prestige) between plays
 
 type Particle = { x: number; y: number; vx: number; vy: number; life: number; decay: number; size: number; color: string };
@@ -34,7 +35,7 @@ export default function TapForge({ onGameOver }: { onGameOver: (p: GameOverPaylo
   const prestigeMultiRef = useRef(1);
   const prestigeCountRef = useRef(0);
   const autoForgeLevelRef = useRef(0);
-  const luckyForgeRef = useRef(false);
+  const luckyForgeRef = useRef(0); // 0 = off, 1–3 = Lucky tier
   const autoForgeTimerRef = useRef(0);
   const autoMergeRef = useRef(false);
   const autoMergeTimerRef = useRef(0);
@@ -88,7 +89,7 @@ export default function TapForge({ onGameOver }: { onGameOver: (p: GameOverPaylo
       prestigeCountRef.current = s.prestigeCount ?? 0;
       prestigeMultiRef.current = Math.pow(1.5, prestigeCountRef.current);
       autoForgeLevelRef.current = s.autoForgeLevel ?? 0;
-      luckyForgeRef.current = !!s.lucky;
+      luckyForgeRef.current = typeof s.lucky === "number" ? s.lucky : (s.lucky ? 1 : 0);
       autoMergeRef.current = !!s.autoMerge;
       setStarted(true);
     } catch { /* ignore */ }
@@ -197,14 +198,33 @@ export default function TapForge({ onGameOver }: { onGameOver: (p: GameOverPaylo
 
   const mergePopRef = useRef<number | null>(null);
 
+  // Higher Lucky tiers can forge progressively better starting items.
+  function luckyForgeTier(): number {
+    const lvl = luckyForgeRef.current;
+    if (lvl <= 0) return 1;
+    const r = Math.random();
+    if (lvl >= 3) {
+      if (r < 0.06) return 4; // Sword
+      if (r < 0.20) return 3; // Dagger
+      if (r < 0.45) return 2; // Ingot
+      return 1;
+    }
+    if (lvl >= 2) {
+      if (r < 0.10) return 3; // Dagger
+      if (r < 0.32) return 2; // Ingot
+      return 1;
+    }
+    return r < 0.18 ? 2 : 1; // lvl 1
+  }
+
   function forgeItem(x: number, y: number) {
     const idx = firstEmpty();
     if (idx === -1) return;
-    const tier = (luckyForgeRef.current && Math.random() < 0.15) ? 2 : 1;
+    const tier = luckyForgeTier();
     gridRef.current[idx] = tier;
     spawnSparks(x, y, "#ff6b1a", 14);
     sfxForge();
-    if (tier === 2) floatText("⚡ Lucky!", x, y - 30, "#ffd700");
+    if (tier > 1) floatText(`⚡ Lucky ${TIERS[tier]!.name}!`, x, y - 30, "#ffd700");
     rerender();
   }
 
@@ -459,17 +479,22 @@ export default function TapForge({ onGameOver }: { onGameOver: (p: GameOverPaylo
   }
 
   function buyLuckyForge() {
-    if (!luckyForgeRef.current && coinsRef.current >= 200) {
-      coinsRef.current -= 200;
-      luckyForgeRef.current = true;
-      floatText("\u{1F340} Lucky ON!", window.innerWidth / 2, window.innerHeight / 2, "#88ff44", true);
+    const lvl = luckyForgeRef.current;
+    if (lvl >= 3) return;
+    const cost = LUCKY_COSTS[lvl];
+    if (coinsRef.current >= cost) {
+      coinsRef.current -= cost;
+      luckyForgeRef.current = lvl + 1;
+      const label = lvl + 1 === 3 ? "Lucky MAX" : `Lucky ${["I", "II", "III"][lvl]}`;
+      floatText(`\u{1F340} ${label}!`, window.innerWidth / 2, window.innerHeight / 2, "#88ff44", true);
+      saveState();
       rerender();
     }
   }
 
   function buyAutoMerge() {
-    if (!autoMergeRef.current && coinsRef.current >= 1000) {
-      coinsRef.current -= 1000;
+    if (!autoMergeRef.current && coinsRef.current >= 5000) {
+      coinsRef.current -= 5000;
       autoMergeRef.current = true;
       floatText("🔗 Auto-Merge ON!", window.innerWidth / 2, window.innerHeight / 2, "#44aaff", true);
       saveState();
@@ -492,7 +517,8 @@ export default function TapForge({ onGameOver }: { onGameOver: (p: GameOverPaylo
   const coins = coinsRef.current;
   const totalCoins = totalCoinsRef.current;
   const autoLevel = autoForgeLevelRef.current;
-  const hasLucky = luckyForgeRef.current;
+  const luckyLevel = luckyForgeRef.current;
+  const luckyNextCost = luckyLevel < 3 ? LUCKY_COSTS[luckyLevel] : 0;
   const hasAutoMerge = autoMergeRef.current;
   const hasHighTier = grid.some(t => t !== null && t >= 8);
 
@@ -677,29 +703,32 @@ export default function TapForge({ onGameOver }: { onGameOver: (p: GameOverPaylo
             </button>
             <button
               onClick={buyLuckyForge}
-              disabled={hasLucky || coins < 200}
+              disabled={luckyLevel >= 3 || coins < luckyNextCost}
               style={{
-                padding: "7px 14px", background: "#1a1a1a",
+                padding: "7px 14px", background: luckyLevel > 0 ? "#160a24" : "#1a1a1a",
                 border: "1px solid #bf6fff88", borderRadius: 16,
                 color: "#bf6fff", fontSize: "0.78rem",
-                cursor: hasLucky ? "default" : "pointer",
-                opacity: (hasLucky || coins < 200) ? 0.5 : 1,
+                cursor: luckyLevel >= 3 ? "default" : "pointer",
+                opacity: (luckyLevel >= 3 || coins < luckyNextCost) ? 0.5 : 1,
               }}
             >
-              {hasLucky ? "🍀 Lucky ON ✓" : "🍀 Lucky Forge (200🪙)"}
+              {luckyLevel === 0 ? "🍀 Lucky Forge (200🪙)"
+                : luckyLevel === 1 ? "🍀 Lucky II (800🪙)"
+                : luckyLevel === 2 ? "🍀 Lucky III (2500🪙)"
+                : "🍀 Lucky MAX ✓"}
             </button>
             <button
               onClick={buyAutoMerge}
-              disabled={hasAutoMerge || coins < 1000}
+              disabled={hasAutoMerge || coins < 5000}
               style={{
                 padding: "7px 14px", background: hasAutoMerge ? "#0a1a2a" : "#1a1a1a",
                 border: `1px solid ${hasAutoMerge ? "#44aaff" : "#44aaff88"}`, borderRadius: 16,
                 color: "#44aaff", fontSize: "0.78rem",
                 cursor: hasAutoMerge ? "default" : "pointer",
-                opacity: (hasAutoMerge || coins < 1000) ? 0.5 : 1,
+                opacity: (hasAutoMerge || coins < 5000) ? 0.5 : 1,
               }}
             >
-              {hasAutoMerge ? "🔗 Auto-Merge ON ✓" : "🔗 Auto-Merge (1000🪙)"}
+              {hasAutoMerge ? "🔗 Auto-Merge ON ✓" : "🔗 Auto-Merge (5000🪙)"}
             </button>
           </div>
 
