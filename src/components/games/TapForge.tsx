@@ -472,7 +472,10 @@ export default function TapForge({ onGameOver }: { onGameOver: (p: GameOverPaylo
       ))}
 
       <div style={{
-        width: "100%", maxWidth: 480, display: "flex", flexDirection: "column", alignItems: "center",
+        width: "100%", maxWidth: 460, display: "flex", flexDirection: "column", alignItems: "center",
+        // Fit within the viewport (below the page header, above the navbar) so
+        // the whole game is visible without scrolling; the grid flexes to fill.
+        height: "calc(100dvh - 116px)", overflow: "hidden",
         animation: shakeRef.current ? "tf-shake 0.3s ease" : "none",
       }}>
         {/* Top bar */}
@@ -496,8 +499,8 @@ export default function TapForge({ onGameOver }: { onGameOver: (p: GameOverPaylo
         </div>
 
         {/* Grid */}
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", width: "100%", padding: 12 }}>
-          <div style={{ display: "grid", gridTemplateColumns: `repeat(${COLS}, 1fr)`, gap: 8, width: "100%", maxWidth: 380 }}>
+        <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", width: "100%", padding: "8px 12px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: `repeat(${COLS}, 1fr)`, gridTemplateRows: `repeat(${ROWS}, 1fr)`, gap: 6, height: "100%", aspectRatio: `${COLS} / ${ROWS}`, maxWidth: "100%" }}>
             {grid.map((tier, i) => {
               const isEmpty = tier === null;
               const tierClass = tier ? `tier-${tier}` : "";
@@ -510,7 +513,7 @@ export default function TapForge({ onGameOver }: { onGameOver: (p: GameOverPaylo
                   onTouchStart={!isEmpty ? (e) => onSlotTouchStart(i, e) : undefined}
                   className={tierClass}
                   style={{
-                    aspectRatio: "1", background: "#1a1a1a",
+                    minHeight: 0, background: "#1a1a1a",
                     border: isEmpty ? "1px dashed #2a2a2a" : "1px solid #ff6b1a44",
                     borderRadius: 10, display: "flex", flexDirection: "column",
                     alignItems: "center", justifyContent: "center", position: "relative",
@@ -525,13 +528,13 @@ export default function TapForge({ onGameOver }: { onGameOver: (p: GameOverPaylo
                         background: tier <= 10 ? `radial-gradient(circle at center, ${MERGE_COLORS[Math.min(tier - 1, MERGE_COLORS.length - 1)]}33, transparent 70%)` : "none",
                       }} />
                       <div style={{
-                        fontSize: "2rem", lineHeight: 1,
+                        fontSize: "min(2rem, 6vh)", lineHeight: 1,
                         transform: mergePopRef.current === i ? "scale(1.4)" : "none",
                         transition: "transform 0.15s",
                       }}>
                         {TIERS[tier]!.emoji}
                       </div>
-                      <div style={{ fontSize: "0.55rem", color: "#888", marginTop: 2, textTransform: "uppercase" }}>
+                      <div style={{ fontSize: "min(0.55rem, 1.6vh)", color: "#888", marginTop: 2, textTransform: "uppercase" }}>
                         {TIERS[tier]!.name}
                       </div>
                     </>
@@ -543,7 +546,7 @@ export default function TapForge({ onGameOver }: { onGameOver: (p: GameOverPaylo
         </div>
 
         {/* Bottom area */}
-        <div style={{ width: "100%", padding: "12px 16px 8px", display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
+        <div style={{ width: "100%", padding: "6px 16px 6px", display: "flex", flexDirection: "column", alignItems: "center", gap: "min(10px, 1.2vh)", flexShrink: 0 }}>
           <div style={{ fontSize: "0.7rem", color: "#555", textAlign: "center" }}>
             Drag items to merge &bull; Tap item to sell
           </div>
@@ -553,9 +556,9 @@ export default function TapForge({ onGameOver }: { onGameOver: (p: GameOverPaylo
             onClick={onAnvilClick}
             onTouchEnd={onAnvilTouch}
             style={{
-              width: 90, height: 90, borderRadius: "50%", border: "3px solid #ff6b1a",
+              width: "min(90px, 11vh)", height: "min(90px, 11vh)", borderRadius: "50%", border: "3px solid #ff6b1a",
               background: "radial-gradient(circle at 40% 35%, #3a1a00, #1a0a00)",
-              fontSize: "2.8rem", cursor: "pointer",
+              fontSize: "min(2.8rem, 6vh)", cursor: "pointer", flexShrink: 0,
               boxShadow: "0 0 20px #ff6b1a66, 0 0 40px #ff6b1a22",
               display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1,
             }}
