@@ -14,8 +14,14 @@ type BigBetEntry = {
   stake: number;
   multiplier: number;
   isAllIn: boolean;
+  gameType: string;
   createdAt: string;
 };
+
+const GAME_LABELS: Record<string, string> = {
+  roulette: "🎡 Roulette", slots: "🎰 Slots", blackjack: "🃏 Blackjack", custom: "🎲 Custom",
+};
+const gameLabel = (g: string) => GAME_LABELS[g] ?? `🎲 ${g}`;
 
 type CompletedBet = {
   id: number;
@@ -154,18 +160,21 @@ export default function AdminCasinoNightPage() {
             <button onClick={() => act("set_reveal_time", { revealAt })}
               className="rounded-lg bg-violet-600 hover:bg-violet-500 text-white px-4 py-1.5 text-sm">Set Show Time</button>
           </div>
-          <div className="flex gap-2 items-center">
-            <label className="text-xs text-slate-500">Game for live stage:</label>
-            <select value={gameType} onChange={(e) => setGameType(e.target.value)}
-              className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white">
-              <option value="">Not set</option>
-              <option value="roulette">🎡 Roulette</option>
-              <option value="blackjack">🃏 Blackjack</option>
-              <option value="slots">🎰 Slots</option>
-              <option value="custom">🎲 Custom</option>
-            </select>
-            <button onClick={() => act("set_game_type", { gameType })}
-              className="rounded-lg bg-violet-600 hover:bg-violet-500 text-white px-3 py-1.5 text-sm">Save</button>
+          <div className="space-y-1">
+            <p className="text-xs text-slate-500">Each player picks their own game when they submit — shown on their card above. This is only an optional global override.</p>
+            <div className="flex gap-2 items-center">
+              <label className="text-xs text-slate-500">Override game:</label>
+              <select value={gameType} onChange={(e) => setGameType(e.target.value)}
+                className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white">
+                <option value="">No override</option>
+                <option value="roulette">🎡 Roulette</option>
+                <option value="blackjack">🃏 Blackjack</option>
+                <option value="slots">🎰 Slots</option>
+                <option value="custom">🎲 Custom</option>
+              </select>
+              <button onClick={() => act("set_game_type", { gameType })}
+                className="rounded-lg bg-violet-600 hover:bg-violet-500 text-white px-3 py-1.5 text-sm">Save</button>
+            </div>
           </div>
         </div>
 
@@ -206,6 +215,7 @@ export default function AdminCasinoNightPage() {
                 ×{effectiveMultiplier}{status.bigBetForce5x && !status.approvedBet.isAllIn ? " (forced)" : ""}
                 {status.approvedBet.isAllIn && " · ALL IN"}
               </p>
+              <p className="text-sm text-amber-300">Playing: {gameLabel(status.approvedBet.gameType)}</p>
             </div>
             <div className="flex gap-2">
               <button onClick={() => completeBet(status.approvedBet!.id, "win")}
@@ -243,6 +253,7 @@ export default function AdminCasinoNightPage() {
                     <p className="text-xs text-slate-500 mt-0.5">
                       {formatPoints(b.stake)} pts · ×{b.multiplier} · potential: {formatPoints(Math.floor(b.stake * b.multiplier))} pts
                     </p>
+                    <p className="text-xs text-amber-300/80 mt-0.5">Wants to play: {gameLabel(b.gameType)}</p>
                   </div>
                 </div>
                 <div className="flex gap-2">

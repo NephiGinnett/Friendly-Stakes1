@@ -6,6 +6,7 @@ import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import PointsBadge from "@/components/PointsBadge";
 import { formatPoints } from "@/lib/utils";
+import { BIG_BET_GAMES } from "@/lib/casinoNight";
 
 type BigBetStatus = {
   casinoActive: boolean;
@@ -13,12 +14,12 @@ type BigBetStatus = {
   selectedGame: string | null;
   myPoints: number;
   myBet: {
-    id: number; stake: number; multiplier: number; isAllIn: boolean; status: string;
+    id: number; stake: number; multiplier: number; isAllIn: boolean; status: string; gameType: string;
   } | null;
   biggestBet: { username: string; stake: number; isAllIn: boolean } | null;
   approvedBet: {
     id: number; username: string; userId: number;
-    stake: number; multiplier: number; isAllIn: boolean;
+    stake: number; multiplier: number; isAllIn: boolean; gameType: string;
   } | null;
   completedBets: {
     id: number; username: string; stake: number;
@@ -53,6 +54,7 @@ export default function BigBetPage() {
   const router = useRouter();
   const [status, setStatus] = useState<BigBetStatus | null>(null);
   const [stake, setStake] = useState("");
+  const [chosenGame, setChosenGame] = useState<string>("roulette");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -75,7 +77,7 @@ export default function BigBetPage() {
     const res = await fetch("/api/casino/big-bet", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ stake: amt }),
+      body: JSON.stringify({ stake: amt, gameType: chosenGame }),
     });
     const d = await res.json();
     setSubmitting(false);
@@ -120,9 +122,9 @@ export default function BigBetPage() {
                 </span>
               )}
             </p>
-            {status.selectedGame && (
+            {status.myBet?.gameType && (
               <p className="text-sm text-amber-300">
-                Game: {GAME_ICONS[status.selectedGame] ?? "🎲"} {status.selectedGame.charAt(0).toUpperCase() + status.selectedGame.slice(1)}
+                Your game: {GAME_ICONS[status.myBet.gameType] ?? "🎲"} {status.myBet.gameType.charAt(0).toUpperCase() + status.myBet.gameType.slice(1)}
               </p>
             )}
             {status.revealAt && (
@@ -166,6 +168,23 @@ export default function BigBetPage() {
             </div>
 
             <div>
+              <label className="label">Your game</label>
+              <p className="text-xs text-slate-500 mb-2">Pick the game you&rsquo;ll play live on stage if you&rsquo;re selected.</p>
+              <div className="flex gap-2">
+                {BIG_BET_GAMES.map((g) => (
+                  <button key={g.id} type="button" onClick={() => setChosenGame(g.id)}
+                    className={`flex-1 rounded-xl border px-3 py-2 text-sm transition-colors ${
+                      chosenGame === g.id
+                        ? "bg-violet-500/20 border-violet-500/50 text-white"
+                        : "bg-white/5 border-white/10 text-slate-400 hover:bg-white/10"
+                    }`}>
+                    {g.emoji} {g.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
               <label className="label">Stake</label>
               <div className="flex gap-2">
                 <input type="number" min="50" max={status.myPoints} value={stake}
@@ -203,6 +222,11 @@ export default function BigBetPage() {
               {formatPoints(status.myBet.stake)} pts escrowed · ×{status.myBet.multiplier}
               {status.myBet.isAllIn && " · ALL IN"}
             </p>
+            {status.myBet.gameType && (
+              <p className="text-xs text-slate-400">
+                Your game: {GAME_ICONS[status.myBet.gameType] ?? "🎲"} {status.myBet.gameType.charAt(0).toUpperCase() + status.myBet.gameType.slice(1)}
+              </p>
+            )}
             <p className="text-xs text-slate-600">Waiting for The House to select tonight&rsquo;s player...</p>
           </div>
         )}

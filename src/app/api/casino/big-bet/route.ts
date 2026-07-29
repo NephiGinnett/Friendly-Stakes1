@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { logPoints } from "@/lib/pointLog";
 import { formatPoints } from "@/lib/utils";
-import { BASE_MULTIPLIER, ALL_IN_MULTIPLIER } from "@/lib/casinoNight";
+import { BASE_MULTIPLIER, ALL_IN_MULTIPLIER, BIG_BET_GAME_IDS } from "@/lib/casinoNight";
 import { ACHIEVEMENTS } from "@/lib/achievements";
 
 export async function GET() {
@@ -47,6 +47,7 @@ export async function GET() {
       multiplier: myBet.multiplier,
       isAllIn: myBet.isAllIn,
       status: myBet.status,
+      gameType: myBet.gameType,
     } : null,
     biggestBet: biggest ? {
       username: biggest.user.username,
@@ -60,6 +61,7 @@ export async function GET() {
       stake: approvedBet.stake,
       multiplier: approvedBet.multiplier,
       isAllIn: approvedBet.isAllIn,
+      gameType: approvedBet.gameType,
     } : null,
     completedBets: completedBets.map((b) => ({
       id: b.id,
@@ -82,15 +84,18 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Casino Night is not active" }, { status: 403 });
   }
 
-  const { title, description, stake } = await req.json() as {
+  const { title, description, stake, gameType } = await req.json() as {
     title?: string;
     description?: string;
     stake: number;
+    gameType?: string;
   };
 
   if (!stake || stake < 50 || !Number.isInteger(stake)) {
     return NextResponse.json({ error: "Minimum stake is 50 points" }, { status: 400 });
   }
+  // Player picks which game they'll play on the live stage (defaults to roulette).
+  const chosenGame = BIG_BET_GAME_IDS.includes(gameType ?? "") ? gameType! : "roulette";
   if (stake > user.points) {
     return NextResponse.json({ error: "Not enough points" }, { status: 400 });
   }
@@ -118,6 +123,7 @@ export async function POST(req: Request) {
         stake,
         multiplier,
         isAllIn,
+        gameType: chosenGame,
       },
     });
 

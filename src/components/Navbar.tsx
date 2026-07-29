@@ -103,8 +103,11 @@ export default function Navbar() {
     { href: "/challenges", label: "⚔️", dotKey: "challenges" },
     { href: "/bingo", label: "🎱", dotKey: "bingo" },
     { href: "/games", label: "🎮" },
-    { href: "/house", label: "🎰", dotKey: "house" },
-    ...(showCasino ? [{ href: "/casino-night", label: "🎲" }] : []),
+    // During Casino Night the casino tab IS Casino Night — it replaces the
+    // regular House gaming floor as the casino entry point.
+    ...(showCasino
+      ? [{ href: "/casino-night", label: "🎰" }]
+      : [{ href: "/house", label: "🎰", dotKey: "house" as const }]),
     ...(showWorldCup ? [{ href: "/world-cup", label: "⚽", isWc: true }] : []),
     { href: "/profile", label: user.username },
   ];

@@ -150,6 +150,16 @@ export function rouletteColor(n: number): "red" | "black" | "green" {
 export const BASE_MULTIPLIER = 3.0;
 export const ALL_IN_MULTIPLIER = 5.0;
 
+// Games a player can choose to play on the live stage for their Big Bet.
+export const BIG_BET_GAMES = [
+  { id: "roulette", label: "Roulette", emoji: "🎡" },
+  { id: "slots", label: "Slots", emoji: "🎰" },
+  { id: "blackjack", label: "Blackjack", emoji: "🃏" },
+] as const;
+
+export type BigBetGameId = (typeof BIG_BET_GAMES)[number]["id"];
+export const BIG_BET_GAME_IDS: string[] = BIG_BET_GAMES.map((g) => g.id);
+
 // ── Slots ─────────────────────────────────────────────────────────────────────
 
 export const SLOT_SYMBOLS = ["👁", "🏚️", "💀", "🔒", "⚡", "💎", "7️⃣"] as const;
