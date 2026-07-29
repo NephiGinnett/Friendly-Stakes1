@@ -7,7 +7,7 @@ import { getDisplayVersion } from "@/lib/version";
 import TeamBadges from "@/components/TeamBadges";
 
 type User = { id: number; username: string; points: number; isAdmin: boolean; siteTheme?: string };
-type HouseStatus = { worldCupAdminAt: string | null; worldCupPlayerAt: string | null };
+type HouseStatus = { worldCupAdminAt: string | null; worldCupPlayerAt: string | null; casinoNightActive?: boolean };
 type Notifs = {
   challenges: number;
   wagers: number;
@@ -91,6 +91,10 @@ export default function Navbar() {
     (user.isAdmin && now >= wcAdminAt) || now >= wcPlayerAt
   );
 
+  // Casino Night is a simple on/off switch — no time gating, so the floor link
+  // appears for everyone the moment an admin flips it live.
+  const showCasino = !!houseStatus?.casinoNightActive;
+
   const navItems: { href: string; label: string; dotKey?: keyof typeof dotMap; isWc?: boolean }[] = [
     { href: "/feed", label: "Feed", dotKey: "feed" },
     { href: "/wagers/new", label: "+" },
@@ -100,6 +104,7 @@ export default function Navbar() {
     { href: "/bingo", label: "🎱", dotKey: "bingo" },
     { href: "/games", label: "🎮" },
     { href: "/house", label: "🎰", dotKey: "house" },
+    ...(showCasino ? [{ href: "/casino-night", label: "🎲" }] : []),
     ...(showWorldCup ? [{ href: "/world-cup", label: "⚽", isWc: true }] : []),
     { href: "/profile", label: user.username },
   ];

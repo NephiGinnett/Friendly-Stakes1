@@ -43,6 +43,11 @@ export default function GamePage() {
   const [senders, setSenders] = useState<{ id: number; score: number; royalty: number; user: { id: number; username: string } }[]>([]);
   const [senderMsg, setSenderMsg] = useState("");
   const [senderLoading, setSenderLoading] = useState(false);
+  const [hasSenderItem, setHasSenderItem] = useState(false);
+  const [publishedScore, setPublishedScore] = useState<number | null>(null);
+  const [publishRoyalty, setPublishRoyalty] = useState(50);
+  const [publishing, setPublishing] = useState(false);
+  const [publishMsg, setPublishMsg] = useState("");
 
   const sessionIdRef = useRef<number | null>(null);
 
@@ -63,9 +68,26 @@ export default function GamePage() {
 
   const loadSenders = useCallback(() => {
     fetch(`/api/games/score-sender?gameId=${slug}`).then(r => r.ok ? r.json() : null).then(d => {
-      if (d) setSenders(d.senders ?? []);
+      if (!d) return;
+      setSenders(d.senders ?? []);
+      setHasSenderItem(!!d.hasItem);
+      const mine = (d.mySenders ?? []).find((m: { gameId: string; score: number }) => m.gameId === slug);
+      setPublishedScore(mine ? mine.score : null);
     });
   }, [slug]);
+
+  const publishScore = async () => {
+    setPublishing(true); setPublishMsg("");
+    const res = await fetch("/api/games/score-sender", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "publish", gameId: slug, royalty: publishRoyalty }),
+    });
+    const d = await res.json();
+    setPublishing(false);
+    if (res.ok) { setPublishMsg(`Published ${formatPoints(d.score)} pts at ${d.royalty}% royalty!`); loadSenders(); }
+    else setPublishMsg(d.error ?? "Couldn't publish");
+  };
 
   useEffect(() => {
     fetch("/api/auth/me").then((r) => {
@@ -289,6 +311,32 @@ export default function GamePage() {
                 Play Again
               </button>
             </div>
+          </div>
+        )}
+
+        {/* Publish your score (works on every game — spend a Score Sender item) */}
+        {hasSenderItem && !showOverlay && (
+          <div className="mt-4 rounded-2xl bg-emerald-500/[0.06] border border-emerald-500/25 p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold text-white">📡 Publish your {game.name} score</p>
+              {publishedScore !== null && (
+                <span className="text-xs text-emerald-400">Live: {formatPoints(publishedScore)} pts</span>
+              )}
+            </div>
+            <p className="text-xs text-slate-500">
+              Publishes your best {game.name} run so other players can cash it in — you earn the royalty % each time. Uses one Score Sender item.
+            </p>
+            <div className="flex items-center gap-3">
+              <label className="text-xs text-slate-400 whitespace-nowrap">Royalty: <span className="text-white font-semibold">{publishRoyalty}%</span></label>
+              <input type="range" min={10} max={90} step={5} value={publishRoyalty}
+                onChange={(e) => setPublishRoyalty(parseInt(e.target.value))}
+                className="flex-1 accent-emerald-500" />
+            </div>
+            <button onClick={publishScore} disabled={publishing}
+              className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold transition-colors disabled:opacity-50">
+              {publishing ? "Publishing…" : publishedScore !== null ? "Update published score" : "Publish score"}
+            </button>
+            {publishMsg && <p className="text-xs text-center text-emerald-400">{publishMsg}</p>}
           </div>
         )}
 
