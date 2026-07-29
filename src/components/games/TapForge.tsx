@@ -394,17 +394,21 @@ export default function TapForge({ onGameOver }: { onGameOver: (p: GameOverPaylo
 
   function handleCashOut() {
     gameOverRef.current = true;
-    saveState();
-    setGameOver(true);
+    const forged = Math.floor(totalCoinsRef.current);
     onGameOver({
-      coinsEarned: Math.floor(totalCoinsRef.current),
+      coinsEarned: forged,
       distance: 0,
       metadata: {
         prestige: prestigeCountRef.current,
-        totalCoins: Math.floor(totalCoinsRef.current),
-        score: Math.floor(totalCoinsRef.current),
+        totalCoins: forged,
+        score: forged,
       },
     });
+    // Cashing out collects the forged coins — reset the cash-out counter to 0
+    // (the board, spendable coins, and upgrades stay saved).
+    totalCoinsRef.current = 0;
+    saveState();
+    setGameOver(true);
   }
 
   function buyAutoForge() {
