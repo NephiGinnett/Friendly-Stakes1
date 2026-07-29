@@ -8,6 +8,7 @@ import { ALL_PAGES, VALID_SLUGS, groupBySection, DiscoveryPage } from "@/lib/dis
 export default function DiscoveryMenu() {
   const [open, setOpen] = useState(false);
   const [visited, setVisited] = useState<string[]>([]);
+  const [bossActive, setBossActive] = useState(false);
   const pathname = usePathname();
   const lastTracked = useRef<string>("");
   const menuRef = useRef<HTMLDivElement>(null);
@@ -30,6 +31,9 @@ export default function DiscoveryMenu() {
     fetch("/api/discovery/pages")
       .then((r) => r.ok ? r.json() : null)
       .then((d) => { if (d) setVisited(d.visited); });
+    fetch("/api/house")
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => { if (d) setBossActive(!!d.bossActive); });
   }, []);
 
   useEffect(() => {
@@ -41,7 +45,9 @@ export default function DiscoveryMenu() {
     return () => document.removeEventListener("mousedown", handleClick);
   }, [open]);
 
-  const sections = groupBySection(ALL_PAGES);
+  // Boss Battle only belongs in the nav while the boss is actually active.
+  const visiblePages = ALL_PAGES.filter((p) => p.slug !== "/house/boss" || bossActive);
+  const sections = groupBySection(visiblePages);
 
   return (
     <div ref={menuRef} className="fixed top-3 right-3 z-[60]">

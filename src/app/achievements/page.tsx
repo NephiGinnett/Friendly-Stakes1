@@ -137,12 +137,18 @@ export default function AchievementsPage() {
           >
             <div className="flex items-start gap-4">
               {/* Icon */}
-              <div className={`shrink-0 w-16 h-16 rounded-xl overflow-hidden flex items-center justify-center ${!a.unlocked ? "grayscale opacity-40" : ""}`}>
-                {a.imageUrl ? (
+              <div className={`relative shrink-0 w-16 h-16 rounded-xl overflow-hidden flex items-center justify-center ${!a.unlocked ? "grayscale opacity-40" : ""}`}>
+                {/* Emoji is the base; the image overlays it and, if it fails to
+                    load (missing file), is hidden so the emoji shows through. */}
+                <span className="text-4xl">{a.emoji}</span>
+                {a.imageUrl && (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={a.imageUrl} alt={a.name} className="w-full h-full object-cover" />
-                ) : (
-                  <span className="text-4xl">{a.emoji}</span>
+                  <img
+                    src={a.imageUrl}
+                    alt={a.name}
+                    className="absolute inset-0 w-full h-full object-cover"
+                    onError={(e) => { e.currentTarget.style.display = "none"; }}
+                  />
                 )}
               </div>
 
