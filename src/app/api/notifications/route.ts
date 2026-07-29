@@ -9,6 +9,8 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const bingoSeenAt = searchParams.get("bingoSeenAt");
   const seenDate = bingoSeenAt ? new Date(bingoSeenAt) : null;
+  const royaltySeenAt = searchParams.get("royaltySeenAt");
+  const royaltySeenDate = royaltySeenAt ? new Date(royaltySeenAt) : null;
 
   const [
     pendingTargeted,
@@ -61,6 +63,15 @@ export async function GET(req: Request) {
     prisma.adminDistributionClaim.findMany({ where: { userId: user.id }, select: { distributionId: true } }),
   ]);
 
+  // Score Sender royalties earned since the player last viewed their history.
+  const royalties = await prisma.pointLog.count({
+    where: {
+      userId: user.id,
+      reason: { startsWith: "Score Sender royalty" },
+      ...(royaltySeenDate ? { createdAt: { gt: royaltySeenDate } } : {}),
+    },
+  });
+
   const unvotedChallenges = myVotingChallenges.filter((c) => c.votes.length === 0).length;
   const unvotedWagers = myVotingWagers.filter((w) => w.votes.length === 0).length;
   const claimedIds = new Set(claimedDistributions.map((c) => c.distributionId));
@@ -74,5 +85,6 @@ export async function GET(req: Request) {
     bingo: latestBingoApproval?.claimedAt ?? null,
     boss: houseConfig?.bossActive ?? false,
     distributions: pendingDistributions,
+    royalties,
   });
 }
