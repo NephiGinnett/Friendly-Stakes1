@@ -69,6 +69,13 @@ export default function BigBetPage() {
       .then((u) => { if (u) load(); });
   }, [router, load]);
 
+  // Poll so the VIP selection, countdown, and win/loss resolution appear live
+  // for players without a manual refresh.
+  useEffect(() => {
+    const id = setInterval(() => { load(); }, 5000);
+    return () => clearInterval(id);
+  }, [load]);
+
   const submit = async () => {
     const amt = parseInt(stake);
     if (!amt || amt < 50) { setError("Minimum stake is 50 points"); return; }
