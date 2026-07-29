@@ -9,6 +9,8 @@ export default function DiscoveryMenu() {
   const [open, setOpen] = useState(false);
   const [visited, setVisited] = useState<string[]>([]);
   const [bossActive, setBossActive] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [wc, setWc] = useState<{ adminAt: string | null; playerAt: string | null; endAt: string | null }>({ adminAt: null, playerAt: null, endAt: null });
   const pathname = usePathname();
   const lastTracked = useRef<string>("");
   const menuRef = useRef<HTMLDivElement>(null);
@@ -33,7 +35,14 @@ export default function DiscoveryMenu() {
       .then((d) => { if (d) setVisited(d.visited); });
     fetch("/api/house")
       .then((r) => r.ok ? r.json() : null)
-      .then((d) => { if (d) setBossActive(!!d.bossActive); });
+      .then((d) => {
+        if (!d) return;
+        setBossActive(!!d.bossActive);
+        setWc({ adminAt: d.worldCupAdminAt ?? null, playerAt: d.worldCupPlayerAt ?? null, endAt: d.worldCupEventEndAt ?? null });
+      });
+    fetch("/api/auth/me")
+      .then((r) => r.ok ? r.json() : null)
+      .then((u) => { if (u) setIsAdmin(!!u.isAdmin); });
   }, []);
 
   useEffect(() => {
@@ -45,8 +54,20 @@ export default function DiscoveryMenu() {
     return () => document.removeEventListener("mousedown", handleClick);
   }, [open]);
 
-  // Boss Battle only belongs in the nav while the boss is actually active.
-  const visiblePages = ALL_PAGES.filter((p) => p.slug !== "/house/boss" || bossActive);
+  // World Cup pages only belong in the nav while the event is live (started
+  // and not past its end time); admins see it during the pre-player preview.
+  const now = new Date();
+  const wcStarted = !!(
+    (isAdmin && wc.adminAt && now >= new Date(wc.adminAt)) || (wc.playerAt && now >= new Date(wc.playerAt))
+  );
+  const wcLive = wcStarted && (!wc.endAt || now < new Date(wc.endAt));
+
+  const visiblePages = ALL_PAGES.filter((p) => {
+    // Boss Battle only belongs in the nav while the boss is actually active.
+    if (p.slug === "/house/boss" && !bossActive) return false;
+    if (p.section === "World Cup" && !wcLive) return false;
+    return true;
+  });
   const sections = groupBySection(visiblePages);
 
   return (

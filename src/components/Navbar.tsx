@@ -7,7 +7,7 @@ import { getDisplayVersion } from "@/lib/version";
 import TeamBadges from "@/components/TeamBadges";
 
 type User = { id: number; username: string; points: number; isAdmin: boolean; siteTheme?: string };
-type HouseStatus = { worldCupAdminAt: string | null; worldCupPlayerAt: string | null; casinoNightActive?: boolean };
+type HouseStatus = { worldCupAdminAt: string | null; worldCupPlayerAt: string | null; worldCupEventEndAt?: string | null; casinoNightActive?: boolean };
 type Notifs = {
   challenges: number;
   wagers: number;
@@ -87,9 +87,12 @@ export default function Navbar() {
   const now = new Date();
   const wcAdminAt = houseStatus?.worldCupAdminAt ? new Date(houseStatus.worldCupAdminAt) : null;
   const wcPlayerAt = houseStatus?.worldCupPlayerAt ? new Date(houseStatus.worldCupPlayerAt) : null;
-  const showWorldCup = wcAdminAt && wcPlayerAt && (
-    (user.isAdmin && now >= wcAdminAt) || now >= wcPlayerAt
+  const wcEndAt = houseStatus?.worldCupEventEndAt ? new Date(houseStatus.worldCupEventEndAt) : null;
+  const wcStarted = !!(
+    (user.isAdmin && wcAdminAt && now >= wcAdminAt) || (wcPlayerAt && now >= wcPlayerAt)
   );
+  // Hide once the event has ended (past its end time) — no longer "live".
+  const showWorldCup = wcStarted && (!wcEndAt || now < wcEndAt);
 
   // Casino Night is a simple on/off switch — no time gating, so the floor link
   // appears for everyone the moment an admin flips it live.
