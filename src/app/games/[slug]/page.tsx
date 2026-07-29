@@ -320,7 +320,7 @@ export default function GamePage() {
             <div className="flex items-center justify-between">
               <p className="text-sm font-semibold text-white">📡 Publish your {game.name} score</p>
               {publishedScore !== null && (
-                <span className="text-xs text-emerald-400">Live: {formatPoints(publishedScore)} pts</span>
+                <span className="text-xs text-emerald-400">Live: {formatPoints(publishedScore)} {game.leaderboardLabel.toLowerCase()}</span>
               )}
             </div>
             <p className="text-xs text-slate-500">
@@ -354,12 +354,13 @@ export default function GamePage() {
               <div className="mt-2 space-y-2">
                 {senderMsg && <p className="text-xs text-emerald-400 text-center">{senderMsg}</p>}
                 {senders.map(s => {
-                  const playerPts = Math.floor(s.score * (100 - s.royalty) / 100);
+                  const scorePts = Math.floor(s.score / game.conversionRate);
+                  const playerPts = scorePts - Math.floor(scorePts * s.royalty / 100);
                   return (
                     <div key={s.id} className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10">
                       <div>
                         <p className="text-sm text-white font-medium">{s.user.username}</p>
-                        <p className="text-xs text-slate-500">{formatPoints(s.score)} pts · {s.royalty}% royalty</p>
+                        <p className="text-xs text-slate-500">{formatPoints(s.score)} {game.leaderboardLabel.toLowerCase()} · {s.royalty}% royalty</p>
                       </div>
                       <button
                         onClick={async () => {

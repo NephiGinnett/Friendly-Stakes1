@@ -245,32 +245,35 @@ export default function TapForge({ onGameOver }: { onGameOver: (p: GameOverPaylo
     const g = gridRef.current;
     if (g[from] === null || g[to] === null || from === to || g[from] !== g[to]) return false;
     const t = g[from]!;
+    const el = slotsRef.current[to];
+    const r = el?.getBoundingClientRect();
+    const cx = r ? r.left + r.width / 2 : window.innerWidth / 2;
+    const cy = r ? r.top + r.height / 2 : window.innerHeight / 2;
+
     if (t >= 10) {
-      const v = sellVal(t) * 2;
+      // Two Legendaries — a grand cash-out (there is no tier above Legendary).
+      const v = Math.floor(sellVal(t) * 5);
       coinsRef.current += v;
       totalCoinsRef.current += v;
-      const el = slotsRef.current[to];
-      if (el) {
-        const r = el.getBoundingClientRect();
-        floatText("+" + Math.floor(v) + " \u{1FA99}", r.left + r.width / 2, r.top);
-      }
       g[from] = null; g[to] = null;
-    } else {
-      g[from] = null; g[to] = t + 1;
-      mergePopRef.current = to;
-      setTimeout(() => { mergePopRef.current = null; rerender(); }, 200);
+      screenShake();
+      spawnRing(cx, cy, "#ffffff", 30);
+      spawnSparks(cx, cy, "#ffd700", 40);
+      floatText(`💥 GRAND FORGE! +${v.toLocaleString()} 🪙`, cx, cy - 30, "#ffd700", true);
+      sfxPrestige();
+      rerender();
+      return true;
     }
+
+    // Normal merge — combine into the next tier.
+    g[from] = null; g[to] = t + 1;
+    mergePopRef.current = to;
+    setTimeout(() => { mergePopRef.current = null; rerender(); }, 200);
     screenShake();
-    const el = slotsRef.current[to];
-    if (el) {
-      const r = el.getBoundingClientRect();
-      const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
-      const color = MERGE_COLORS[Math.min(t - 1, MERGE_COLORS.length - 1)];
-      spawnSparks(cx, cy, color, 16 + t * 3);
-      if (t >= 5) spawnRing(cx, cy, color, 18);
-      const newTier = Math.min(t + 1, 10);
-      floatText(`${TIERS[newTier]!.emoji} ${TIERS[newTier]!.name}!`, cx, cy - 30, color, true);
-    }
+    const color = MERGE_COLORS[Math.min(t - 1, MERGE_COLORS.length - 1)];
+    spawnSparks(cx, cy, color, 16 + t * 3);
+    if (t >= 5) spawnRing(cx, cy, color, 18);
+    floatText(`${TIERS[t + 1]!.emoji} ${TIERS[t + 1]!.name}!`, cx, cy - 30, color, true);
     sfxMerge(t);
     rerender();
     return true;

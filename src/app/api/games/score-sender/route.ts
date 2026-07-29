@@ -45,16 +45,27 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid game" }, { status: 400 });
     }
 
+    const game = GAME_REGISTRY[gameId as keyof typeof GAME_REGISTRY];
+
     const item = await prisma.userItem.findFirst({
       where: { userId: user.id, itemType: "score_sender", usesLeft: { gt: 0 } },
     });
     if (!item) return NextResponse.json({ error: "You need a Score Sender item" }, { status: 400 });
 
-    const bestSession = await prisma.gameSession.findFirst({
+    // Publish the player's best GAME score (same metric the leaderboard shows),
+    // not their capped points — using it converts that score into points.
+    const sessions = await prisma.gameSession.findMany({
       where: { userId: user.id, gameId, endedAt: { not: null } },
-      orderBy: { pointsEarned: "desc" },
+      select: { metadata: true },
     });
-    if (!bestSession || bestSession.pointsEarned <= 0) {
+    let bestScore = 0;
+    for (const s of sessions) {
+      try {
+        const v = JSON.parse(s.metadata || "{}")[game.leaderboardMetric];
+        if (typeof v === "number" && v > bestScore) bestScore = v;
+      } catch { /* ignore */ }
+    }
+    if (bestScore <= 0) {
       return NextResponse.json({ error: "Play the game first to have a score to publish" }, { status: 400 });
     }
 
@@ -63,13 +74,13 @@ export async function POST(req: Request) {
     await prisma.$transaction(async (tx) => {
       await tx.scoreSender.upsert({
         where: { userId_gameId: { userId: user.id, gameId } },
-        create: { userId: user.id, gameId, score: bestSession.pointsEarned, royalty: royaltyNum },
-        update: { score: bestSession.pointsEarned, royalty: royaltyNum, active: true },
+        create: { userId: user.id, gameId, score: bestScore, royalty: royaltyNum },
+        update: { score: bestScore, royalty: royaltyNum, active: true },
       });
       await tx.userItem.update({ where: { id: item.id }, data: { usesLeft: { decrement: 1 } } });
     });
 
-    return NextResponse.json({ ok: true, score: bestSession.pointsEarned, royalty: royaltyNum });
+    return NextResponse.json({ ok: true, score: bestScore, royalty: royaltyNum });
   }
 
   if (action === "use") {
@@ -94,7 +105,10 @@ export async function POST(req: Request) {
     }
 
     const available = game.dailyCap - alreadyEarned;
-    const pointsFromSender = Math.min(sender.score, available);
+    // Convert the published game score into points via the game's rate, capped
+    // at the remaining daily allowance.
+    const scorePts = Math.floor(sender.score / game.conversionRate);
+    const pointsFromSender = Math.min(scorePts, available);
     const royaltyPts = Math.floor(pointsFromSender * sender.royalty / 100);
     const playerPts = pointsFromSender - royaltyPts;
 
