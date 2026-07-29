@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { logPoints } from "@/lib/pointLog";
 import { formatPoints } from "@/lib/utils";
-import { BASE_MULTIPLIER, ALL_IN_MULTIPLIER, BIG_BET_GAME_IDS } from "@/lib/casinoNight";
+import { BASE_MULTIPLIER, ALL_IN_MULTIPLIER, BIG_BET_GAME_IDS, spinRoulette, resolveRoulette, rouletteColor, spinSlots, type BetType } from "@/lib/casinoNight";
 import { ACHIEVEMENTS } from "@/lib/achievements";
 
 export async function GET() {
@@ -84,12 +84,22 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Casino Night is not active" }, { status: 403 });
   }
 
-  const { title, description, stake, gameType } = await req.json() as {
+  const body = await req.json() as {
+    action?: string;
     title?: string;
     description?: string;
-    stake: number;
+    stake?: number;
     gameType?: string;
+    betType?: string;
+    betValue?: string;
   };
+
+  // VIP self-resolves their approved Big Bet by playing their chosen game live.
+  if (body.action === "resolve") {
+    return resolveBigBet(user.id, config, body);
+  }
+
+  const { title, description, stake, gameType } = body;
 
   if (!stake || stake < 50 || !Number.isInteger(stake)) {
     return NextResponse.json({ error: "Minimum stake is 50 points" }, { status: 400 });
@@ -147,5 +157,78 @@ export async function POST(req: Request) {
     newAchievement: newAchievement
       ? ACHIEVEMENTS[newAchievement as keyof typeof ACHIEVEMENTS]
       : null,
+  });
+}
+
+// The selected VIP plays their chosen game live; the round decides the outcome
+// and the payout is their normal game winnings times their bonus multiplier
+// (stake returned on a win/push, escrow forfeited on a loss).
+async function resolveBigBet(
+  userId: number,
+  config: { bigBetForce5x?: boolean } | null,
+  body: { betType?: string; betValue?: string },
+) {
+  const bet = await prisma.bigBet.findFirst({ where: { userId, status: "approved" } });
+  if (!bet) {
+    return NextResponse.json({ error: "You don't have an approved Big Bet to play" }, { status: 400 });
+  }
+
+  const multiplier = config?.bigBetForce5x ? 5.0 : bet.multiplier;
+  const stake = bet.stake;
+
+  let won = false;
+  let pushed = false;
+  let nativeWinnings = 0; // normal net profit for this game outcome
+  let detail: Record<string, unknown> = {};
+
+  if (bet.gameType === "roulette") {
+    const validTypes = ["number", "color", "dozen", "half", "even_odd"];
+    const betType = body.betType ?? "";
+    const betValue = body.betValue ?? "";
+    if (!validTypes.includes(betType)) {
+      return NextResponse.json({ error: "Choose your roulette bet first" }, { status: 400 });
+    }
+    const result = spinRoulette();
+    nativeWinnings = resolveRoulette(result, betType as BetType, betValue, stake);
+    won = nativeWinnings > 0;
+    detail = { result, color: rouletteColor(result), betType, betValue };
+  } else if (bet.gameType === "slots") {
+    const spin = spinSlots(stake);
+    if (spin.isTriple) { won = true; nativeWinnings = spin.payout - stake; }
+    else if (spin.isDouble) { pushed = true; }
+    detail = { reels: spin.reels, isTriple: spin.isTriple, isDouble: spin.isDouble, multiplier: spin.multiplier };
+  } else {
+    return NextResponse.json({ error: "This game can't be played live yet — ask the admin to resolve it." }, { status: 400 });
+  }
+
+  const bonusWinnings = won ? Math.floor(nativeWinnings * multiplier) : 0;
+  const payoutCredit = won ? stake + bonusWinnings : pushed ? stake : 0;
+  const outcome = won ? "win" : pushed ? "push" : "loss";
+
+  await prisma.$transaction(async (tx) => {
+    await tx.bigBet.update({
+      where: { id: bet.id },
+      data: { outcome, payout: payoutCredit, multiplier, status: "completed", resolvedAt: new Date() },
+    });
+    if (won) {
+      await tx.user.update({ where: { id: userId }, data: { points: { increment: payoutCredit } } });
+      await logPoints(tx, userId, payoutCredit, `Strike It Rich WIN — ${bet.gameType} (winnings ×${multiplier} bonus)`);
+    } else if (pushed) {
+      await tx.user.update({ where: { id: userId }, data: { points: { increment: payoutCredit } } });
+      await logPoints(tx, userId, payoutCredit, `Strike It Rich push — ${bet.gameType}, stake returned`);
+    }
+  });
+
+  return NextResponse.json({
+    ok: true,
+    gameType: bet.gameType,
+    won,
+    pushed,
+    stake,
+    multiplier,
+    nativeWinnings: won ? nativeWinnings : 0,
+    bonusWinnings,
+    payout: payoutCredit,
+    detail,
   });
 }

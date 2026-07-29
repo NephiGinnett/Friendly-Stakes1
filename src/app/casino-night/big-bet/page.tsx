@@ -32,6 +32,33 @@ const GAME_ICONS: Record<string, string> = {
   roulette: "🎡", blackjack: "🃏", slots: "🎰", custom: "🎲",
 };
 
+type ResolveResult = {
+  gameType: string;
+  won: boolean;
+  pushed: boolean;
+  stake: number;
+  multiplier: number;
+  nativeWinnings: number;
+  bonusWinnings: number;
+  payout: number;
+  detail: { result?: number; color?: string; reels?: string[]; isTriple?: boolean; isDouble?: boolean };
+};
+
+const RBET_TYPES: { value: string; label: string }[] = [
+  { value: "color", label: "Red / Black" },
+  { value: "even_odd", label: "Even / Odd" },
+  { value: "half", label: "Low / High" },
+  { value: "dozen", label: "Dozen" },
+  { value: "number", label: "Straight #" },
+];
+const RBET_VALUES: Record<string, [string, string][]> = {
+  color: [["red", "Red"], ["black", "Black"]],
+  even_odd: [["even", "Even"], ["odd", "Odd"]],
+  half: [["low", "Low 1-18"], ["high", "High 19-36"]],
+  dozen: [["1", "1st 1-12"], ["2", "2nd 13-24"], ["3", "3rd 25-36"]],
+  number: Array.from({ length: 37 }, (_, i) => [String(i), String(i)] as [string, string]),
+};
+
 function Countdown({ target }: { target: string }) {
   const [text, setText] = useState("");
   useEffect(() => {
@@ -57,6 +84,10 @@ export default function BigBetPage() {
   const [chosenGame, setChosenGame] = useState<string>("roulette");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [rBetType, setRBetType] = useState<string>("color");
+  const [rBetValue, setRBetValue] = useState<string>("red");
+  const [resolving, setResolving] = useState(false);
+  const [resolveResult, setResolveResult] = useState<ResolveResult | null>(null);
 
   const load = useCallback(() =>
     fetch("/api/casino/big-bet")
@@ -94,6 +125,22 @@ export default function BigBetPage() {
     } else {
       setError(d.error ?? "Something went wrong");
     }
+  };
+
+  const resolveBet = async () => {
+    setResolving(true); setError("");
+    const gt = status?.myBet?.gameType;
+    const bodyData: Record<string, unknown> = { action: "resolve" };
+    if (gt === "roulette") { bodyData.betType = rBetType; bodyData.betValue = rBetValue; }
+    const res = await fetch("/api/casino/big-bet", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(bodyData),
+    });
+    const d = await res.json();
+    setResolving(false);
+    if (res.ok) { setResolveResult(d); load(); }
+    else setError(d.error ?? "Couldn't resolve the bet");
   };
 
   if (!status) return null;
@@ -139,12 +186,81 @@ export default function BigBetPage() {
                 Show time: <Countdown target={status.revealAt} />
               </p>
             )}
-            <p className="text-xs text-slate-500">Stand by. The House will call you to the stage.</p>
+            <p className="text-xs text-slate-500">Play your game below to resolve your bet live.</p>
+          </div>
+        )}
+
+        {/* Result of the VIP's live play */}
+        {resolveResult && (
+          <div className={`rounded-2xl border-2 p-5 text-center space-y-2 ${
+            resolveResult.won ? "bg-emerald-500/15 border-emerald-500/50"
+            : resolveResult.pushed ? "bg-slate-500/15 border-slate-500/40"
+            : "bg-rose-500/15 border-rose-500/50"
+          }`}>
+            <p className="text-3xl">{resolveResult.won ? "🎉" : resolveResult.pushed ? "➖" : "💀"}</p>
+            {resolveResult.gameType === "roulette" && resolveResult.detail.result !== undefined && (
+              <p className="text-sm text-slate-300">Landed on <span className="font-black text-white">{resolveResult.detail.result}</span> ({resolveResult.detail.color})</p>
+            )}
+            {resolveResult.gameType === "slots" && resolveResult.detail.reels && (
+              <p className="text-3xl tracking-widest">{resolveResult.detail.reels.join(" ")}</p>
+            )}
+            {resolveResult.won ? (
+              <>
+                <p className="text-2xl font-black text-emerald-400">+{formatPoints(resolveResult.payout)} pts</p>
+                <p className="text-xs text-slate-400">
+                  {formatPoints(resolveResult.nativeWinnings)} winnings ×{resolveResult.multiplier} bonus + {formatPoints(resolveResult.stake)} stake back
+                </p>
+              </>
+            ) : resolveResult.pushed ? (
+              <p className="text-lg font-bold text-slate-300">Push — {formatPoints(resolveResult.stake)} pts stake returned</p>
+            ) : (
+              <p className="text-lg font-bold text-rose-400">-{formatPoints(resolveResult.stake)} pts — the House keeps it</p>
+            )}
+          </div>
+        )}
+
+        {/* VIP live play panel */}
+        {isVIP && !resolveResult && status.myBet && (
+          <div className="rounded-2xl bg-white/5 border border-white/10 p-5 space-y-4">
+            <div className="text-center">
+              <p className="text-xs font-mono text-amber-400 uppercase tracking-widest">Play Your Big Bet</p>
+              <p className="text-sm text-slate-300 mt-1">
+                {GAME_ICONS[status.myBet.gameType] ?? "🎲"} {status.myBet.gameType.charAt(0).toUpperCase() + status.myBet.gameType.slice(1)} · stake locked at <span className="text-white font-bold">{formatPoints(status.myBet.stake)} pts</span>
+              </p>
+              <p className="text-xs text-slate-500">Win pays your normal winnings ×{status.myBet.multiplier} bonus.</p>
+            </div>
+
+            {status.myBet.gameType === "roulette" && (
+              <div className="space-y-3">
+                <div className="flex flex-wrap gap-2 justify-center">
+                  {RBET_TYPES.map((t) => (
+                    <button key={t.value} onClick={() => { setRBetType(t.value); setRBetValue(RBET_VALUES[t.value][0][0]); }}
+                      className={`rounded-lg border px-3 py-1.5 text-xs transition-colors ${rBetType === t.value ? "bg-violet-500/20 border-violet-500/50 text-white" : "bg-white/5 border-white/10 text-slate-400"}`}>
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+                <div className={rBetType === "number" ? "grid grid-cols-7 gap-1" : "flex flex-wrap gap-2 justify-center"}>
+                  {RBET_VALUES[rBetType].map(([val, label]) => (
+                    <button key={val} onClick={() => setRBetValue(val)}
+                      className={`rounded-lg border px-2 py-1.5 text-xs transition-colors ${rBetValue === val ? "bg-violet-500/20 border-violet-500/50 text-white" : "bg-white/5 border-white/10 text-slate-400"}`}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <button onClick={resolveBet} disabled={resolving}
+              className="w-full btn-primary disabled:opacity-40 py-3 text-base">
+              {resolving ? "Playing…" : status.myBet.gameType === "roulette" ? "🎡 Spin & Resolve" : "🎰 Spin & Resolve"}
+            </button>
+            {error && <p className="text-xs text-rose-400 text-center">{error}</p>}
           </div>
         )}
 
         {/* Current Spotlight */}
-        {!isVIP && spotlightBet && (
+        {!isVIP && !resolveResult && spotlightBet && (
           <div className="rounded-2xl bg-rose-500/10 border border-rose-500/30 p-5 text-center space-y-2">
             <p className="text-xs font-mono text-rose-400 uppercase tracking-widest">
               {status.approvedBet ? "🎟️ Tonight's VIP" : "🔥 Current Leader"}
