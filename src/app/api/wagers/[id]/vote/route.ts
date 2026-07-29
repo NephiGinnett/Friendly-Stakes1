@@ -56,17 +56,18 @@ export async function POST(
       await checkThumbAchievement(user.id);
     }
 
-    // Auto-settle: a side wins when its weighted votes exceed half of all participants.
-    // totalParticipants = creator (1) + all entries, matching who can actually vote.
+    // Auto-settle once 2+ (weighted) votes agree on one side — matching the
+    // stated rule. A Thumb on the Scale makes a single vote weigh 2, so it can
+    // settle on its own; otherwise two agreeing votes do it. The leading side
+    // must strictly exceed the other so a 2–2 split waits for a tiebreaker.
     const allVotes = await prisma.vote.findMany({ where: { wagerId } });
-    const totalParticipants = 1 + wager.entries.length;
-    const majorityThreshold = totalParticipants / 2;
+    const SETTLE_AT = 2;
     const forWeight = allVotes.filter((v) => v.choice === "for").reduce((sum, v) => sum + v.weight, 0);
     const againstWeight = allVotes.filter((v) => v.choice === "against").reduce((sum, v) => sum + v.weight, 0);
 
-    if (forWeight > majorityThreshold) {
+    if (forWeight >= SETTLE_AT && forWeight > againstWeight) {
       await doSettle(wagerId, "for", "vote");
-    } else if (againstWeight > majorityThreshold) {
+    } else if (againstWeight >= SETTLE_AT && againstWeight > forWeight) {
       await doSettle(wagerId, "against", "vote");
     }
 

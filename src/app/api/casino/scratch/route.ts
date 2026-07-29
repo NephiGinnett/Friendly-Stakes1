@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { logPoints } from "@/lib/pointLog";
 import { scratchResult, SCRATCH_COSTS, ScratchTier } from "@/lib/casinoNight";
 import { ACHIEVEMENTS } from "@/lib/achievements";
+import { SHOP_ITEMS } from "@/lib/shop";
 
 export async function GET() {
   const user = await getCurrentUser();
@@ -53,7 +54,7 @@ export async function POST(req: Request) {
   }
 
   const jackpotPool = config.scratchJackpot;
-  const { grid, payout, isJackpot } = scratchResult(tier, jackpotPool);
+  const { grid, payout, isJackpot, itemsWon } = scratchResult(tier, jackpotPool);
 
   let newAchievement: string | null = null;
 
@@ -80,6 +81,18 @@ export async function POST(req: Request) {
       await tx.user.update({ where: { id: user.id }, data: { points: { increment: payout } } });
       await logPoints(tx, user.id, payout, `Scratch card win (${tier})`);
     }
+
+    // Gift lines award power-up items.
+    for (const itemType of itemsWon) {
+      const def = SHOP_ITEMS[itemType as keyof typeof SHOP_ITEMS];
+      if (!def) continue;
+      const existing = await tx.userItem.findFirst({ where: { userId: user.id, itemType, usesLeft: { gt: 0 } } });
+      if (existing) {
+        await tx.userItem.update({ where: { id: existing.id }, data: { usesLeft: { increment: def.maxUses } } });
+      } else {
+        await tx.userItem.create({ data: { userId: user.id, itemType, usesLeft: def.maxUses } });
+      }
+    }
   });
 
   const updatedConfig = await prisma.houseConfig.findUnique({ where: { id: 1 } });
@@ -88,6 +101,10 @@ export async function POST(req: Request) {
     grid,
     payout,
     isJackpot,
+    itemsWon: itemsWon.map((t) => {
+      const def = SHOP_ITEMS[t as keyof typeof SHOP_ITEMS];
+      return { itemType: t, name: def?.name ?? t, emoji: def?.emoji ?? "🎁" };
+    }),
     jackpotAwarded: isJackpot ? jackpotPool : 0,
     newJackpot: updatedConfig?.scratchJackpot ?? 0,
     newAchievement: newAchievement

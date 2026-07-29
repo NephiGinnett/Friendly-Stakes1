@@ -180,6 +180,16 @@ function ColorCheckModal({ order, mixColor, onClose }: { order: Order; mixColor:
 
 // ── Main component ────────────────────────────────────────────────────────────
 
+// Persist shop upgrades and money between plays.
+const SAVE_KEY = "paintshop:v1";
+function loadPaintSave(): { total?: number; upgradeLevels?: Record<string, number> } | null {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch { /* ignore */ }
+  return null;
+}
+
 type Props = { onGameOver: (payload: GameOverPayload) => void };
 
 export default function PaintShop({ onGameOver }: Props) {
@@ -209,7 +219,7 @@ export default function PaintShop({ onGameOver }: Props) {
   const [mixColor, setMixColor] = useState<RGB>({ r: 128, g: 128, b: 128 });
   const [orderStartTime, setOrderStartTime] = useState<number | null>(null);
   const [elapsed, setElapsed] = useState(0);
-  const [total, setTotal] = useState(0);
+  const [total, setTotal] = useState(() => loadPaintSave()?.total ?? 0);
   const [message, setMessage] = useState("Walk to the counter to take an order!");
   const [lastResult, setLastResult] = useState<OrderResult | null>(null);
   const [activeZone, setActiveZone] = useState<ZoneKey | null>(null);
@@ -222,7 +232,12 @@ export default function PaintShop({ onGameOver }: Props) {
   const [orderHistory, setOrderHistory] = useState<HistoryItem[]>([]);
   const [perfectMatch, setPerfectMatch] = useState(false);
   const [, setClockTick] = useState(0);
-  const [upgradeLevels, setUpgradeLevels] = useState<Record<string, number>>({});
+  const [upgradeLevels, setUpgradeLevels] = useState<Record<string, number>>(() => loadPaintSave()?.upgradeLevels ?? {});
+
+  // Persist upgrades + money whenever they change.
+  useEffect(() => {
+    try { localStorage.setItem(SAVE_KEY, JSON.stringify({ total, upgradeLevels })); } catch { /* ignore */ }
+  }, [total, upgradeLevels]);
   const [showShop, setShowShop] = useState(false);
 
   const skatesLevel = upgradeLevels["skates"] ?? 0;
