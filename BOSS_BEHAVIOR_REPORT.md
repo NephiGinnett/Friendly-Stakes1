@@ -105,10 +105,15 @@ spinning at midnight raises everyone's risk. Top healer earns `top_healer` /
 
 ### Attack 5 — The Sacrifice (player-on-player, House-brokered)
 
-`src/app/api/admin/house/sacrifice/route.ts`
+`src/app/api/admin/house/sacrifice/route.ts` (admin) · `src/app/api/house/sacrifice/route.ts` (players)
 
-Not strictly a boss attack — the boss just profits.
+Not strictly a boss attack — the boss just profits. **Fully manual: there is no
+cron and no trigger condition.** Nothing opens, closes, or resolves it except an
+admin POSTing `action: "open"` / `"close"` / `"execute"`.
 
+- Opening clears all previous votes. One vote per player, changeable any time
+  while open. Admins can't vote and can't be targeted
+- **Thumb on the Scale** doubles a vote to weight 2, consuming one charge
 - Players vote; highest weighted vote loses **their entire balance** (ties broken randomly)
 - Half is distributed evenly to every surviving non-admin player
 - **Half of that half** is banked as `sacrificeBonusHp` and added to the boss's max
@@ -194,6 +199,9 @@ route. Unlikely, but it would silently eat two achievements and 700 points.
 
 ### 4.6 Minor
 
+- Changing your sacrifice vote after spending a Thumb on the Scale silently resets
+  you to weight 1 — the `upsert` writes `weight` unconditionally, and the charge is
+  already gone
 - Attack route validates `amount > user.points` before the transaction, not inside
   it — concurrent attacks could overdraw
 - `pool.sort(() => Math.random() - 0.5)` in `executeHouseStrike` is a statistically
@@ -219,7 +227,12 @@ check the admin panel or the /house page on the Railway deploy.
 | 1 | Glitch | ✅ | ✅ | Corrupted text only. No mechanical change. |
 | 2 | Aware | ✅ | ✅ | More corrupted text. No mechanical change. |
 | 3 | **Hostile** | 🔒 | 🔒 | **Casino goes dark. Nothing else.** |
-| 4 | BOSS MODE | 🔒 | 🔒 | Everything in §2 switches on. |
+| 4 | BOSS MODE | ✅ | ✅ | Everything in §2 switches on — **and the casino re-opens as a trap** |
+
+`HOUSE_PHASES` marks the wheel and blackjack locked at *both* 3 and 4, but both
+routes explicitly bypass the lock at phase 4 (`spin/route.ts:29`,
+`blackjack/start/route.ts:19`) so that losses can heal the boss. Phase 3 is
+therefore the **only** phase where the casino is genuinely dark.
 
 ### The thing to know about Phase 3
 
