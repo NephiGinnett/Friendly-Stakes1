@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { logPoints } from "@/lib/pointLog";
 import { spinRoulette, resolveRoulette, BetType } from "@/lib/casinoNight";
 import { ACHIEVEMENTS } from "@/lib/achievements";
+import { healBossFromLoss } from "@/lib/bossHeal";
 
 export async function GET() {
   const user = await getCurrentUser();
@@ -60,6 +61,8 @@ export async function POST(req: Request) {
       await logPoints(tx, user.id, net, `Roulette win — ${betType} ${betValue} on ${result}`);
     } else {
       await logPoints(tx, user.id, -betAmount, `Roulette loss — ${betType} ${betValue} on ${result}`);
+      // Phase 4: what the table takes, The House keeps.
+      await healBossFromLoss(tx, betAmount);
     }
 
     await tx.rouletteGame.create({

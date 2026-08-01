@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { logPoints } from "@/lib/pointLog";
 import { spinSlots } from "@/lib/casinoNight";
 import { ACHIEVEMENTS } from "@/lib/achievements";
+import { healBossFromLoss } from "@/lib/bossHeal";
 
 export async function GET() {
   const user = await getCurrentUser();
@@ -54,6 +55,9 @@ export async function POST(req: Request) {
     } else {
       await logPoints(tx, user.id, -betAmount, `Slots loss — ${result.reels.join(" ")}`);
     }
+
+    // Phase 4: what the table takes, The House keeps.
+    if (net < 0) await healBossFromLoss(tx, -net);
 
     if (isAllIn) {
       const existing = await tx.userAchievement.findUnique({

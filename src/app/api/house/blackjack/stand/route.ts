@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { handValue } from "@/lib/house";
 import { log } from "@/lib/pointLog";
+import { healBoss } from "@/lib/bossHeal";
 
 async function runDealer(game: { userId: number; playerHand: string; dealerHand: string; deck: string; bet: number }) {
   const playerHand: string[] = JSON.parse(game.playerHand);
@@ -66,12 +67,7 @@ export async function POST() {
 
   // Phase 4: player loss heals the boss
   if (result.status === "dealer_win" || result.status === "player_bust") {
-    const config = await prisma.houseConfig.findUnique({ where: { id: 1 } });
-    if (config?.bossActive && config.bossHp > 0 && config.phase === 4) {
-      const healHp = Math.floor(game.bet / 2);
-      const newHp = Math.min(config.bossHp + healHp, config.bossMaxHp);
-      await prisma.houseConfig.update({ where: { id: 1 }, data: { bossHp: newHp } });
-    }
+    await healBoss(game.bet);
   }
 
   return NextResponse.json({ game: result, newPoints: result.newPoints });

@@ -26,7 +26,9 @@ export async function POST(req: Request) {
     if (typeof delta !== "number") return NextResponse.json({ error: "delta must be a number" }, { status: 400 });
     const config = await prisma.houseConfig.findUnique({ where: { id: 1 } });
     if (!config?.bossActive) return NextResponse.json({ error: "Boss not active" }, { status: 400 });
-    const newHp = Math.max(0, Math.min(config.bossHp + delta, config.bossMaxHp));
+    // Not capped at bossMaxHp — overheal is a legitimate state and admin
+    // adjustments shouldn't silently erase it.
+    const newHp = Math.max(0, config.bossHp + delta);
     await prisma.houseConfig.update({ where: { id: 1 }, data: { bossHp: newHp } });
     return NextResponse.json({ ok: true, bossHp: newHp, bossMaxHp: config.bossMaxHp });
   }

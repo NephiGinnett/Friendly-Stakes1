@@ -5,6 +5,7 @@ import { logPoints } from "@/lib/pointLog";
 import { formatPoints } from "@/lib/utils";
 import { BASE_MULTIPLIER, ALL_IN_MULTIPLIER, BIG_BET_GAME_IDS, spinRoulette, resolveRoulette, rouletteColor, spinSlots, type BetType } from "@/lib/casinoNight";
 import { ACHIEVEMENTS } from "@/lib/achievements";
+import { healBossFromLoss } from "@/lib/bossHeal";
 
 export async function GET() {
   const user = await getCurrentUser();
@@ -216,6 +217,9 @@ async function resolveBigBet(
     } else if (pushed) {
       await tx.user.update({ where: { id: userId }, data: { points: { increment: payoutCredit } } });
       await logPoints(tx, userId, payoutCredit, `Strike It Rich push — ${bet.gameType}, stake returned`);
+    } else {
+      // Phase 4: the forfeited escrow feeds The House. Big stakes, big heals.
+      await healBossFromLoss(tx, stake);
     }
   });
 

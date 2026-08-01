@@ -93,15 +93,41 @@ Attacking the boss while it sleeps (8pm–6am local) risks waking it.
 
 ### Attack 4 — Boss Healing from Losses
 
-`src/app/api/house/spin/route.ts`, lines 64–71
+`src/lib/bossHeal.ts` — every losing table routes through `healBossFromLoss()`
 
-At Phase 4, any point loss on the wheel heals the boss at the same 2:1 ratio
-attacks use (`House Wins` = −75 pts → +37 HP back). Capped at `bossMaxHp`.
+At Phase 4, **every net point loss anywhere in the app feeds The House** at the same
+2:1 ratio attacks use. All eight loss paths are wired:
+
+| Table | Heals on | Fed by |
+|---|---|---|
+| Wheel | Any negative outcome (`House Wins` −75 → +37 HP) | `house/spin` |
+| Blackjack | Bust or dealer win | `house/blackjack/hit`, `.../stand` |
+| Slots | Net loss (a "double" returns the bet → no heal) | `casino/slots` |
+| Roulette | Losing bet | `casino/roulette` |
+| Scratch | Cost minus payout, when the card pays back less than it cost | `casino/scratch` |
+| Strike It Rich | Forfeited escrow on a loss (push/win return the stake) | `casino/big-bet`, `admin/casino` |
+
+**Overheal is deliberate and uncapped.** `bossHp` can be pushed above `bossMaxHp` —
+a bad losing streak makes The House stronger than it started, and the group has to
+claw it back down. The boss page shows a pulsing red `⚠ OVERCHARGED — 137.4%
+integrity` bar in that state. Admin HP adjustments no longer clamp to max either,
+so an admin nudge can't silently erase an overheal.
+
+The helper no-ops unless the boss is live (phase 4, active, `bossHp > 0`), so
+ordinary Casino Night play outside the fight is unaffected, and a defeated House is
+never resurrected by a late losing hand.
 
 Separately, playing **any** game during the sleep window logs a 25 HP `sleep_game`
 "noise" entry that feeds the wake-chance meter. Players get no warning that
-spinning at midnight raises everyone's risk. Top healer earns `top_healer` /
-"Unwitting Accomplice" (+300 pts).
+spinning at midnight raises everyone's risk.
+
+> **Note on the top-healer achievement:** `top_healer` / "Unwitting Accomplice" is
+> computed from `sleep_game` rows — i.e. *playing during the sleep window* — not
+> from actual HP restored. Real heals aren't logged per-player at all. If you want
+> the award to reflect who actually fed the boss, that needs a separate `source`
+> on `HouseDamageLog` plus updates to the five queries that currently treat every
+> non-`sleep_game` row as damage. Left alone deliberately — changing it now would
+> corrupt the damage leaderboard.
 
 ### Attack 5 — The Sacrifice (player-on-player, House-brokered)
 
