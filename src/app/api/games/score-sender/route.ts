@@ -4,6 +4,9 @@ import { getCurrentUser } from "@/lib/auth";
 import { GAME_REGISTRY } from "@/lib/gameRegistry";
 import { logPoints } from "@/lib/pointLog";
 
+/** Largest value a Prisma/SQLite `Int` column can hold. */
+const INT32_MAX = 2147483647;
+
 function todayDateStr() {
   const d = new Date();
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
@@ -58,16 +61,27 @@ export async function POST(req: Request) {
       where: { userId: user.id, gameId, endedAt: { not: null } },
       select: { metadata: true },
     });
-    let bestScore = 0;
+    let rawBest = 0;
     for (const s of sessions) {
       try {
         const v = JSON.parse(s.metadata || "{}")[game.leaderboardMetric];
-        if (typeof v === "number" && v > bestScore) bestScore = v;
+        if (typeof v === "number" && Number.isFinite(v) && v > rawBest) rawBest = v;
       } catch { /* ignore */ }
     }
-    if (bestScore <= 0) {
+    if (rawBest <= 0) {
       return NextResponse.json({ error: "Play the game first to have a score to publish" }, { status: 400 });
     }
+
+    // ScoreSender.score is a 32-bit INT column. Idle games like Tap Forge can
+    // run well past that ceiling, and writing an over-large value throws
+    // ("does not fit in an INT column"), which used to surface as a stalled
+    // Publish button. Clamp instead — a published score is only ever converted
+    // into points at the game's rate and then capped by the daily allowance, so
+    // anything at or above the ceiling is already worth a full day's cap. The
+    // player's true score is unaffected on the leaderboard, which reads the
+    // uncapped value straight from session metadata.
+    const bestScore = Math.min(Math.floor(rawBest), INT32_MAX);
+    const clamped = bestScore < Math.floor(rawBest);
 
     const royaltyNum = Math.max(10, Math.min(90, parseInt(royalty) || 50));
 
@@ -80,7 +94,7 @@ export async function POST(req: Request) {
       await tx.userItem.update({ where: { id: item.id }, data: { usesLeft: { decrement: 1 } } });
     });
 
-    return NextResponse.json({ ok: true, score: bestScore, royalty: royaltyNum });
+    return NextResponse.json({ ok: true, score: bestScore, royalty: royaltyNum, clamped, rawScore: rawBest });
   }
 
   if (action === "use") {
