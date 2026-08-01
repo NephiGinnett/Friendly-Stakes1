@@ -76,29 +76,50 @@ export default function GamePage() {
     });
   }, [slug]);
 
+  // Both of these must clear `publishing` on every path — an uncaught throw
+  // (network drop, or a non-JSON error body from a 500) would otherwise leave
+  // the button stuck on "Publishing…" forever with no way to retry.
   const publishScore = async () => {
     setPublishing(true); setPublishMsg("");
-    const res = await fetch("/api/games/score-sender", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "publish", gameId: slug, royalty: publishRoyalty }),
-    });
-    const d = await res.json();
-    setPublishing(false);
-    if (res.ok) { setPublishMsg(`Published ${formatPoints(d.score)} at ${d.royalty}% royalty!`); loadSenders(); }
-    else setPublishMsg(d.error ?? "Couldn't publish");
+    try {
+      const res = await fetch("/api/games/score-sender", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "publish", gameId: slug, royalty: publishRoyalty }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setPublishMsg(
+          d.clamped
+            ? `Published at the ${formatPoints(d.score)} ceiling (your ${formatPoints(d.rawScore)} still stands on the leaderboard) — ${d.royalty}% royalty!`
+            : `Published ${formatPoints(d.score)} at ${d.royalty}% royalty!`
+        );
+        loadSenders();
+      } else {
+        setPublishMsg(d.error ?? "Couldn't publish");
+      }
+    } catch {
+      setPublishMsg("Couldn't reach the server — try again.");
+    } finally {
+      setPublishing(false);
+    }
   };
 
   const unpublishScore = async () => {
     setPublishing(true); setPublishMsg("");
-    const res = await fetch("/api/games/score-sender", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "unpublish", gameId: slug }),
-    });
-    setPublishing(false);
-    if (res.ok) { setPublishMsg("Removed from the market."); loadSenders(); }
-    else setPublishMsg("Couldn't remove it");
+    try {
+      const res = await fetch("/api/games/score-sender", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "unpublish", gameId: slug }),
+      });
+      if (res.ok) { setPublishMsg("Removed from the market."); loadSenders(); }
+      else setPublishMsg("Couldn't remove it");
+    } catch {
+      setPublishMsg("Couldn't reach the server — try again.");
+    } finally {
+      setPublishing(false);
+    }
   };
 
   useEffect(() => {
