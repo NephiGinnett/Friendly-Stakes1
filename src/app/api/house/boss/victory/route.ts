@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import { DAMAGE_WHERE, HEAL_WHERE } from "@/lib/houseLog";
 
 export async function GET() {
   const user = await getCurrentUser();
@@ -15,18 +16,18 @@ export async function GET() {
     ? await prisma.user.findUnique({ where: { id: config.killerUserId }, select: { username: true } })
     : null;
 
-  // Damage rankings (attacks only, exclude sleep_game noise)
+  // Damage rankings — real damage only, excluding heals and sleep-window noise
   const damageRaw = await prisma.houseDamageLog.groupBy({
     by: ["userId"],
-    where: { source: { not: "sleep_game" } },
+    where: DAMAGE_WHERE,
     _sum: { amount: true },
     orderBy: { _sum: { amount: "desc" } },
   });
 
-  // Heal rankings (game losses that healed the boss)
+  // Heal rankings — HP actually restored by players losing at the tables
   const healRaw = await prisma.houseDamageLog.groupBy({
     by: ["userId"],
-    where: { source: "sleep_game" },
+    where: HEAL_WHERE,
     _sum: { amount: true },
     orderBy: { _sum: { amount: "desc" } },
   });

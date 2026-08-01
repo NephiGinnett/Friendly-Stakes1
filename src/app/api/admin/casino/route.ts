@@ -180,7 +180,7 @@ export async function POST(req: Request) {
         await logPoints(tx, bet.userId, payout, `Strike It Rich WIN (×${effectiveMultiplier})`);
       } else if (outcome === "loss") {
         // Phase 4: the forfeited escrow feeds The House.
-        await healBossFromLoss(tx, bet.stake);
+        await healBossFromLoss(tx, bet.userId, bet.stake);
       }
     });
 

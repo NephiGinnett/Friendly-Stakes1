@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { HEAL_SOURCE } from "@/lib/houseLog";
 
 /** Points a player must lose to restore 1 HP — mirrors the 2 pts = 1 HP attack ratio. */
 export const HEAL_RATIO = 2;
@@ -14,15 +15,20 @@ export const HEAL_RATIO = 2;
  * No-ops unless the boss is live (phase 4, active, not yet dead) — so ordinary
  * Casino Night play outside the boss fight is unaffected.
  *
+ * Every heal is attributed to the player who lost the points via a
+ * `HouseDamageLog` row with source `heal`, which is what drives the healing
+ * leaderboard and the Unwitting Accomplice award.
+ *
  * Pass a transaction client when the caller is already inside `$transaction`
  * so the heal commits atomically with the point deduction.
  *
  * @param db     prisma client or transaction client
+ * @param userId the player whose loss is feeding The House
  * @param pointsLost  net points the player lost (positive number)
  * @returns HP restored (0 if the boss isn't live or the loss was too small)
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function healBossFromLoss(db: any, pointsLost: number): Promise<number> {
+export async function healBossFromLoss(db: any, userId: number, pointsLost: number): Promise<number> {
   if (!Number.isFinite(pointsLost) || pointsLost <= 0) return 0;
 
   const config = await db.houseConfig.findUnique({ where: { id: 1 } });
@@ -37,10 +43,15 @@ export async function healBossFromLoss(db: any, pointsLost: number): Promise<num
     data: { bossHp: { increment: healHp } },
   });
 
+  // Attribute the heal so the healing board reflects HP actually restored.
+  await db.houseDamageLog.create({
+    data: { userId, amount: healHp, source: HEAL_SOURCE },
+  });
+
   return healHp;
 }
 
 /** Convenience wrapper for callers outside a transaction. */
-export async function healBoss(pointsLost: number): Promise<number> {
-  return healBossFromLoss(prisma, pointsLost);
+export async function healBoss(userId: number, pointsLost: number): Promise<number> {
+  return healBossFromLoss(prisma, userId, pointsLost);
 }

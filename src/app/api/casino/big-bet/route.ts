@@ -5,6 +5,7 @@ import { logPoints } from "@/lib/pointLog";
 import { formatPoints } from "@/lib/utils";
 import { BASE_MULTIPLIER, ALL_IN_MULTIPLIER, BIG_BET_GAME_IDS, spinRoulette, resolveRoulette, rouletteColor, spinSlots, type BetType } from "@/lib/casinoNight";
 import { ACHIEVEMENTS } from "@/lib/achievements";
+import { isCasinoNightOpen } from "@/lib/casinoAccess";
 import { healBossFromLoss } from "@/lib/bossHeal";
 
 export async function GET() {
@@ -38,7 +39,7 @@ export async function GET() {
   const biggest = pendingBets[0] ?? null;
 
   return NextResponse.json({
-    casinoActive: config?.casinoNightActive ?? false,
+    casinoActive: isCasinoNightOpen(config),
     revealAt: config?.bigBetRevealAt ?? null,
     selectedGame: config?.bigBetGameType || null,
     myPoints: user.points,
@@ -81,7 +82,7 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const config = await prisma.houseConfig.findUnique({ where: { id: 1 } });
-  if (!config?.casinoNightActive) {
+  if (!isCasinoNightOpen(config)) {
     return NextResponse.json({ error: "Casino Night is not active" }, { status: 403 });
   }
 
@@ -219,7 +220,7 @@ async function resolveBigBet(
       await logPoints(tx, userId, payoutCredit, `Strike It Rich push — ${bet.gameType}, stake returned`);
     } else {
       // Phase 4: the forfeited escrow feeds The House. Big stakes, big heals.
-      await healBossFromLoss(tx, stake);
+      await healBossFromLoss(tx, userId, stake);
     }
   });
 

@@ -121,13 +121,32 @@ Separately, playing **any** game during the sleep window logs a 25 HP `sleep_gam
 "noise" entry that feeds the wake-chance meter. Players get no warning that
 spinning at midnight raises everyone's risk.
 
-> **Note on the top-healer achievement:** `top_healer` / "Unwitting Accomplice" is
-> computed from `sleep_game` rows — i.e. *playing during the sleep window* — not
-> from actual HP restored. Real heals aren't logged per-player at all. If you want
-> the award to reflect who actually fed the boss, that needs a separate `source`
-> on `HouseDamageLog` plus updates to the five queries that currently treat every
-> non-`sleep_game` row as damage. Left alone deliberately — changing it now would
-> corrupt the damage leaderboard.
+### Log taxonomy — `src/lib/houseLog.ts`
+
+`HouseDamageLog` stores three kinds of event that must never be summed together.
+Queries now select by explicit source list rather than "everything that isn't
+`sleep_game`":
+
+| Kind | Sources | Meaning |
+|---|---|---|
+| **Damage** | `attack`, `sleep_attack`, `bingo` | Reduces boss HP. The damage board and Public Enemy #1. |
+| **Heal** | `heal` | HP actually restored by a player losing. The healing board and Unwitting Accomplice. |
+| **Noise** | `sleep_game` | Casino use during the sleep window. Moves the wake meter only — neither damage nor healing. |
+
+`top_healer` / "Unwitting Accomplice" now measures **HP actually restored**, which
+is what its description always claimed ("your losses at the wheel and table healed
+THE HOUSE"). It previously ranked players by `sleep_game` rows — i.e. by who played
+most during the sleep window, which had nothing to do with healing.
+
+Two related bugs fixed by the same change: `resistance_fighter` (200+ HP dealt)
+aggregated the player's damage log with **no source filter at all**, so sleep-window
+noise counted toward a damage achievement — a player could unlock it by playing
+games at night without ever attacking. Both copies of that query (boss attack and
+bingo approval) now filter to damage sources.
+
+Heals are also excluded from the wake-chance meter — being fed is not a
+disturbance, and counting heals would let a losing streak wake The House on the
+loser's behalf.
 
 ### Attack 5 — The Sacrifice (player-on-player, House-brokered)
 
@@ -259,6 +278,21 @@ check the admin panel or the /house page on the Railway deploy.
 routes explicitly bypass the lock at phase 4 (`spin/route.ts:29`,
 `blackjack/start/route.ts:19`) so that losses can heal the boss. Phase 3 is
 therefore the **only** phase where the casino is genuinely dark.
+
+### Casino floor access — `src/lib/casinoAccess.ts`
+
+Roulette, scratch cards and Strike It Rich are gated on `casinoNightActive`, so
+before this change they were unreachable during a boss fight unless an admin also
+ran a Casino Night event — API-blocked *and* hidden from the nav. That made them
+unable to feed The House in practice.
+
+`isCasinoNightOpen()` now opens the floor when **either** Casino Night is live
+**or** the boss fight is running (phase 4 + `bossActive`). Both close on their own:
+Casino Night when the admin flips it off, the boss floor when The House dies.
+
+The nav needed a second fix. Casino Night's tab *replaces* the House tab, which
+during a boss fight would have hidden the fight itself. During the fight both now
+show — 🎰 for the boss, 🎲 for the tables that feed it.
 
 ### The thing to know about Phase 3
 

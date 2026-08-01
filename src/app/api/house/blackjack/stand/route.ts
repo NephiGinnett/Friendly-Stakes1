@@ -67,7 +67,7 @@ export async function POST() {
 
   // Phase 4: player loss heals the boss
   if (result.status === "dealer_win" || result.status === "player_bust") {
-    await healBoss(game.bet);
+    await healBoss(user.id, game.bet);
   }
 
   return NextResponse.json({ game: result, newPoints: result.newPoints });

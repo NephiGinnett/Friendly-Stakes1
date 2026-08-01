@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { buildDeck, handValue, isNaturalBlackjack, HOUSE_PHASES } from "@/lib/house";
 import { log } from "@/lib/pointLog";
 import { todayUtcDate, isStrikeWindow } from "@/lib/houseStrike";
+import { NOISE_SOURCE } from "@/lib/houseLog";
 
 const DAILY_LIMIT = 3;
 
@@ -54,7 +55,7 @@ export async function POST(req: Request) {
 
   // Playing during sleep window counts as noise — adds to wake chance
   if (!isStrikeWindow()) {
-    await prisma.houseDamageLog.create({ data: { userId: user.id, amount: 25, source: "sleep_game" } });
+    await prisma.houseDamageLog.create({ data: { userId: user.id, amount: 25, source: NOISE_SOURCE } });
   }
 
   let status = "active";

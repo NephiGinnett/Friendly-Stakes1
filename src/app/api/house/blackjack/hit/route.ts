@@ -43,7 +43,7 @@ export async function POST() {
     await log(user.id, 0, `Blackjack: bust (${pv}), lost ${game.bet} pts`);
 
     // Phase 4: bust heals the boss
-    await healBoss(game.bet);
+    await healBoss(user.id, game.bet);
   }
 
   const updated = await prisma.user.findUnique({ where: { id: user.id }, select: { points: true } });
