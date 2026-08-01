@@ -4,6 +4,8 @@ import { getCurrentUser } from "@/lib/auth";
 import { logPoints } from "@/lib/pointLog";
 import { spinSlots } from "@/lib/casinoNight";
 import { ACHIEVEMENTS } from "@/lib/achievements";
+import { isCasinoNightOpen } from "@/lib/casinoAccess";
+import { healBossFromLoss } from "@/lib/bossHeal";
 
 export async function GET() {
   const user = await getCurrentUser();
@@ -11,7 +13,7 @@ export async function GET() {
 
   const config = await prisma.houseConfig.findUnique({ where: { id: 1 } });
   return NextResponse.json({
-    casinoActive: config?.casinoNightActive ?? false,
+    casinoActive: isCasinoNightOpen(config),
     casinoOpen: config?.casinoOpen ?? true,
     myPoints: user.points,
   });
@@ -54,6 +56,9 @@ export async function POST(req: Request) {
     } else {
       await logPoints(tx, user.id, -betAmount, `Slots loss — ${result.reels.join(" ")}`);
     }
+
+    // Phase 4: what the table takes, The House keeps.
+    if (net < 0) await healBossFromLoss(tx, user.id, -net);
 
     if (isAllIn) {
       const existing = await tx.userAchievement.findUnique({

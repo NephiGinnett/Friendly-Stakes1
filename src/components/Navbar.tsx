@@ -7,7 +7,7 @@ import { getDisplayVersion } from "@/lib/version";
 import TeamBadges from "@/components/TeamBadges";
 
 type User = { id: number; username: string; points: number; isAdmin: boolean; siteTheme?: string };
-type HouseStatus = { worldCupAdminAt: string | null; worldCupPlayerAt: string | null; worldCupEventEndAt?: string | null; casinoNightActive?: boolean };
+type HouseStatus = { worldCupAdminAt: string | null; worldCupPlayerAt: string | null; worldCupEventEndAt?: string | null; casinoNightActive?: boolean; casinoNightOpen?: boolean; bossFightLive?: boolean };
 type Notifs = {
   challenges: number;
   wagers: number;
@@ -95,8 +95,12 @@ export default function Navbar() {
   const showWorldCup = wcStarted && (!wcEndAt || now < wcEndAt);
 
   // Casino Night is a simple on/off switch — no time gating, so the floor link
-  // appears for everyone the moment an admin flips it live.
-  const showCasino = !!houseStatus?.casinoNightActive;
+  // appears for everyone the moment an admin flips it live. A live boss fight
+  // opens the same floor, since losses there feed The House.
+  const showCasino = !!houseStatus?.casinoNightOpen;
+  // During the fight the boss page is the main event, so keep the House tab too
+  // rather than letting the casino link replace it.
+  const bossFightLive = !!houseStatus?.bossFightLive;
 
   const navItems: { href: string; label: string; dotKey?: keyof typeof dotMap; isWc?: boolean }[] = [
     { href: "/feed", label: "Feed", dotKey: "feed" },
@@ -107,10 +111,17 @@ export default function Navbar() {
     { href: "/bingo", label: "🎱", dotKey: "bingo" },
     { href: "/games", label: "🎮" },
     // During Casino Night the casino tab IS Casino Night — it replaces the
-    // regular House gaming floor as the casino entry point.
-    ...(showCasino
-      ? [{ href: "/casino-night", label: "🎰" }]
-      : [{ href: "/house", label: "🎰", dotKey: "house" as const }]),
+    // regular House gaming floor as the casino entry point. During the boss
+    // fight both are shown: the House tab leads to the fight, the dice tab to
+    // the tables that feed it.
+    ...(bossFightLive
+      ? [
+          { href: "/house", label: "🎰", dotKey: "house" as const },
+          { href: "/casino-night", label: "🎲" },
+        ]
+      : showCasino
+        ? [{ href: "/casino-night", label: "🎰" }]
+        : [{ href: "/house", label: "🎰", dotKey: "house" as const }]),
     ...(showWorldCup ? [{ href: "/world-cup", label: "⚽", isWc: true }] : []),
     { href: "/profile", label: user.username },
   ];

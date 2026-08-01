@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { executeHouseStrike, nextStrikeTime, isStrikeWindow, nightDamageDealt, wakeChance } from "@/lib/houseStrike";
 import { refreshPasswordLeak } from "@/lib/passwordLeak";
+import { DAMAGE_WHERE } from "@/lib/houseLog";
 
 export async function GET() {
   const user = await getCurrentUser();
@@ -40,7 +41,7 @@ export async function GET() {
 
   const [damageLogs, attackLogs, myDamageAgg] = await Promise.all([
     prisma.houseDamageLog.findMany({
-      where: { source: { not: "sleep_game" } },
+      where: DAMAGE_WHERE,
       orderBy: { createdAt: "desc" },
       take: 30,
       include: { user: { select: { username: true } } },
@@ -50,7 +51,7 @@ export async function GET() {
       take: 30,
       include: { user: { select: { username: true } } },
     }),
-    prisma.houseDamageLog.aggregate({ where: { userId: user.id, source: { not: "sleep_game" } }, _sum: { amount: true } }),
+    prisma.houseDamageLog.aggregate({ where: { userId: user.id, ...DAMAGE_WHERE }, _sum: { amount: true } }),
   ]);
 
   const killer = config.killerUserId
@@ -59,7 +60,7 @@ export async function GET() {
 
   const leaderboardRaw = await prisma.houseDamageLog.groupBy({
     by: ["userId"],
-    where: { source: { not: "sleep_game" } },
+    where: DAMAGE_WHERE,
     _sum: { amount: true },
     orderBy: { _sum: { amount: "desc" } },
   });

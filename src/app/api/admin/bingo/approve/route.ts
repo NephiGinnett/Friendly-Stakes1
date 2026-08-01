@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { hasNewBingo, isBlackout } from "@/lib/bingo";
 import { log } from "@/lib/pointLog";
 import { notifyUser, appUrl } from "@/lib/discordNotify";
+import { DAMAGE_WHERE } from "@/lib/houseLog";
 
 export async function POST(req: Request) {
   const user = await getCurrentUser();
@@ -105,7 +106,7 @@ export async function POST(req: Request) {
           update: {},
         });
       }
-      const myTotal = await prisma.houseDamageLog.aggregate({ where: { userId: square.userId }, _sum: { amount: true } });
+      const myTotal = await prisma.houseDamageLog.aggregate({ where: { userId: square.userId, ...DAMAGE_WHERE }, _sum: { amount: true } });
       if ((myTotal._sum.amount ?? 0) >= 200) {
         await prisma.userAchievement.upsert({
           where: { userId_achievementId: { userId: square.userId, achievementId: "resistance_fighter" } },

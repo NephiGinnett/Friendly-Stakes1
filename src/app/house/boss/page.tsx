@@ -103,7 +103,10 @@ export default function BossPage() {
   if (!boss) return null;
 
   const hpPct = boss.bossMaxHp > 0 ? Math.max(0, (boss.bossHp / boss.bossMaxHp) * 100) : 0;
-  const hpColor = hpPct > 60 ? "#ef4444" : hpPct > 30 ? "#f97316" : "#fbbf24";
+  // The House can be healed past 100% — keep the bar full and flag the overcharge.
+  const overcharged = hpPct > 100;
+  const barPct = Math.min(hpPct, 100);
+  const hpColor = overcharged ? "#f43f5e" : hpPct > 60 ? "#ef4444" : hpPct > 30 ? "#f97316" : "#fbbf24";
 
   return (
     <div className="min-h-screen pb-20" style={{ background: "rgb(8,5,15)" }}>
@@ -245,14 +248,22 @@ export default function BossPage() {
               <div className="relative h-7 rounded-full overflow-hidden border" style={{ background: "rgb(20,5,5)", borderColor: "#7f1d1d" }}>
                 <div
                   className="absolute inset-y-0 left-0 transition-all duration-1000 rounded-full"
-                  style={{ width: `${hpPct}%`, background: `linear-gradient(90deg, ${hpColor}88, ${hpColor})` }}
+                  style={{
+                    width: `${barPct}%`,
+                    background: `linear-gradient(90deg, ${hpColor}88, ${hpColor})`,
+                    ...(overcharged ? { animation: "pulse 1.2s ease-in-out infinite" } : {}),
+                  }}
                 />
                 <div className="absolute inset-0 flex items-center justify-center text-xs font-bold font-mono text-white drop-shadow">
                   {boss.bossHp.toLocaleString()} / {boss.bossMaxHp.toLocaleString()} HP
                 </div>
               </div>
-              <p className="text-xs font-mono text-red-800">
-                {boss.active && !boss.defeated ? `${hpPct.toFixed(1)}% integrity remaining` : "SYSTEM DEFEATED"}
+              <p className="text-xs font-mono" style={{ color: overcharged ? "#fb7185" : "#991b1b" }}>
+                {!boss.active || boss.defeated
+                  ? "SYSTEM DEFEATED"
+                  : overcharged
+                    ? `⚠ OVERCHARGED — ${hpPct.toFixed(1)}% integrity`
+                    : `${hpPct.toFixed(1)}% integrity remaining`}
               </p>
             </div>
           </div>

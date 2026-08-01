@@ -4,6 +4,8 @@ import { getCurrentUser } from "@/lib/auth";
 import { logPoints } from "@/lib/pointLog";
 import { spinRoulette, resolveRoulette, BetType } from "@/lib/casinoNight";
 import { ACHIEVEMENTS } from "@/lib/achievements";
+import { isCasinoNightOpen } from "@/lib/casinoAccess";
+import { healBossFromLoss } from "@/lib/bossHeal";
 
 export async function GET() {
   const user = await getCurrentUser();
@@ -11,7 +13,7 @@ export async function GET() {
 
   const config = await prisma.houseConfig.findUnique({ where: { id: 1 } });
   return NextResponse.json({
-    casinoActive: config?.casinoNightActive ?? false,
+    casinoActive: isCasinoNightOpen(config),
     myPoints: user.points,
   });
 }
@@ -21,7 +23,7 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const config = await prisma.houseConfig.findUnique({ where: { id: 1 } });
-  if (!config?.casinoNightActive) {
+  if (!isCasinoNightOpen(config)) {
     return NextResponse.json({ error: "Casino Night is not active" }, { status: 403 });
   }
 
@@ -60,6 +62,8 @@ export async function POST(req: Request) {
       await logPoints(tx, user.id, net, `Roulette win — ${betType} ${betValue} on ${result}`);
     } else {
       await logPoints(tx, user.id, -betAmount, `Roulette loss — ${betType} ${betValue} on ${result}`);
+      // Phase 4: what the table takes, The House keeps.
+      await healBossFromLoss(tx, user.id, betAmount);
     }
 
     await tx.rouletteGame.create({

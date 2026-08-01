@@ -4,6 +4,8 @@ import { getCurrentUser } from "@/lib/auth";
 import { pickSpinOutcome, HOUSE_PHASES } from "@/lib/house";
 import { logPoints } from "@/lib/pointLog";
 import { todayUtcDate, isStrikeWindow } from "@/lib/houseStrike";
+import { healBossFromLoss } from "@/lib/bossHeal";
+import { NOISE_SOURCE } from "@/lib/houseLog";
 
 function todayUtcStart() {
   const d = new Date();
@@ -62,29 +64,15 @@ export async function POST() {
     }
 
     // Phase 4: player loss heals the boss (2 pts = 1 HP, same ratio as attacks)
-    if (phase === 4 && outcome.amount < 0 && config.bossActive && config.bossHp > 0) {
-      const healHp = Math.floor(Math.abs(outcome.amount) / 2);
-      await tx.houseConfig.update({
-        where: { id: 1 },
-        data: { bossHp: { increment: healHp } },
-      });
-    }
+    if (outcome.amount < 0) await healBossFromLoss(tx, user.id, Math.abs(outcome.amount));
 
     // Playing during sleep window counts as a 50-pt "noise contribution" for wake chance
     if (sleeping) {
       await tx.houseDamageLog.create({
-        data: { userId: user.id, amount: 25, source: "sleep_game" },
+        data: { userId: user.id, amount: 25, source: NOISE_SOURCE },
       });
     }
   });
-
-  // Cap bossHp at bossMaxHp after healing
-  if (phase === 4 && outcome.amount < 0 && config.bossActive && config.bossHp > 0) {
-    const latest = await prisma.houseConfig.findUnique({ where: { id: 1 } });
-    if (latest && latest.bossHp > latest.bossMaxHp) {
-      await prisma.houseConfig.update({ where: { id: 1 }, data: { bossHp: latest.bossMaxHp } });
-    }
-  }
 
   const updated = await prisma.user.findUnique({ where: { id: user.id }, select: { points: true } });
 

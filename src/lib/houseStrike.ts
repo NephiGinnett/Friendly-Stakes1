@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { logPoints } from "@/lib/pointLog";
 import { notifyUser, appUrl } from "@/lib/discordNotify";
+import { WAKE_NOISE_WHERE } from "@/lib/houseLog";
 
 // Set HOUSE_UTC_OFFSET in .env to your event's UTC offset (e.g. -4 for EDT, -5 for EST)
 const HOUSE_UTC_OFFSET = parseInt(process.env.HOUSE_UTC_OFFSET ?? "-4", 10);
@@ -62,8 +63,10 @@ export async function nightDamageDealt(): Promise<number> {
   // Convert shifted timestamp back to real UTC
   const sleepStartUTC = new Date(sleepStartLocal.getTime() - HOUSE_UTC_OFFSET * 3600_000);
 
+  // Heals are excluded — feeding The House is not a disturbance, and counting
+  // them would let a losing streak wake it on the loser's behalf.
   const agg = await prisma.houseDamageLog.aggregate({
-    where: { createdAt: { gte: sleepStartUTC } },
+    where: { createdAt: { gte: sleepStartUTC }, ...WAKE_NOISE_WHERE },
     _sum: { amount: true },
   });
   return agg._sum.amount ?? 0;

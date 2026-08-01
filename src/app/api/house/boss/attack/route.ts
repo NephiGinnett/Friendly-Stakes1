@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { logPoints } from "@/lib/pointLog";
 import { isStrikeWindow, wakeChance, nightDamageDealt, executeTargetedStrike, tomorrowUtcDate } from "@/lib/houseStrike";
+import { DAMAGE_WHERE, HEAL_WHERE } from "@/lib/houseLog";
 
 export async function POST(req: Request) {
   const user = await getCurrentUser();
@@ -33,8 +34,9 @@ export async function POST(req: Request) {
     await logPoints(tx, user.id, -amount, `Boss Attack: dealt ${hpDamage} HP to The House`);
   });
 
-  // Resistance fighter achievement: 200+ total HP dealt
-  const myTotal = await prisma.houseDamageLog.aggregate({ where: { userId: user.id }, _sum: { amount: true } });
+  // Resistance fighter achievement: 200+ total HP dealt.
+  // Damage sources only — sleep-window noise and heals are not damage.
+  const myTotal = await prisma.houseDamageLog.aggregate({ where: { userId: user.id, ...DAMAGE_WHERE }, _sum: { amount: true } });
   if ((myTotal._sum.amount ?? 0) >= 200) {
     await prisma.userAchievement.upsert({
       where: { userId_achievementId: { userId: user.id, achievementId: "resistance_fighter" } },
@@ -54,7 +56,7 @@ export async function POST(req: Request) {
     // Top damage dealer → Public Enemy #1 achievement (400 pts) + Signal Scrambler item
     const topDamage = await prisma.houseDamageLog.groupBy({
       by: ["userId"],
-      where: { source: { not: "sleep_game" } },
+      where: DAMAGE_WHERE,
       _sum: { amount: true },
       orderBy: { _sum: { amount: "desc" } },
       take: 1,
@@ -72,10 +74,10 @@ export async function POST(req: Request) {
       await prisma.userItem.create({ data: { userId: topId, itemType: "signal_scrambler", usesLeft: 999 } });
     }
 
-    // Top healer (most HP fed to boss via game losses) → Unwitting Accomplice (300 pts)
+    // Top healer (most HP actually restored to the boss by losing) → Unwitting Accomplice (300 pts)
     const topHeal = await prisma.houseDamageLog.groupBy({
       by: ["userId"],
-      where: { source: "sleep_game" },
+      where: HEAL_WHERE,
       _sum: { amount: true },
       orderBy: { _sum: { amount: "desc" } },
       take: 1,

@@ -4,7 +4,9 @@ import { getCurrentUser } from "@/lib/auth";
 import { logPoints } from "@/lib/pointLog";
 import { scratchResult, SCRATCH_COSTS, ScratchTier } from "@/lib/casinoNight";
 import { ACHIEVEMENTS } from "@/lib/achievements";
+import { isCasinoNightOpen } from "@/lib/casinoAccess";
 import { SHOP_ITEMS } from "@/lib/shop";
+import { healBossFromLoss } from "@/lib/bossHeal";
 
 export async function GET() {
   const user = await getCurrentUser();
@@ -18,7 +20,7 @@ export async function GET() {
   });
 
   return NextResponse.json({
-    casinoActive: config?.casinoNightActive ?? false,
+    casinoActive: isCasinoNightOpen(config),
     jackpot: config?.scratchJackpot ?? 0,
     costs: SCRATCH_COSTS,
     myPoints: user.points,
@@ -44,7 +46,7 @@ export async function POST(req: Request) {
   }
 
   const config = await prisma.houseConfig.findUnique({ where: { id: 1 } });
-  if (!config?.casinoNightActive) {
+  if (!config || !isCasinoNightOpen(config)) {
     return NextResponse.json({ error: "Casino Night is not active" }, { status: 403 });
   }
 
@@ -81,6 +83,10 @@ export async function POST(req: Request) {
       await tx.user.update({ where: { id: user.id }, data: { points: { increment: payout } } });
       await logPoints(tx, user.id, payout, `Scratch card win (${tier})`);
     }
+
+    // Phase 4: a card that pays back less than it cost feeds The House the difference.
+    const netLoss = cost - (isJackpot ? jackpotPool : payout);
+    if (netLoss > 0) await healBossFromLoss(tx, user.id, netLoss);
 
     // Gift lines award power-up items.
     for (const itemType of itemsWon) {

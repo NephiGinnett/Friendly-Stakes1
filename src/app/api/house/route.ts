@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { HOUSE_PHASES } from "@/lib/house";
+import { isCasinoNightOpen, isBossFightLive } from "@/lib/casinoAccess";
 
 function todayUtcStart() {
   const d = new Date();
@@ -38,6 +39,10 @@ export async function GET() {
     hasActiveBlackjack: bj?.status === "active",
     casinoOpen: config.casinoOpen,
     casinoNightActive: config.casinoNightActive,
+    // Effective floor state: the admin toggle OR a live boss fight, which opens
+    // the Casino Night tables so losses can feed The House.
+    casinoNightOpen: isCasinoNightOpen(config),
+    bossFightLive: isBossFightLive(config),
     bossHpMultiplier: config.bossHpMultiplier,
     botsEnabled: config.botsEnabled,
     arFaireActive: config.arFaireActive,

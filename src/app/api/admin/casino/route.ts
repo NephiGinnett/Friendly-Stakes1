@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { logPoints } from "@/lib/pointLog";
+import { healBossFromLoss } from "@/lib/bossHeal";
 
 export async function GET() {
   const user = await getCurrentUser();
@@ -177,6 +178,9 @@ export async function POST(req: Request) {
       if (outcome === "win" && payout > 0) {
         await tx.user.update({ where: { id: bet.userId }, data: { points: { increment: payout } } });
         await logPoints(tx, bet.userId, payout, `Strike It Rich WIN (×${effectiveMultiplier})`);
+      } else if (outcome === "loss") {
+        // Phase 4: the forfeited escrow feeds The House.
+        await healBossFromLoss(tx, bet.userId, bet.stake);
       }
     });
 
