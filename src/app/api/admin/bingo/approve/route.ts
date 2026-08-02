@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
-import { hasNewBingo, isBlackout } from "@/lib/bingo";
+import { hasBingo, hasNewBingo, isBlackout } from "@/lib/bingo";
 import { log } from "@/lib/pointLog";
 import { notifyUser, appUrl } from "@/lib/discordNotify";
 import { DAMAGE_WHERE } from "@/lib/houseLog";
@@ -58,19 +58,26 @@ export async function POST(req: Request) {
     const newBingo = hasNewBingo(prevApproved, square.position);
     const newBlackout = isBlackout(newApproved);
 
-    // Award bingo bonus (100 pts) and first-collective-bingo achievement
+    // Line bonus — only when this approval completes a brand new line.
     if (newBingo) {
       await prisma.user.update({ where: { id: square.userId }, data: { points: { increment: 100 } } });
       await log(square.userId, 100, "Completed a bingo line!");
+    }
 
-      const anyBingo = await prisma.userAchievement.findFirst({
-        where: { achievementId: "bingo" },
+    // BINGO! achievement — everyone earns it for their own first line, it is
+    // not a race. Keyed off the card's current state rather than the moment of
+    // transition, so a player who completed a line while this was still
+    // first-past-the-post picks it up on their next approval. The upsert makes
+    // it idempotent.
+    //
+    // Left unclaimed on purpose: the 100 pts above is the line bonus, and the
+    // achievement's own 250 is claimed separately by the player.
+    if (hasBingo(newApproved)) {
+      await prisma.userAchievement.upsert({
+        where: { userId_achievementId: { userId: square.userId, achievementId: "bingo" } },
+        create: { userId: square.userId, achievementId: "bingo" },
+        update: {},
       });
-      if (!anyBingo) {
-        await prisma.userAchievement.create({
-          data: { userId: square.userId, achievementId: "bingo" },
-        });
-      }
     }
 
     // Award blackout bonus (350 pts) and first-collective-blackout achievement

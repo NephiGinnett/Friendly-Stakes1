@@ -65,7 +65,9 @@ export async function POST(req: Request) {
       const topId = topDamage[0].userId;
       await prisma.userAchievement.upsert({
         where: { userId_achievementId: { userId: topId, achievementId: "top_damage" } },
-        create: { userId: topId, achievementId: "top_damage" },
+        // claimed at creation: the 400 pts are paid inline just below, so
+        // leaving it claimable would pay the same reward a second time.
+        create: { userId: topId, achievementId: "top_damage", claimed: true },
         update: {},
       });
       await prisma.user.update({ where: { id: topId }, data: { points: { increment: 400 } } });
@@ -86,7 +88,8 @@ export async function POST(req: Request) {
       const healId = topHeal[0].userId;
       await prisma.userAchievement.upsert({
         where: { userId_achievementId: { userId: healId, achievementId: "top_healer" } },
-        create: { userId: healId, achievementId: "top_healer" },
+        // claimed at creation — see the note on top_damage above.
+        create: { userId: healId, achievementId: "top_healer", claimed: true },
         update: {},
       });
       await prisma.user.update({ where: { id: healId }, data: { points: { increment: 300 } } });

@@ -122,6 +122,14 @@ export default function AdminPage() {
   const [distItemUses, setDistItemUses] = useState("1");
   const [distMessage, setDistMessage] = useState("");
 
+  // Grant achievement state
+  type AdminAchievement = { id: string; name: string; emoji: string; reward: string | null; holders: { userId: number; claimed: boolean }[] };
+  const [achievements, setAchievements] = useState<AdminAchievement[]>([]);
+  const [grantUserId, setGrantUserId] = useState("");
+  const [grantAchievementId, setGrantAchievementId] = useState("");
+  const [granting, setGranting] = useState(false);
+  const [grantMsg, setGrantMsg] = useState<string | null>(null);
+
   // Restart state
   const [confirmRestart, setConfirmRestart] = useState(false);
   const [restarting, setRestarting] = useState(false);
@@ -150,6 +158,7 @@ export default function AdminPage() {
     fetch("/api/admin/bingo/claims").then((r) => r.ok ? r.json() : []).then(setClaims);
     fetch("/api/admin/bingo/items").then((r) => r.ok ? r.json() : []).then(setBingoItems);
     fetch("/api/admin/bots/stats").then((r) => r.ok ? r.json() : []).then(setBotStats);
+    fetch("/api/admin/achievements").then((r) => r.ok ? r.json() : null).then((d) => { if (d) setAchievements(d.achievements ?? []); });
     fetch("/api/house").then((r) => r.ok ? r.json() : null).then((d) => {
       if (d) {
         setHouseStatus({ phase: d.phase, bossActive: d.bossActive, bossHp: d.bossHp, bossMaxHp: d.bossMaxHp });
@@ -396,6 +405,52 @@ export default function AdminPage() {
     setConfirmCancelId(null);
     if (res.ok) { setWagerMsg(`Wager cancelled — ${d.refundCount} player${d.refundCount !== 1 ? "s" : ""} refunded.`); fetchAll(); }
     else setWagerMsg(d.error);
+  };
+
+  const grantAchievement = async (action: "grant" | "revoke") => {
+    setGranting(true); setGrantMsg(null);
+    try {
+      const res = await fetch("/api/admin/achievements", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, userId: Number(grantUserId), achievementId: grantAchievementId }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setGrantMsg(action === "grant"
+          ? `${d.emoji ?? "🏆"} Granted ${d.name} to ${d.username}. They'll claim it themselves${d.reward ? ` for ${d.reward.toLowerCase()}` : ""}.`
+          : `Removed ${d.name} from ${d.username}.${d.wasClaimed ? " They had already claimed the reward — adjust their points manually if you want it back." : ""}`);
+        fetchAll();
+      } else {
+        setGrantMsg(d.error ?? "Something went wrong.");
+      }
+    } catch {
+      setGrantMsg("Couldn't reach the server — try again.");
+    } finally {
+      setGranting(false);
+    }
+  };
+
+  const backfillBingo = async () => {
+    setGranting(true); setGrantMsg(null);
+    try {
+      const res = await fetch("/api/admin/achievements", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "backfill_bingo" }),
+      });
+      const d = await res.json().catch(() => ({}));
+      setGrantMsg(res.ok
+        ? (d.count > 0
+            ? `Granted BINGO! to ${d.count} player${d.count === 1 ? "" : "s"}: ${d.granted.join(", ")}.`
+            : "Nobody was missing it — everyone with a line already has BINGO!.")
+        : (d.error ?? "Something went wrong."));
+      if (res.ok) fetchAll();
+    } catch {
+      setGrantMsg("Couldn't reach the server — try again.");
+    } finally {
+      setGranting(false);
+    }
   };
 
   const restartGame = async () => {
@@ -833,6 +888,75 @@ export default function AdminPage() {
               </div>
             </div>
           ))}
+        </section>
+
+        {/* ── Grant Achievement ── */}
+        <section className="space-y-3">
+          <button onClick={() => toggleSection("grantAch")} className="w-full flex items-center justify-between group">
+            <h2 className="font-semibold text-white">🏆 Grant Achievement</h2>
+            <span className="text-slate-500 text-xs group-hover:text-slate-300 transition-colors">{collapsed["grantAch"] ? "▶" : "▼"}</span>
+          </button>
+
+          {!collapsed["grantAch"] && (
+            <div className="card space-y-3">
+              <p className="text-xs text-slate-500">
+                Hand an achievement to a player who earned it in spirit but not by the rules. It arrives unclaimed — they claim it themselves and the reward pays once, the normal way.
+              </p>
+
+              <select className="input w-full text-sm" value={grantUserId} onChange={(e) => setGrantUserId(e.target.value)}>
+                <option value="">Select a player…</option>
+                {users.filter((u) => !u.isAdmin).map((u) => (
+                  <option key={u.id} value={u.id}>{u.username}</option>
+                ))}
+              </select>
+
+              <select className="input w-full text-sm" value={grantAchievementId} onChange={(e) => setGrantAchievementId(e.target.value)}>
+                <option value="">Select an achievement…</option>
+                {achievements.map((a) => {
+                  const has = grantUserId ? a.holders.some((h) => h.userId === Number(grantUserId)) : false;
+                  return (
+                    <option key={a.id} value={a.id}>
+                      {a.emoji} {a.name}{has ? " — already has it" : ""}{a.reward ? ` · ${a.reward}` : ""}
+                    </option>
+                  );
+                })}
+              </select>
+
+              {grantMsg && (
+                <p className="text-xs font-medium text-slate-300 rounded-lg bg-white/5 border border-white/10 px-3 py-2">{grantMsg}</p>
+              )}
+
+              <div className="flex gap-2">
+                <button
+                  onClick={() => grantAchievement("grant")}
+                  disabled={granting || !grantUserId || !grantAchievementId}
+                  className="btn-primary flex-1 text-sm"
+                >
+                  {granting ? "Working…" : "Grant"}
+                </button>
+                <button
+                  onClick={() => grantAchievement("revoke")}
+                  disabled={granting || !grantUserId || !grantAchievementId}
+                  className="px-4 py-2 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 transition-colors text-sm font-medium"
+                >
+                  Revoke
+                </button>
+              </div>
+
+              <div className="pt-2 border-t border-white/10 space-y-2">
+                <p className="text-xs text-slate-500">
+                  🎱 BINGO! used to go only to the first player in the whole group. It is now per-player, but anyone who completed a line under the old rule can never trigger it through play. This hands it to them. Safe to re-run.
+                </p>
+                <button
+                  onClick={backfillBingo}
+                  disabled={granting}
+                  className="w-full px-4 py-2 rounded-xl bg-white/5 text-slate-300 hover:bg-white/10 border border-white/10 transition-colors text-sm font-medium"
+                >
+                  {granting ? "Working…" : "Catch up BINGO! for existing lines"}
+                </button>
+              </div>
+            </div>
+          )}
         </section>
 
         {/* ── The House ── */}
