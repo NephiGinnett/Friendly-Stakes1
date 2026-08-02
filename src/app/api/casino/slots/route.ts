@@ -4,7 +4,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { logPoints } from "@/lib/pointLog";
 import { spinSlots } from "@/lib/casinoNight";
 import { ACHIEVEMENTS } from "@/lib/achievements";
-import { isCasinoNightOpen } from "@/lib/casinoAccess";
+import { isCasinoNightOpen, isBossFightLive } from "@/lib/casinoAccess";
 import { healBossFromLoss } from "@/lib/bossHeal";
 
 export async function GET() {
@@ -23,8 +23,11 @@ export async function POST(req: Request) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  // Slots sits on the House floor switch, but a live boss fight opens it the
+  // same way it opens roulette and scratch — otherwise the page would render as
+  // playable (it reads the floor flag) while this route refused the bet.
   const config = await prisma.houseConfig.findUnique({ where: { id: 1 } });
-  if (!config?.casinoOpen) {
+  if (!config?.casinoOpen && !isBossFightLive(config)) {
     return NextResponse.json({ error: "The casino is closed" }, { status: 403 });
   }
 

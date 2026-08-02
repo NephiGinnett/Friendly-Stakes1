@@ -5,7 +5,6 @@ import { logPoints } from "@/lib/pointLog";
 import { formatPoints } from "@/lib/utils";
 import { BASE_MULTIPLIER, ALL_IN_MULTIPLIER, BIG_BET_GAME_IDS, spinRoulette, resolveRoulette, rouletteColor, spinSlots, type BetType } from "@/lib/casinoNight";
 import { ACHIEVEMENTS } from "@/lib/achievements";
-import { isCasinoNightOpen } from "@/lib/casinoAccess";
 import { healBossFromLoss } from "@/lib/bossHeal";
 
 export async function GET() {
@@ -39,7 +38,9 @@ export async function GET() {
   const biggest = pendingBets[0] ?? null;
 
   return NextResponse.json({
-    casinoActive: isCasinoNightOpen(config),
+    // Big Bet tracks the real Casino Night event only — a boss fight does not
+    // open it (see the POST gate below).
+    casinoActive: !!config?.casinoNightActive,
     revealAt: config?.bigBetRevealAt ?? null,
     selectedGame: config?.bigBetGameType || null,
     myPoints: user.points,
@@ -81,8 +82,11 @@ export async function POST(req: Request) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  // Strike It Rich is a Casino Night headline act, not part of the standing
+  // casino floor — it needs an admin to approve a submission and run the live
+  // show. Unlike the other tables it stays closed during a boss fight.
   const config = await prisma.houseConfig.findUnique({ where: { id: 1 } });
-  if (!isCasinoNightOpen(config)) {
+  if (!config?.casinoNightActive) {
     return NextResponse.json({ error: "Casino Night is not active" }, { status: 403 });
   }
 
