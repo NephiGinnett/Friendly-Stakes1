@@ -22,6 +22,8 @@ type CardResult = {
   newJackpot: number;
   itemsWon: { itemType: string; name: string; emoji: string }[];
   newAchievement: { name: string; emoji: string; reward: string } | null;
+  /** HP your net loss on this card restored to THE HOUSE, if a boss fight is live. */
+  bossHealed: number;
 };
 
 type ScratchTier = "basic" | "premium";
@@ -180,6 +182,11 @@ export default function ScratchPage() {
                 ) : (result.itemsWon?.length ?? 0) === 0 ? (
                   <p className="text-slate-500 text-sm">No matching lines. The House thanks you for your contribution.</p>
                 ) : null}
+                {result.bossHealed > 0 && (
+                  <p className="text-xs font-mono text-emerald-400">
+                    🩸 THE HOUSE absorbed your loss — +{result.bossHealed} HP
+                  </p>
+                )}
                 {result.itemsWon?.map((item, i) => (
                   <div key={i} className="rounded-xl bg-violet-500/10 border border-violet-500/30 p-3 mt-2">
                     <p className="text-sm font-bold text-violet-300">🎁 Item won: {item.emoji} {item.name}</p>

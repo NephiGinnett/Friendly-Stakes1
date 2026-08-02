@@ -45,6 +45,7 @@ export async function POST(req: Request) {
   const net = result.payout - betAmount;
 
   let newAchievement: string | null = null;
+  let bossHealed = 0;
 
   await prisma.$transaction(async (tx) => {
     await tx.user.update({ where: { id: user.id }, data: { points: { decrement: betAmount } } });
@@ -61,7 +62,7 @@ export async function POST(req: Request) {
     }
 
     // Phase 4: what the table takes, The House keeps.
-    if (net < 0) await healBossFromLoss(tx, user.id, -net);
+    if (net < 0) bossHealed = await healBossFromLoss(tx, user.id, -net);
 
     if (isAllIn) {
       const existing = await tx.userAchievement.findUnique({
@@ -77,6 +78,7 @@ export async function POST(req: Request) {
   });
 
   return NextResponse.json({
+    bossHealed,
     reels: result.reels,
     multiplier: result.multiplier,
     payout: result.payout,

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 
 type LogEntry = {
-  type: "damage" | "attack";
+  type: "damage" | "heal" | "attack";
   username: string;
   amount: number;
   source: string | null;
@@ -28,6 +28,7 @@ type BossData = {
   leaderboard: LeaderEntry[];
   recentLogs: LogEntry[];
   myDamage: number;
+  myHealing: number;
 };
 
 type VictoryData = {
@@ -273,6 +274,14 @@ export default function BossPage() {
             <span className="text-violet-400">Your damage dealt</span>
             <span className="text-violet-300 font-bold">{boss.myDamage} HP</span>
           </div>
+
+          {/* What your losses at the tables gave back */}
+          {boss.myHealing > 0 && (
+            <div className="rounded-lg px-3 py-2 text-xs font-mono flex items-center justify-between" style={{ background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.2)" }}>
+              <span className="text-emerald-400">Your losses healed it</span>
+              <span className="text-emerald-300 font-bold">+{boss.myHealing} HP</span>
+            </div>
+          )}
         </div>
 
         {/* Sleeping notice + risk meter */}
@@ -382,13 +391,21 @@ export default function BossPage() {
               key={i}
               className="px-3 py-2.5 rounded-lg text-xs font-mono"
               style={{
-                background: entry.type === "attack" ? "rgba(239,68,68,0.08)" : "rgba(124,58,237,0.08)",
-                border: `1px solid ${entry.type === "attack" ? "rgba(239,68,68,0.15)" : "rgba(124,58,237,0.15)"}`,
+                background: entry.type === "attack" ? "rgba(239,68,68,0.08)"
+                  : entry.type === "heal" ? "rgba(16,185,129,0.08)"
+                  : "rgba(124,58,237,0.08)",
+                border: `1px solid ${entry.type === "attack" ? "rgba(239,68,68,0.15)"
+                  : entry.type === "heal" ? "rgba(16,185,129,0.2)"
+                  : "rgba(124,58,237,0.15)"}`,
               }}
             >
               {entry.type === "damage" ? (
                 <span className="text-violet-300">
                   <span className="text-violet-400 font-bold">{entry.username}</span> dealt <span className="font-bold">{entry.amount} HP</span> to The House
+                </span>
+              ) : entry.type === "heal" ? (
+                <span className="text-emerald-300">
+                  🩸 <span className="text-emerald-400 font-bold">{entry.username}</span> lost at the tables — The House <span className="font-bold">recovered {entry.amount} HP</span>
                 </span>
               ) : (
                 <span className="text-red-300">{entry.text}</span>

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { HEAL_SOURCE } from "@/lib/houseLog";
+import { logPoints } from "@/lib/pointLog";
 
 /** Points a player must lose to restore 1 HP — mirrors the 2 pts = 1 HP attack ratio. */
 export const HEAL_RATIO = 2;
@@ -47,6 +48,10 @@ export async function healBossFromLoss(db: any, userId: number, pointsLost: numb
   await db.houseDamageLog.create({
     data: { userId, amount: healHp, source: HEAL_SOURCE },
   });
+
+  // Receipt in the player's own point log. Amount 0 — the points were already
+  // deducted by the game itself; this records where they went.
+  await logPoints(db, userId, 0, `THE HOUSE absorbed your loss — restored ${healHp} HP`);
 
   return healHp;
 }

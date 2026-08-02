@@ -53,6 +53,7 @@ export async function POST(req: Request) {
   const net = winAmount > 0 ? winAmount : -betAmount;
 
   let newAchievement: string | null = null;
+  let bossHealed = 0;
 
   await prisma.$transaction(async (tx) => {
     await tx.user.update({ where: { id: user.id }, data: { points: { decrement: betAmount } } });
@@ -63,7 +64,7 @@ export async function POST(req: Request) {
     } else {
       await logPoints(tx, user.id, -betAmount, `Roulette loss — ${betType} ${betValue} on ${result}`);
       // Phase 4: what the table takes, The House keeps.
-      await healBossFromLoss(tx, user.id, betAmount);
+      bossHealed = await healBossFromLoss(tx, user.id, betAmount);
     }
 
     await tx.rouletteGame.create({
@@ -84,6 +85,7 @@ export async function POST(req: Request) {
   });
 
   return NextResponse.json({
+    bossHealed,
     result,
     betAmount,
     winAmount,

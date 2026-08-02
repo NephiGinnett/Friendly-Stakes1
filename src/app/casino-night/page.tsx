@@ -13,6 +13,8 @@ type CasinoStatus = {
   /** The Casino Night event proper. Strike It Rich needs this; a boss fight
    *  opens the tables but not the live show. */
   casinoNightActive: boolean;
+  /** A boss is up, so every loss at these tables restores its HP. */
+  bossFightLive: boolean;
   jackpot: number;
   myPoints: number;
   biggestBet: { username: string; stake: number; isAllIn: boolean } | null;
@@ -78,6 +80,7 @@ export default function CasinoNightPage() {
           setStatus({
             casinoActive: scratch.casinoActive,
             casinoNightActive: !!scratch.casinoNightActive,
+            bossFightLive: !!scratch.bossFightLive,
             jackpot: scratch.jackpot,
             myPoints: scratch.myPoints,
             biggestBet: bigBet.biggestBet,
@@ -117,9 +120,9 @@ export default function CasinoNightPage() {
           </div>
         )}
 
-        {/* Floor open because of the boss fight rather than a Casino Night —
-            players should know what their losses are doing. */}
-        {status.casinoActive && !status.casinoNightActive && (
+        {/* Shown whenever a boss is up — including during a Casino Night, since
+            the tables feed it either way. */}
+        {status.bossFightLive && (
           <div className="rounded-2xl bg-red-500/10 border border-red-500/30 px-5 py-4 text-center">
             <p className="text-xs font-mono text-red-400 uppercase tracking-widest">⚠ The floor is open during the fight</p>
             <p className="text-xs text-slate-400 mt-1">Every point you lose at these tables is fed back to THE HOUSE as HP.</p>
