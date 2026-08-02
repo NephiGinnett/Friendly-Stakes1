@@ -247,6 +247,10 @@ model HouseConfig {
   arFaireActive        Boolean  @default(true)
   leakAchievementId    String?  // currently displayed achievement
   leakRefreshedAt      DateTime?
+  // JSON array of password strings, frozen at the moment the leak was drawn.
+  // The leak is a dead list: it never re-reads live passwords, so changing your
+  // password after a leak makes the leaked entry stale instead of updating it.
+  leakPasswords        String   @default("")
   passwordLeakEnabled  Boolean  @default(true)
   strikesSinceLeak     Int      @default(0) // resets to 0 after every-other-strike refresh
   worldCupAdminAt      DateTime? // admins can see 12h early

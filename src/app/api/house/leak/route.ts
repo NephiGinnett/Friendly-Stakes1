@@ -14,16 +14,22 @@ export async function GET() {
   const achievement = ACHIEVEMENTS[achievementId];
   if (!achievement) return NextResponse.json({ leak: null });
 
-  // Get passwords of all non-admin players who hold this achievement
-  // No usernames — only the password strings
-  const holders = await prisma.userAchievement.findMany({
-    where: { achievementId, user: { isAdmin: false } },
-    include: { user: { select: { password: true } } },
-  });
+  // Serve only the frozen snapshot taken when this leak was drawn. This route
+  // never reads a live password — a player who changes theirs after the leak
+  // leaves a stale string here rather than republishing their new one.
+  //
+  // A leak with no snapshot (drawn before snapshots existed) shows nothing. We
+  // deliberately do NOT capture one now: the draw-time passwords are gone, and
+  // anyone who has already changed theirs would have the *new* value frozen in
+  // — the exact leak this mechanic is meant to prevent. Publishing nothing is
+  // correct; the leak returns at the next draw.
+  let passwords: string[] = [];
+  try {
+    const parsed = JSON.parse(config.leakPasswords || "[]");
+    if (Array.isArray(parsed)) passwords = parsed.filter((p): p is string => typeof p === "string" && !!p);
+  } catch { /* malformed snapshot — show nothing rather than guess */ }
 
-  const passwords = holders
-    .map((h) => h.user.password)
-    .filter(Boolean);
+  if (passwords.length === 0) return NextResponse.json({ leak: null });
 
   return NextResponse.json({
     leak: {
