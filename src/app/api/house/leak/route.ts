@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { ACHIEVEMENTS } from "@/lib/achievements";
+import { captureLeakPasswords } from "@/lib/passwordLeak";
 
 export async function GET() {
   const user = await getCurrentUser();
@@ -14,16 +15,25 @@ export async function GET() {
   const achievement = ACHIEVEMENTS[achievementId];
   if (!achievement) return NextResponse.json({ leak: null });
 
-  // Get passwords of all non-admin players who hold this achievement
-  // No usernames — only the password strings
-  const holders = await prisma.userAchievement.findMany({
-    where: { achievementId, user: { isAdmin: false } },
-    include: { user: { select: { password: true } } },
-  });
+  // Serve the frozen snapshot taken when this leak was drawn — never a live
+  // read. A player who changes their password after the leak leaves a stale
+  // string here rather than republishing their new one.
+  let passwords: string[] = [];
+  try {
+    const parsed = JSON.parse(config.leakPasswords || "[]");
+    if (Array.isArray(parsed)) passwords = parsed.filter((p): p is string => typeof p === "string" && !!p);
+  } catch { /* fall through to the backfill below */ }
 
-  const passwords = holders
-    .map((h) => h.user.password)
-    .filter(Boolean);
+  // A leak drawn before snapshots existed has no frozen list. Capture one now
+  // and freeze it, so the current leak keeps working and stops tracking live
+  // passwords from this point on.
+  if (!config.leakPasswords) {
+    passwords = await captureLeakPasswords(achievementId);
+    await prisma.houseConfig.update({
+      where: { id: 1 },
+      data: { leakPasswords: JSON.stringify(passwords) },
+    });
+  }
 
   return NextResponse.json({
     leak: {
