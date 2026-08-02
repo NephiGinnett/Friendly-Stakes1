@@ -8,7 +8,11 @@ import PointsBadge from "@/components/PointsBadge";
 import { formatPoints } from "@/lib/utils";
 
 type CasinoStatus = {
+  /** The floor is playable — a real Casino Night, or a live boss fight. */
   casinoActive: boolean;
+  /** The Casino Night event proper. Strike It Rich needs this; a boss fight
+   *  opens the tables but not the live show. */
+  casinoNightActive: boolean;
   jackpot: number;
   myPoints: number;
   biggestBet: { username: string; stake: number; isAllIn: boolean } | null;
@@ -73,6 +77,7 @@ export default function CasinoNightPage() {
         ]).then(([scratch, bigBet]) => {
           setStatus({
             casinoActive: scratch.casinoActive,
+            casinoNightActive: !!scratch.casinoNightActive,
             jackpot: scratch.jackpot,
             myPoints: scratch.myPoints,
             biggestBet: bigBet.biggestBet,
@@ -112,6 +117,15 @@ export default function CasinoNightPage() {
           </div>
         )}
 
+        {/* Floor open because of the boss fight rather than a Casino Night —
+            players should know what their losses are doing. */}
+        {status.casinoActive && !status.casinoNightActive && (
+          <div className="rounded-2xl bg-red-500/10 border border-red-500/30 px-5 py-4 text-center">
+            <p className="text-xs font-mono text-red-400 uppercase tracking-widest">⚠ The floor is open during the fight</p>
+            <p className="text-xs text-slate-400 mt-1">Every point you lose at these tables is fed back to THE HOUSE as HP.</p>
+          </div>
+        )}
+
         {status.casinoActive && (
           <div className="rounded-2xl bg-amber-500/10 border border-amber-500/30 p-5 text-center space-y-1">
             <p className="text-xs font-mono text-amber-400 uppercase tracking-widest">Scratch Jackpot</p>
@@ -134,8 +148,10 @@ export default function CasinoNightPage() {
           </div>
         )}
 
-        {/* Strike It Rich — center bottom */}
-        {status.casinoActive && (
+        {/* Strike It Rich — center bottom. Casino Night only: it needs an admin
+            to approve a submission and run the live show, so a boss fight opens
+            the tables without it. */}
+        {status.casinoNightActive && (
           <Link href="/casino-night/big-bet" className="block rounded-2xl bg-rose-500/10 border-2 border-rose-500/40 px-5 py-5 hover:bg-rose-500/20 transition-colors">
             <div className="text-center space-y-2">
               <p className="text-3xl">📺</p>
@@ -167,7 +183,9 @@ export default function CasinoNightPage() {
           <div className="rounded-2xl bg-white/5 border border-white/10 px-5 py-4 space-y-3">
             <p className="text-xs font-mono text-slate-500 uppercase tracking-widest">The Rules</p>
             <div className="space-y-2 text-sm text-slate-300">
-              <p>📺 <strong>Strike It Rich</strong> — Submit your biggest bet. One player is selected for the live show. Everyone else gets refunded. ×3 payout (×5 if all-in).</p>
+              {status.casinoNightActive && (
+                <p>📺 <strong>Strike It Rich</strong> — Submit your biggest bet. One player is selected for the live show. Everyone else gets refunded. ×3 payout (×5 if all-in).</p>
+              )}
               <p>🃏 Scratch cards reveal a 3×3 grid. Match 3 in any line to win.</p>
               <p>🎰 Slots — triple match for multiplied payout, double returns your bet.</p>
               <p>🎡 Roulette — standard European rules. Go all-in for something special.</p>

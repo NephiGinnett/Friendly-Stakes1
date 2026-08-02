@@ -20,7 +20,11 @@ export async function GET() {
   });
 
   return NextResponse.json({
+    // casinoActive = the floor is playable (Casino Night OR a live boss fight).
+    // casinoNightActive = the real Casino Night event, which additionally
+    // unlocks the Strike It Rich headline act.
     casinoActive: isCasinoNightOpen(config),
+    casinoNightActive: !!config?.casinoNightActive,
     jackpot: config?.scratchJackpot ?? 0,
     costs: SCRATCH_COSTS,
     myPoints: user.points,
