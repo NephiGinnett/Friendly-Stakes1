@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { executeHouseStrike, nextStrikeTime, isStrikeWindow, nightDamageDealt, wakeChance } from "@/lib/houseStrike";
 import { refreshPasswordLeak } from "@/lib/passwordLeak";
-import { DAMAGE_WHERE } from "@/lib/houseLog";
+import { DAMAGE_WHERE, HEAL_WHERE } from "@/lib/houseLog";
 
 export async function GET() {
   const user = await getCurrentUser();
@@ -39,9 +39,17 @@ export async function GET() {
   const nightHp = sleeping ? await nightDamageDealt() : 0;
   const currentWakeChance = sleeping ? wakeChance(nightHp) : 0;
 
-  const [damageLogs, attackLogs, myDamageAgg] = await Promise.all([
+  const [damageLogs, healLogs, attackLogs, myDamageAgg, myHealAgg] = await Promise.all([
     prisma.houseDamageLog.findMany({
       where: DAMAGE_WHERE,
+      orderBy: { createdAt: "desc" },
+      take: 30,
+      include: { user: { select: { username: true } } },
+    }),
+    // Heals belong in the battle log too — players need to see the bar going
+    // the wrong way and who is feeding it.
+    prisma.houseDamageLog.findMany({
+      where: HEAL_WHERE,
       orderBy: { createdAt: "desc" },
       take: 30,
       include: { user: { select: { username: true } } },
@@ -52,6 +60,7 @@ export async function GET() {
       include: { user: { select: { username: true } } },
     }),
     prisma.houseDamageLog.aggregate({ where: { userId: user.id, ...DAMAGE_WHERE }, _sum: { amount: true } }),
+    prisma.houseDamageLog.aggregate({ where: { userId: user.id, ...HEAL_WHERE }, _sum: { amount: true } }),
   ]);
 
   const killer = config.killerUserId
@@ -74,6 +83,7 @@ export async function GET() {
 
   const combined = [
     ...damageLogs.map(d => ({ type: "damage" as const, username: d.user.username, amount: d.amount, source: d.source, text: null, createdAt: d.createdAt.toISOString() })),
+    ...healLogs.map(h => ({ type: "heal" as const, username: h.user.username, amount: h.amount, source: h.source, text: null, createdAt: h.createdAt.toISOString() })),
     ...attackLogs.map(a => ({ type: "attack" as const, username: a.user.username, amount: a.amount, source: null, text: a.flavorText, createdAt: a.createdAt.toISOString() })),
   ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 40);
 
@@ -90,5 +100,6 @@ export async function GET() {
     leaderboard,
     recentLogs: combined,
     myDamage: myDamageAgg._sum.amount ?? 0,
+    myHealing: myHealAgg._sum.amount ?? 0,
   });
 }

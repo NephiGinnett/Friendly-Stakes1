@@ -17,6 +17,8 @@ type SpinResult = {
   isDouble: boolean;
   isAllIn: boolean;
   newAchievement: { name: string; emoji: string; reward: string } | null;
+  /** HP your loss restored to THE HOUSE, if a boss fight is live. */
+  bossHealed: number;
 };
 
 const HOUSE_LINES = [
@@ -151,6 +153,11 @@ export default function SlotsPage() {
                   <p className="text-sm font-semibold text-rose-400">-{formatPoints(Math.abs(result.net))} pts</p>
                   <p className="text-xs text-slate-500">The House always collects.</p>
                 </>
+              )}
+              {result.bossHealed > 0 && (
+                <p className="mt-2 text-xs font-mono text-emerald-400">
+                  🩸 THE HOUSE absorbed your loss — +{result.bossHealed} HP
+                </p>
               )}
               {result.newAchievement && (
                 <div className="mt-3 rounded-xl bg-amber-500/10 border border-amber-500/30 p-2">

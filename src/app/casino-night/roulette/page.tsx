@@ -18,6 +18,8 @@ type SpinResult = {
   net: number;
   isAllIn: boolean;
   newAchievement: { name: string; emoji: string; reward: string } | null;
+  /** HP your loss restored to THE HOUSE, if a boss fight is live. */
+  bossHealed: number;
 };
 
 function numColor(n: number) {
@@ -167,6 +169,11 @@ export default function RoulettePage() {
                 <p className="text-lg font-black text-rose-400">-{formatPoints(spinResult.betAmount)} pts</p>
                 <p className="text-xs text-slate-400">The House appreciated that.</p>
               </>
+            )}
+            {spinResult.bossHealed > 0 && (
+              <p className="mt-2 text-xs font-mono text-emerald-400">
+                🩸 THE HOUSE absorbed your loss — +{spinResult.bossHealed} HP
+              </p>
             )}
             {spinResult.newAchievement && (
               <div className="mt-2 rounded-xl bg-amber-500/10 border border-amber-500/30 p-2">

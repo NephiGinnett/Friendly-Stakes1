@@ -44,6 +44,7 @@ export async function POST() {
   }
 
   const { outcome, index } = pickSpinOutcome();
+  let bossHealed = 0;
   const sleeping = !isStrikeWindow();
 
   await prisma.$transaction(async (tx) => {
@@ -64,7 +65,7 @@ export async function POST() {
     }
 
     // Phase 4: player loss heals the boss (2 pts = 1 HP, same ratio as attacks)
-    if (outcome.amount < 0) await healBossFromLoss(tx, user.id, Math.abs(outcome.amount));
+    if (outcome.amount < 0) bossHealed = await healBossFromLoss(tx, user.id, Math.abs(outcome.amount));
 
     // Playing during sleep window counts as a 50-pt "noise contribution" for wake chance
     if (sleeping) {
@@ -76,5 +77,5 @@ export async function POST() {
 
   const updated = await prisma.user.findUnique({ where: { id: user.id }, select: { points: true } });
 
-  return NextResponse.json({ outcomeIndex: index, outcome, newPoints: updated!.points });
+  return NextResponse.json({ outcomeIndex: index, outcome, newPoints: updated!.points, bossHealed });
 }
