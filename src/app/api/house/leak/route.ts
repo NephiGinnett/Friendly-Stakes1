@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { ACHIEVEMENTS } from "@/lib/achievements";
-import { captureLeakPasswords } from "@/lib/passwordLeak";
 
 export async function GET() {
   const user = await getCurrentUser();
@@ -15,25 +14,22 @@ export async function GET() {
   const achievement = ACHIEVEMENTS[achievementId];
   if (!achievement) return NextResponse.json({ leak: null });
 
-  // Serve the frozen snapshot taken when this leak was drawn — never a live
-  // read. A player who changes their password after the leak leaves a stale
-  // string here rather than republishing their new one.
+  // Serve only the frozen snapshot taken when this leak was drawn. This route
+  // never reads a live password — a player who changes theirs after the leak
+  // leaves a stale string here rather than republishing their new one.
+  //
+  // A leak with no snapshot (drawn before snapshots existed) shows nothing. We
+  // deliberately do NOT capture one now: the draw-time passwords are gone, and
+  // anyone who has already changed theirs would have the *new* value frozen in
+  // — the exact leak this mechanic is meant to prevent. Publishing nothing is
+  // correct; the leak returns at the next draw.
   let passwords: string[] = [];
   try {
     const parsed = JSON.parse(config.leakPasswords || "[]");
     if (Array.isArray(parsed)) passwords = parsed.filter((p): p is string => typeof p === "string" && !!p);
-  } catch { /* fall through to the backfill below */ }
+  } catch { /* malformed snapshot — show nothing rather than guess */ }
 
-  // A leak drawn before snapshots existed has no frozen list. Capture one now
-  // and freeze it, so the current leak keeps working and stops tracking live
-  // passwords from this point on.
-  if (!config.leakPasswords) {
-    passwords = await captureLeakPasswords(achievementId);
-    await prisma.houseConfig.update({
-      where: { id: 1 },
-      data: { leakPasswords: JSON.stringify(passwords) },
-    });
-  }
+  if (passwords.length === 0) return NextResponse.json({ leak: null });
 
   return NextResponse.json({
     leak: {

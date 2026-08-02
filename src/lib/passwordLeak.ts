@@ -12,7 +12,8 @@ const LEAK_POOL = Object.keys(ACHIEVEMENTS) as (keyof typeof ACHIEVEMENTS)[];
  * a player who changes their password afterwards leaves a stale string behind
  * rather than silently republishing their new one — which is what makes the
  * Change Password shop item worth buying. Players who earn the achievement
- * after the draw are likewise not added.
+ * after the draw are likewise not added. The read path serves only this
+ * snapshot and never falls back to a live query.
  *
  * Usernames are never captured; only the password strings.
  */
