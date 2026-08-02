@@ -431,6 +431,28 @@ export default function AdminPage() {
     }
   };
 
+  const backfillBingo = async () => {
+    setGranting(true); setGrantMsg(null);
+    try {
+      const res = await fetch("/api/admin/achievements", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "backfill_bingo" }),
+      });
+      const d = await res.json().catch(() => ({}));
+      setGrantMsg(res.ok
+        ? (d.count > 0
+            ? `Granted BINGO! to ${d.count} player${d.count === 1 ? "" : "s"}: ${d.granted.join(", ")}.`
+            : "Nobody was missing it — everyone with a line already has BINGO!.")
+        : (d.error ?? "Something went wrong."));
+      if (res.ok) fetchAll();
+    } catch {
+      setGrantMsg("Couldn't reach the server — try again.");
+    } finally {
+      setGranting(false);
+    }
+  };
+
   const restartGame = async () => {
     setRestarting(true);
     setRestartResult(null);
@@ -918,6 +940,19 @@ export default function AdminPage() {
                   className="px-4 py-2 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 transition-colors text-sm font-medium"
                 >
                   Revoke
+                </button>
+              </div>
+
+              <div className="pt-2 border-t border-white/10 space-y-2">
+                <p className="text-xs text-slate-500">
+                  🎱 BINGO! used to go only to the first player in the whole group. It is now per-player, but anyone who completed a line under the old rule can never trigger it through play. This hands it to them. Safe to re-run.
+                </p>
+                <button
+                  onClick={backfillBingo}
+                  disabled={granting}
+                  className="w-full px-4 py-2 rounded-xl bg-white/5 text-slate-300 hover:bg-white/10 border border-white/10 transition-colors text-sm font-medium"
+                >
+                  {granting ? "Working…" : "Catch up BINGO! for existing lines"}
                 </button>
               </div>
             </div>

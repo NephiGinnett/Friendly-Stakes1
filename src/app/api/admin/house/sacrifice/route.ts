@@ -108,7 +108,9 @@ export async function POST(req: Request) {
     if (isFattest) {
       await prisma.userAchievement.upsert({
         where: { userId_achievementId: { userId: sacrificedId, achievementId: "fatted_calf" } },
-        create: { userId: sacrificedId, achievementId: "fatted_calf" },
+        // claimed at creation: the 500 pts are paid inline just below, so
+        // leaving it claimable would pay the same reward a second time.
+        create: { userId: sacrificedId, achievementId: "fatted_calf", claimed: true },
         update: {},
       });
       await prisma.user.update({ where: { id: sacrificedId }, data: { points: { increment: 500 } } });
@@ -119,7 +121,8 @@ export async function POST(req: Request) {
     if (isMeekest && !isFattest) {
       await prisma.userAchievement.upsert({
         where: { userId_achievementId: { userId: sacrificedId, achievementId: "suffer_meek" } },
-        create: { userId: sacrificedId, achievementId: "suffer_meek" },
+        // claimed at creation — see the note on fatted_calf above.
+        create: { userId: sacrificedId, achievementId: "suffer_meek", claimed: true },
         update: {},
       });
       await prisma.user.update({ where: { id: sacrificedId }, data: { points: { increment: 300 } } });

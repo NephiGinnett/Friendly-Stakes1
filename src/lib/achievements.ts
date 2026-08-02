@@ -24,7 +24,7 @@ export const ACHIEVEMENTS = {
   bingo: {
     id: "bingo",
     name: "BINGO!",
-    description: "First player to complete a bingo line. Called it before anyone else!",
+    description: "You completed a bingo line. Five in a row, called and claimed.",
     hint: "???",
     reward: "Earn 250 pts",
     rewardPoints: 250,
