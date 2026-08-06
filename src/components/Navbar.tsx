@@ -16,6 +16,7 @@ type Notifs = {
   bingo: string | null;
   boss: boolean;
   distributions: number;
+  royalties: number;
 };
 
 export default function Navbar() {
@@ -23,7 +24,7 @@ export default function Navbar() {
   const pathname = usePathname();
   const [user, setUser] = useState<User | null>(null);
   const [houseStatus, setHouseStatus] = useState<HouseStatus | null>(null);
-  const [notifs, setNotifs] = useState<Notifs>({ challenges: 0, wagers: 0, achievements: 0, adminBingo: 0, bingo: null, boss: false, distributions: 0 });
+  const [notifs, setNotifs] = useState<Notifs>({ challenges: 0, wagers: 0, achievements: 0, adminBingo: 0, bingo: null, boss: false, distributions: 0, royalties: 0 });
   const [notifsEnabled, setNotifsEnabled] = useState(true);
 
   useEffect(() => {
@@ -36,6 +37,10 @@ export default function Navbar() {
   useEffect(() => {
     if (pathname === "/bingo") {
       try { localStorage.setItem("bingoSeenAt", new Date().toISOString()); } catch { /* ignore */ }
+    }
+    if (pathname === "/profile") {
+      // Point History lives on the profile — viewing it clears the royalty ping.
+      try { localStorage.setItem("royaltySeenAt", new Date().toISOString()); } catch { /* ignore */ }
     }
   }, [pathname]);
 
@@ -52,10 +57,16 @@ export default function Navbar() {
     if (!notifsEnabled) return;
 
     let bingoSeenAt = "";
-    try { bingoSeenAt = localStorage.getItem("bingoSeenAt") ?? ""; } catch { /* ignore */ }
-    const url = bingoSeenAt
-      ? `/api/notifications?bingoSeenAt=${encodeURIComponent(bingoSeenAt)}`
-      : "/api/notifications";
+    let royaltySeenAt = "";
+    try {
+      bingoSeenAt = localStorage.getItem("bingoSeenAt") ?? "";
+      royaltySeenAt = localStorage.getItem("royaltySeenAt") ?? "";
+    } catch { /* ignore */ }
+    const params = new URLSearchParams();
+    if (bingoSeenAt) params.set("bingoSeenAt", bingoSeenAt);
+    if (royaltySeenAt) params.set("royaltySeenAt", royaltySeenAt);
+    const qs = params.toString();
+    const url = qs ? `/api/notifications?${qs}` : "/api/notifications";
 
     fetch(url)
       .then((r) => r.ok ? r.json() : null)
@@ -79,6 +90,7 @@ export default function Navbar() {
     bingo: notifs.bingo !== null,
     admin: notifs.adminBingo > 0,
     house: notifs.boss,
+    royalties: notifs.royalties > 0,
   };
 
   const showDot = (key: keyof typeof dotMap) => notifsEnabled && dotMap[key];
@@ -123,7 +135,7 @@ export default function Navbar() {
         ? [{ href: "/casino-night", label: "🎰" }]
         : [{ href: "/house", label: "🎰", dotKey: "house" as const }]),
     ...(showWorldCup ? [{ href: "/world-cup", label: "⚽", isWc: true }] : []),
-    { href: "/profile", label: user.username },
+    { href: "/profile", label: user.username, dotKey: "royalties" },
   ];
 
   if (user.isAdmin) {
