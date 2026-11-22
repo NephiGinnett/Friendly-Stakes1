@@ -89,3 +89,11 @@ body:has([data-theme])::before {
     @apply block text-sm font-medium text-slate-400 mb-1.5;
   }
 }
+
+/* Guest demo: leave room for the fixed "Guest demo" banner. */
+html.demo-active body {
+  padding-top: 2rem;
+}
+html.demo-active .sticky.top-0 {
+  top: 2rem;
+}

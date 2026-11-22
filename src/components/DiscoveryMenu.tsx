@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
+import { useDemoActive } from "@/components/DemoMode";
 import { ALL_PAGES, VALID_SLUGS, groupBySection, DiscoveryPage } from "@/lib/discovery";
 
 export default function DiscoveryMenu() {
@@ -12,6 +13,7 @@ export default function DiscoveryMenu() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [wc, setWc] = useState<{ adminAt: string | null; playerAt: string | null; endAt: string | null }>({ adminAt: null, playerAt: null, endAt: null });
   const pathname = usePathname();
+  const demo = useDemoActive();
   const lastTracked = useRef<string>("");
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -69,6 +71,9 @@ export default function DiscoveryMenu() {
     return true;
   });
   const sections = groupBySection(visiblePages);
+
+  // The guest demo only covers betting, so the page directory stays hidden.
+  if (demo) return null;
 
   return (
     <div ref={menuRef} className="fixed top-3 right-3 z-[60]">

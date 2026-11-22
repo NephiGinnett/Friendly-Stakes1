@@ -5,6 +5,8 @@ import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getDisplayVersion } from "@/lib/version";
 import TeamBadges from "@/components/TeamBadges";
+import { useDemoActive } from "@/components/DemoMode";
+import { endDemo } from "@/lib/demo/client";
 
 type User = { id: number; username: string; points: number; isAdmin: boolean; siteTheme?: string };
 type HouseStatus = { worldCupAdminAt: string | null; worldCupPlayerAt: string | null; worldCupEventEndAt?: string | null; casinoNightActive?: boolean; casinoNightOpen?: boolean; bossFightLive?: boolean };
@@ -25,6 +27,7 @@ export default function Navbar() {
   const [houseStatus, setHouseStatus] = useState<HouseStatus | null>(null);
   const [notifs, setNotifs] = useState<Notifs>({ challenges: 0, wagers: 0, achievements: 0, adminBingo: 0, bingo: null, boss: false, distributions: 0 });
   const [notifsEnabled, setNotifsEnabled] = useState(true);
+  const demo = useDemoActive();
 
   useEffect(() => {
     try {
@@ -64,6 +67,11 @@ export default function Navbar() {
   }, [pathname, notifsEnabled]);
 
   const logout = async () => {
+    if (demo) {
+      endDemo();
+      window.location.href = "/login";
+      return;
+    }
     await fetch("/api/auth/logout", { method: "POST" });
     router.push("/login");
   };
@@ -102,7 +110,12 @@ export default function Navbar() {
   // rather than letting the casino link replace it.
   const bossFightLive = !!houseStatus?.bossFightLive;
 
-  const navItems: { href: string; label: string; dotKey?: keyof typeof dotMap; isWc?: boolean }[] = [
+  const navItems: { href: string; label: string; dotKey?: keyof typeof dotMap; isWc?: boolean }[] = demo ? [
+    // Guest demo: betting only.
+    { href: "/feed", label: "Feed", dotKey: "feed" },
+    { href: "/wagers/new", label: "+" },
+    { href: "/profile", label: user.username },
+  ] : [
     { href: "/feed", label: "Feed", dotKey: "feed" },
     { href: "/wagers/new", label: "+" },
     { href: "/shop", label: "Shop" },
@@ -172,7 +185,7 @@ export default function Navbar() {
           onClick={logout}
           className="flex flex-col items-center px-2 py-1.5 text-xs font-medium text-slate-500 hover:text-slate-300"
         >
-          Logout
+          {demo ? "Exit demo" : "Logout"}
         </button>
         <span className="absolute right-2 bottom-0.5 text-[9px] text-slate-800 select-none pointer-events-none">
           v{getDisplayVersion(user?.isAdmin ?? false)}

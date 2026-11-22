@@ -147,6 +147,13 @@ export default function LoginPage() {
             Create account
           </Link>
         </p>
+
+        <p className="text-center text-sm text-slate-500 mt-3">
+          No invite?{" "}
+          <a href="/demo" className="text-amber-400 hover:text-amber-300">
+            Try it as a guest
+          </a>
+        </p>
       </div>
     </div>
   );
